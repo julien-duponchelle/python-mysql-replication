@@ -13,7 +13,15 @@ class BinLogStreamReader(object):
         blocking: Read on stream is blocking
         '''
         self.__connection = connection
+        self.__connected = False
+        self.__resume_stream = resume_stream
+        self.__blocking = blocking
+        
+        #Store table meta informations
+        self.table_map = {}
 
+
+    def __connect_to_stream(self):
         cur = self.__connection.cursor()
         cur.execute("SHOW MASTER STATUS")
         (log_file, log_pos) = cur.fetchone()[:2]
@@ -27,22 +35,22 @@ class BinLogStreamReader(object):
         command = COM_BINLOG_DUMP
         prelude = struct.pack('<i', len(log_file) + 11) \
                 + int2byte(command)
-        if resume_stream:
+        if self.__resume_stream:
             prelude += struct.pack('<I', log_pos)            
         else:
             prelude += struct.pack('<I', 4)
-        if blocking:
+        if self.__blocking:
             prelude += struct.pack('<h', 0)
         else:
             prelude += struct.pack('<h', 1)        
         prelude += struct.pack('<I', 3)
         self.__connection.wfile.write(prelude + log_file)
         self.__connection.wfile.flush()
-
-        #Store table meta informations
-        self.table_map = {}
+        self.__connected = True
         
     def fetchone(self):
+        if self.__connected == False:
+            self.__connect_to_stream()
         pkt = self.__connection.read_packet()
         if not pkt.is_ok_packet():
             return None

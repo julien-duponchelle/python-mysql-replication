@@ -1,5 +1,7 @@
 import pymysql
 import unittest
+import copy
+from pymysqlreplication import BinLogStreamReader
 
 class PyMySQLReplicationTestCase(unittest.TestCase):
     '''Test the module. Be carefull it will reset your MySQL server'''
@@ -7,9 +9,13 @@ class PyMySQLReplicationTestCase(unittest.TestCase):
 
     def setUp(self):
         self.conn_control = pymysql.connect(**self.database)
-        self.conn_test = pymysql.connect(**self.database)
         self.execute("CREATE DATABASE pymysqlreplication_test")
         self.resetBinLog()
+        db = copy.copy(self.database)
+        db["db"] = "pymysqlreplication_test"
+        self.conn_control = pymysql.connect(**db)
+        self.conn_test = pymysql.connect(**self.database)
+        self.stream = BinLogStreamReader(self.conn_test)     
 
     def tearDown(self):
         self.execute("DROP DATABASE pymysqlreplication_test")

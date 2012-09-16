@@ -1,11 +1,19 @@
 import base
-from pymysqlreplication import BinLogStreamReader
+from pymysqlreplication.event import *
 
 class TestBinLogStreamReader(base.PyMySQLReplicationTestCase):
-    def test_open_stream(self):
-        """ test opening stream"""
-        stream = BinLogStreamReader(self.conn_test)
+    def test_read_query_event(self):
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
 
+        #RotateEvent
+        self.stream.fetchone()
+        #FormatDescription
+        self.stream.fetchone()
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event.event, BinLogQueryEvent)
+        self.assertEqual(event.event.query, query)
 
 __all__ = ["TestBinLogStreamReader"]
 
