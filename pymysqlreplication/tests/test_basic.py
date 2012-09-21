@@ -14,7 +14,7 @@ class TestBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.stream.fetchone()
 
         event = self.stream.fetchone()
-        self.assertIsInstance(event.event, BinLogQueryEvent)
+        self.assertIsInstance(event.event, QueryEvent)
         self.assertEqual(event.event.query, query)
 
     def test_write_row_event(self):
@@ -35,7 +35,7 @@ class TestBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.stream.fetchone()
 
         event = self.stream.fetchone()
-        self.assertIsInstance(event.event, BinLogTableMapEvent)
+        self.assertIsInstance(event.event, TableMapEvent)
 
         event = self.stream.fetchone()
         self.assertEqual(event.event_type, WRITE_ROWS_EVENT)        
@@ -64,7 +64,7 @@ class TestBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.stream.fetchone()
 
         event = self.stream.fetchone()
-        self.assertIsInstance(event.event, BinLogTableMapEvent)
+        self.assertIsInstance(event.event, TableMapEvent)
 
         event = self.stream.fetchone()
         self.assertEqual(event.event_type, DELETE_ROWS_EVENT)        

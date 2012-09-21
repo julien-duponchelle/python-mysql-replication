@@ -90,7 +90,7 @@ class BinLogPacketWrapper(object):
 
         event_size_without_header = self.event_size - 19
         if self.event_type == QUERY_EVENT:
-            self.event = BinLogQueryEvent(self.packet, event_size_without_header, table_map)
+            self.event = QueryEvent(self.packet, event_size_without_header, table_map)
         elif self.event_type == UPDATE_ROWS_EVENT:
             self.event = UpdateRowsEvent(self.packet, event_size_without_header, table_map)
         elif self.event_type == WRITE_ROWS_EVENT:
@@ -98,7 +98,7 @@ class BinLogPacketWrapper(object):
         elif self.event_type == DELETE_ROWS_EVENT:
             self.event = DeleteRowsEvent(self.packet, event_size_without_header, table_map)
         elif self.event_type == TABLE_MAP_EVENT:
-            self.event = BinLogTableMapEvent(self.packet, event_size_without_header, table_map)
+            self.event = TableMapEvent(self.packet, event_size_without_header, table_map)
         else:
             self.event = None
 

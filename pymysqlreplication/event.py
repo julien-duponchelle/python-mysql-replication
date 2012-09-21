@@ -112,9 +112,9 @@ class UpdateRowsEvent(BinLogEvent):
         print
 
 
-class BinLogTableMapEvent(BinLogEvent):
+class TableMapEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map):
-        super(BinLogTableMapEvent, self).__init__(from_packet, event_size, table_map)
+        super(TableMapEvent, self).__init__(from_packet, event_size, table_map)
 
         # Post-Header
         self.table_id = self._read_table_id() 
@@ -150,9 +150,9 @@ class BinLogTableMapEvent(BinLogEvent):
         #import sys
         #sys.exit(0)
 
-class BinLogQueryEvent(BinLogEvent):
+class QueryEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map):
-        super(BinLogQueryEvent, self).__init__(from_packet, event_size, table_map)
+        super(QueryEvent, self).__init__(from_packet, event_size, table_map)
 
         # Post-header
         self.slave_proxy_id = struct.unpack('<I', self.packet.read(4))[0]
