@@ -7,16 +7,18 @@ from event import *
 class BinLogStreamReader(object):
     '''Connect to replication stream and read event'''
     
-    def __init__(self, connection, resume_stream = False, blocking = False):
+    def __init__(self, connection, resume_stream = False, blocking = False, only_events = None):
         '''
         resume_stream: Start for latest event of binlog or from older available event
         blocking: Read on stream is blocking
+        only_events: Array of allowed events
         '''
         self.__connection = connection
         self.__connected = False
         self.__resume_stream = resume_stream
         self.__blocking = blocking
-        
+        self.__only_events = only_events
+
         #Store table meta informations
         self.table_map = {}
 
@@ -51,13 +53,24 @@ class BinLogStreamReader(object):
     def fetchone(self):
         if self.__connected == False:
             self.__connect_to_stream()
-        pkt = self.__connection.read_packet()
-        if not pkt.is_ok_packet():
-            return None
-        binlog_event = BinLogPacketWrapper(pkt, self.table_map)
-        if binlog_event.event_type == TABLE_MAP_EVENT:
-            self.table_map[binlog_event.event.table_id] = binlog_event.event
-        return binlog_event.event
+        while True:
+            pkt = self.__connection.read_packet()
+            if not pkt.is_ok_packet():
+                return None
+            binlog_event = BinLogPacketWrapper(pkt, self.table_map)
+            if binlog_event.event_type == TABLE_MAP_EVENT:
+                self.table_map[binlog_event.event.table_id] = binlog_event.event
+            if self.__filter_event(binlog_event.event):
+                continue
+            return binlog_event.event
+
+    def __filter_event(self, event):
+        if self.__only_events is not None:
+            for allowed_event in self.__only_events:
+                if isinstance(event, allowed_event):
+                    return False
+            return True
+        return False
 
     def __iter__(self):
         return iter(self.fetchone, None)

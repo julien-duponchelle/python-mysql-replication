@@ -1,4 +1,5 @@
 import base
+from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 import time
@@ -12,6 +13,15 @@ class TestBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.stream.fetchone()
         #FormatDescription
         self.stream.fetchone()
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, QueryEvent)
+        self.assertEqual(event.query, query)
+
+    def test_filtering_events(self):
+        self.stream = BinLogStreamReader(self.conn_test, only_events = [QueryEvent])        
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, QueryEvent)
