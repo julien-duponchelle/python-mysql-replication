@@ -72,6 +72,38 @@ class TestBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.values[0], 1)        
         self.assertEqual(event.values[1], "Hello World")   
 
+    def test_update_row_event(self):
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        query = "INSERT INTO test (data) VALUES('Hello')"
+        self.execute(query)
+
+        self.resetBinLog()
+        
+        query = "UPDATE test SET data = 'World' WHERE id = 1"
+        self.execute(query)
+        self.execute("COMMIT")
+
+        #RotateEvent
+        self.stream.fetchone()
+        #FormatDescription
+        self.stream.fetchone()
+
+        #QueryEvent for the BEGIN
+        self.stream.fetchone()
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+
+        event = self.stream.fetchone()
+        self.assertEqual(event.event_type, UPDATE_ROWS_EVENT)        
+        self.assertIsInstance(event, UpdateRowsEvent)
+        self.assertEqual(event.before_values[0], 1)        
+        self.assertEqual(event.before_values[1], "Hello")
+        self.assertEqual(event.after_values[0], 1)        
+        self.assertEqual(event.after_values[1], "World")
+
+
 __all__ = ["TestBinLogStreamReader"]
 
 if __name__ == "__main__":
