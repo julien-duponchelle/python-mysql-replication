@@ -57,7 +57,7 @@ class BinLogStreamReader(object):
         binlog_event = BinLogPacketWrapper(pkt, self.table_map)
         if binlog_event.event_type == TABLE_MAP_EVENT:
             self.table_map[binlog_event.event.table_id] = binlog_event.event
-        return binlog_event
+        return binlog_event.event
 
     def __iter__(self):
         return iter(self.fetchone, None)
@@ -68,6 +68,17 @@ class BinLogPacketWrapper(object):
     around it, exposing useful variables while still providing access
     to the original packet objects variables and methods.
     """
+
+    __event_map = {
+        QUERY_EVENT: QueryEvent,
+        UPDATE_ROWS_EVENT: UpdateRowsEvent,
+        WRITE_ROWS_EVENT: WriteRowsEvent,
+        DELETE_ROWS_EVENT: DeleteRowsEvent,
+        TABLE_MAP_EVENT: TableMapEvent,
+        ROTATE_EVENT: RotateEvent,
+        FORMAT_DESCRIPTION_EVENT: FormatDescriptionEvent,
+        XID_EVENT: XidEvent
+    }
 
     def __init__(self, from_packet, table_map):
         if not from_packet.is_ok_packet():
@@ -89,18 +100,11 @@ class BinLogPacketWrapper(object):
         
 
         event_size_without_header = self.event_size - 19
-        if self.event_type == QUERY_EVENT:
-            self.event = QueryEvent(self, event_size_without_header, table_map)
-        elif self.event_type == UPDATE_ROWS_EVENT:
-            self.event = UpdateRowsEvent(self, event_size_without_header, table_map)
-        elif self.event_type == WRITE_ROWS_EVENT:
-            self.event = WriteRowsEvent(self, event_size_without_header, table_map)
-        elif self.event_type == DELETE_ROWS_EVENT:
-            self.event = DeleteRowsEvent(self, event_size_without_header, table_map)
-        elif self.event_type == TABLE_MAP_EVENT:
-            self.event = TableMapEvent(self.packet, event_size_without_header, table_map)
-        else:
-            self.event = None
+        try:
+            event_class = self.__event_map[self.event_type]
+        except KeyError:
+            raise NotImplementedError("Unknown MySQL bin log event type: " + hex(self.event_type))
+        self.event = event_class(self, event_size_without_header, table_map)
 
     def __getattr__(self, key):
         if hasattr(self.packet, key):

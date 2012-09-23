@@ -6,6 +6,8 @@ class BinLogEvent(object):
     def __init__(self, from_packet, event_size, table_map):
         self.packet = from_packet
         self.table_map = table_map
+        self.event_type = self.packet.event_type
+        self.timestamp = self.packet.timestamp
 
     def _read_table_id(self):
         # Table ID is 6 byte
@@ -147,8 +149,21 @@ class TableMapEvent(BinLogEvent):
         print "Columns: %s" % (self.column_count)
 
         print
-        #import sys
-        #sys.exit(0)
+
+class RotateEvent(BinLogEvent):
+    def dump(self):
+        print "== Rotate Event =="
+        print
+
+class FormatDescriptionEvent(BinLogEvent):
+    def dump(self):
+        print "== Format Description Event =="
+        print
+ 
+class XidEvent(BinLogEvent):
+    def dump(self):
+        print "== Xid Event =="
+        print
 
 class QueryEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map):

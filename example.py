@@ -12,8 +12,8 @@ stream = BinLogStreamReader(conn, blocking = False, resume_stream = False)
 for binlogevent in stream:
     print binlogevent.timestamp
     print binlogevent.event_type
-    if binlogevent.event is not None:
-        print binlogevent.event.dump()
+    if binlogevent is not None:
+        print binlogevent.dump()
 
 conn.close()
 
