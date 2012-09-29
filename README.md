@@ -1,7 +1,13 @@
 python-mysql-replication
 ========================
 
-Pure Python Implementation of MySQL replication protocol build on top of PyMYSQL.
+Pure Python Implementation of MySQL replication protocol build on top of PyMYSQL. This allow you to receive event like insert, update, delete with their datas and raw SQL queries.
+
+Use cases
+===========
+
+* MySQL to NoSQL database replication
+* Audit
 
 Examples
 =========
