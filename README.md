@@ -3,6 +3,26 @@ python-mysql-replication
 
 Pure Python Implementation of MySQL replication protocol build on top of PyMYSQL.
 
+Examples
+=========
+
+All examples are available in the [examples directory](https://github.com/noplay/python-mysql-replication/tree/master/examples)
+
+
+This example will dump all replication events to the console:
+    import pymysql
+    from pymysqlreplication import BinLogStreamReader
+
+    conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', passwd='', db='mysql')
+
+    stream = BinLogStreamReader(conn)
+
+    for binlogevent in stream:
+        print binlogevent.dump()
+
+    conn.close()
+
+
 Licence
 =======
 Copyright 2012 Julien Duponchelle
