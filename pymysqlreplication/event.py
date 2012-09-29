@@ -132,30 +132,43 @@ class DeleteRowsEvent(RowsEvent):
     def __init__(self, from_packet, event_size, table_map):
         super(DeleteRowsEvent, self).__init__(from_packet, event_size, table_map)
         self.columns_present_bitmap = self._packet_read((self.number_of_columns + 7) / 8)
-         #TODO: nul-bitmap, length (bits set in 'columns-present-bitmap'+7)/8
+
+    def _fetch_one_row(self):
+        row = {}
+
+        #TODO: nul-bitmap, length (bits set in 'columns-present-bitmap'+7)/8
         self._packet_advance((self.number_of_columns + 7) / 8)
-        self.values = self._read_column_data()
+        row["values"] = self._read_column_data()
+        return row
 
     def _dump(self):
         super(DeleteRowsEvent, self)._dump()
         print "Values:"
-        for i in range(len(self.values)):
-            print "* ", self.values[i]
-
+        for row in self.rows:
+            print "--"
+            for i in range(len(row["values"])):
+                print "* ", row["values"][i]
 
 class WriteRowsEvent(RowsEvent):
     def __init__(self, from_packet, event_size, table_map):
         super(WriteRowsEvent, self).__init__(from_packet, event_size, table_map)
         self.columns_present_bitmap = self._packet_read((self.number_of_columns + 7) / 8)
+
+    def _fetch_one_row(self):
+        row = {}
+
         #TODO: nul-bitmap, length (bits set in 'columns-present-bitmap'+7)/8
         self._packet_advance((self.number_of_columns + 7) / 8)
-        self.values = self._read_column_data()
+        row["values"] = self._read_column_data()
+        return row
 
     def _dump(self):
         super(WriteRowsEvent, self)._dump()
         print "Values:"
-        for i in range(len(self.values)):
-            print "* ", self.values[i]
+        for row in self.rows:
+            print "--"
+            for i in range(len(row["values"])):
+                print "* ", row["values"][i]
 
 
 class UpdateRowsEvent(RowsEvent):
