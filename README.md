@@ -9,6 +9,13 @@ Use cases
 * MySQL to NoSQL database replication
 * Audit
 
+Project status
+================
+
+The current project is a proof of concept of what you can do with the MySQL
+replication log.
+
+
 MySQL server settings
 =========================
 
