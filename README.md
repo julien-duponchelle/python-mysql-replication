@@ -41,6 +41,113 @@ This example will dump all replication events to the console:
 
     conn.close()
 
+For this SQL sessions:
+    CREATE DATABASE test;
+    use test;
+    CREATE TABLE test4 (id int NOT NULL AUTO_INCREMENT, data VARCHAR(255), data2 VARCHAR(255), PRIMARY KEY(id));
+    INSERT INTO test4 (data,data2) VALUES ("Hello", "World");
+    UPDATE test4 SET data = "World", data2="Hello" WHERE id = 1;
+    DELETE FROM test4 WHERE id = 1;
+
+Output will be:
+
+    === QueryEvent ===
+    Date: 2012-09-29T13:18:56
+    Schema: test
+    Execution time: 0
+    Query: CREATE DATABASE test
+
+    === QueryEvent ===
+    Date: 2012-09-29T13:19:03
+    Schema: test
+    Execution time: 0
+    Query: CREATE TABLE test4 (id int NOT NULL AUTO_INCREMENT, data VARCHAR(255), data2 VARCHAR(255), PRIMARY KEY(id))
+
+    === QueryEvent ===
+    Date: 2012-09-29T13:19:35
+    Schema: test
+    Execution time: 0
+    Query: BEGIN
+
+    === TableMapEvent ===
+    Date: 2012-09-29T13:19:35
+    Table id: 43
+    Schema: test
+    Table: test4
+    Columns: 3
+
+    === WriteRowsEvent ===
+    Date: 2012-09-29T13:19:35
+    Table: test.test4
+    Affected columns: 3
+    Values:
+    *  1
+    *  Hello
+    *  World
+
+    === XidEvent ===
+    Date: 2012-09-29T13:19:35
+
+    === QueryEvent ===
+    Date: 2012-09-29T13:19:50
+    Schema: test
+    Execution time: 0
+    Query: BEGIN
+
+    === TableMapEvent ===
+    Date: 2012-09-29T13:19:50
+    Table id: 43
+    Schema: test
+    Table: test4
+    Columns: 3
+
+    === UpdateRowsEvent ===
+    Date: 2012-09-29T13:19:50
+    Table: test.test4
+    Affected columns: 3
+    Affected columns: 3
+    Values:
+    *  1  =>  1
+    *  Hello  =>  World
+    *  World  =>  Hello
+
+    === XidEvent ===
+    Date: 2012-09-29T13:19:50
+
+    === QueryEvent ===
+    Date: 2012-09-29T13:20:15
+    Schema: test
+    Execution time: 1
+    Query: BEGIN
+
+    === TableMapEvent ===
+    Date: 2012-09-29T13:20:15
+    Table id: 43
+    Schema: test
+    Table: test4
+    Columns: 3
+
+    === DeleteRowsEvent ===
+    Date: 2012-09-29T13:20:15
+    Table: test.test4
+    Affected columns: 3
+    Values:
+    *  1
+    *  World
+    *  Hello
+
+    === XidEvent ===
+    Date: 2012-09-29T13:20:15
+
+Tests
+========
+<b>Be carefull</b> tests will reset the binary log of your MySQL server.
+
+To run tests:
+
+    python setup.py test
+
+
 
 Licence
 =======
