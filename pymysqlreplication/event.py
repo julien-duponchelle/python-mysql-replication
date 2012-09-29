@@ -26,13 +26,20 @@ class BinLogEvent(object):
         return values
 
 
-class DeleteRowsEvent(BinLogEvent):
+class RowsEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map):
-        super(DeleteRowsEvent, self).__init__(from_packet, event_size, table_map)
+        super(RowsEvent, self).__init__(from_packet, event_size, table_map)
+
         #Header
         self.table_id = self._read_table_id()
         self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
+        self.table = self.table_map[self.table_id]
+
+
+class DeleteRowsEvent(RowsEvent):
+    def __init__(self, from_packet, event_size, table_map):
+        super(DeleteRowsEvent, self).__init__(from_packet, event_size, table_map)
         #Body
         self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
@@ -45,7 +52,7 @@ class DeleteRowsEvent(BinLogEvent):
     def dump(self):
         table = self.table_map[self.table_id]
         print "== Delete Rows Event =="
-        print "Table: %s.%s" % (table.schema, table.table)
+        print "Table: %s.%s" % (self.table.schema, self.table.table)
         print "Affected columns: %d" % (self.number_of_columns)
         print "Values:"
         for i in range(len(self.values)):
@@ -53,13 +60,9 @@ class DeleteRowsEvent(BinLogEvent):
         print
 
 
-class WriteRowsEvent(BinLogEvent):
+class WriteRowsEvent(RowsEvent):
     def __init__(self, from_packet, event_size, table_map):
         super(WriteRowsEvent, self).__init__(from_packet, event_size, table_map)
-        #Header
-        self.table_id = self._read_table_id()
-        self.flags = struct.unpack('<H', self.packet.read(2))[0]
-
         #Body
         self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
@@ -71,9 +74,8 @@ class WriteRowsEvent(BinLogEvent):
 
 
     def dump(self):
-        table = self.table_map[self.table_id]
         print "== Write Rows Event =="
-        print "Table: %s.%s" % (table.schema, table.table)
+        print "Table: %s.%s" % (self.table.schema, self.table.table)
         print "Affected columns: %d" % (self.number_of_columns)
         print "Values:"
         for i in range(len(self.values)):
@@ -81,13 +83,9 @@ class WriteRowsEvent(BinLogEvent):
         print
 
 
-class UpdateRowsEvent(BinLogEvent):
+class UpdateRowsEvent(RowsEvent):
     def __init__(self, from_packet, event_size, table_map):
         super(UpdateRowsEvent,self).__init__(from_packet, event_size, table_map)
-        #Header
-        self.table_id = self._read_table_id()
-        self.flags = struct.unpack('<H', self.packet.read(2))[0]
-
         #Body
         self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
@@ -104,9 +102,8 @@ class UpdateRowsEvent(BinLogEvent):
         self.after_values = self._read_column_data()
 
     def dump(self):
-        table = self.table_map[self.table_id]
         print "== Update Rows Event =="
-        print "Table: %s.%s" % (table.schema, table.table)
+        print "Table: %s.%s" % (self.table.schema, self.table.table)
         print "Affected columns: %d" % (self.number_of_columns)
         print "Values:"
         for i in range(len(self.before_values)):
