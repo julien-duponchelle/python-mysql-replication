@@ -37,7 +37,7 @@ This example will dump all replication events to the console:
     stream = BinLogStreamReader(conn)
 
     for binlogevent in stream:
-        print binlogevent.dump()
+        binlogevent.dump()
 
     conn.close()
 

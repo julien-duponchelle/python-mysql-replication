@@ -1,4 +1,5 @@
 import struct
+from datetime import datetime
 from pymysql.util import byte2int, int2byte
 from pymysql.constants.FIELD_TYPE import *
 
@@ -25,6 +26,16 @@ class BinLogEvent(object):
                 values.append(self.packet.read_length_coded_string())
         return values
 
+    def dump(self):
+        print "=== %s ===" % (self.__class__.__name__)
+        print "Date: %s" % (datetime.fromtimestamp(self.timestamp).isoformat())
+        self._dump()
+        print
+    
+    def _dump(self):
+        '''Core data dumped for the event'''
+        pass
+
 
 class RowsEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map):
@@ -34,60 +45,51 @@ class RowsEvent(BinLogEvent):
         self.table_id = self._read_table_id()
         self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
+        #Body
+        self.number_of_columns = self.packet.read_length_coded_binary()
+
         self.table = self.table_map[self.table_id]
+
+    def _dump(self):
+        super(RowsEvent, self)._dump()
+        print "Table: %s.%s" % (self.table.schema, self.table.table)
+        print "Affected columns: %d" % (self.number_of_columns)
 
 
 class DeleteRowsEvent(RowsEvent):
     def __init__(self, from_packet, event_size, table_map):
         super(DeleteRowsEvent, self).__init__(from_packet, event_size, table_map)
-        #Body
-        self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
-
-        #TODO: nul-bitmap, length (bits set in 'columns-present-bitmap'+7)/8
+         #TODO: nul-bitmap, length (bits set in 'columns-present-bitmap'+7)/8
         self.packet.advance((self.number_of_columns + 7) / 8)
-
         self.values = self._read_column_data()
 
-    def dump(self):
-        table = self.table_map[self.table_id]
-        print "== Delete Rows Event =="
-        print "Table: %s.%s" % (self.table.schema, self.table.table)
-        print "Affected columns: %d" % (self.number_of_columns)
+    def _dump(self):
+        super(DeleteRowsEvent, self)._dump()
         print "Values:"
         for i in range(len(self.values)):
             print "* ", self.values[i]
-        print
 
 
 class WriteRowsEvent(RowsEvent):
     def __init__(self, from_packet, event_size, table_map):
         super(WriteRowsEvent, self).__init__(from_packet, event_size, table_map)
-        #Body
-        self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
-
         #TODO: nul-bitmap, length (bits set in 'columns-present-bitmap'+7)/8
         self.packet.advance((self.number_of_columns + 7) / 8)
-
         self.values = self._read_column_data()
 
-
-    def dump(self):
-        print "== Write Rows Event =="
-        print "Table: %s.%s" % (self.table.schema, self.table.table)
-        print "Affected columns: %d" % (self.number_of_columns)
+    def _dump(self):
+        super(WriteRowsEvent, self)._dump()
         print "Values:"
         for i in range(len(self.values)):
             print "* ", self.values[i]
-        print
 
 
 class UpdateRowsEvent(RowsEvent):
     def __init__(self, from_packet, event_size, table_map):
         super(UpdateRowsEvent,self).__init__(from_packet, event_size, table_map)
         #Body
-        self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
         self.columns_present_bitmap2 = self.packet.read((self.number_of_columns + 7) / 8)
 
@@ -101,14 +103,12 @@ class UpdateRowsEvent(RowsEvent):
 
         self.after_values = self._read_column_data()
 
-    def dump(self):
-        print "== Update Rows Event =="
-        print "Table: %s.%s" % (self.table.schema, self.table.table)
+    def _dump(self):
+        super(UpdateRowsEvent, self)._dump()
         print "Affected columns: %d" % (self.number_of_columns)
         print "Values:"
         for i in range(len(self.before_values)):
             print "* ", self.before_values[i] , " => ", self.after_values[i]
-        print
 
 
 class TableMapEvent(BinLogEvent):
@@ -138,29 +138,25 @@ class TableMapEvent(BinLogEvent):
         # lenenc-str     column-def
         # n              NULL-bitmask, length: (column-length * 8) / 7
 
-    def dump(self):
-        print "== Table Map Event =="
+    def _dump(self):
+        super(TableMapEvent, self)._dump()
         print "Table id: %d" % (self.table_id)
         print "Schema: %s" % (self.schema)
         print "Table: %s" % (self.table)
         print "Columns: %s" % (self.column_count)
 
-        print
 
 class RotateEvent(BinLogEvent):
-    def dump(self):
-        print "== Rotate Event =="
-        print
+    pass
+
 
 class FormatDescriptionEvent(BinLogEvent):
-    def dump(self):
-        print "== Format Description Event =="
-        print
- 
+    pass
+
+
 class XidEvent(BinLogEvent):
-    def dump(self):
-        print "== Xid Event =="
-        print
+    pass
+
 
 class QueryEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map):
@@ -181,11 +177,9 @@ class QueryEvent(BinLogEvent):
         self.query = self.packet.read(event_size - 13 - self.status_vars_length - self.schema_length - 1)
         #string[EOF]    query
 
-    def dump(self):
-        print "== Query Event =="
+    def _dump(self):
+        super(QueryEvent, self)._dump()
         print "Schema: %s" % (self.schema)
         print "Execution time: %d" % (self.execution_time) 
         print "Query: %s" % (self.query)
-
-        print
 
