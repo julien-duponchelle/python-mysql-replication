@@ -42,6 +42,7 @@ This example will dump all replication events to the console:
     conn.close()
 
 For this SQL sessions:
+
     CREATE DATABASE test;
     use test;
     CREATE TABLE test4 (id int NOT NULL AUTO_INCREMENT, data VARCHAR(255), data2 VARCHAR(255), PRIMARY KEY(id));
