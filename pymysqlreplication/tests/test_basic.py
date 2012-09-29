@@ -4,7 +4,7 @@ from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 import time
 
-class TestBinLogStreamReader(base.PyMySQLReplicationTestCase):
+class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def test_read_query_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
@@ -108,13 +108,52 @@ class TestBinLogStreamReader(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         self.assertEqual(event.event_type, UPDATE_ROWS_EVENT)        
         self.assertIsInstance(event, UpdateRowsEvent)
-        self.assertEqual(event.before_values[0], 1)        
-        self.assertEqual(event.before_values[1], "Hello")
-        self.assertEqual(event.after_values[0], 1)        
-        self.assertEqual(event.after_values[1], "World")
+        self.assertEqual(event.rows[0]["before_values"][0], 1)        
+        self.assertEqual(event.rows[0]["before_values"][1], "Hello")
+        self.assertEqual(event.rows[0]["after_values"][0], 1)        
+        self.assertEqual(event.rows[0]["after_values"][1], "World")
 
+class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
+    def test_update_multiple_row_event(self):
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        query = "INSERT INTO test (data) VALUES('Hello')"
+        self.execute(query)
+        query = "INSERT INTO test (data) VALUES('World')"
+        self.execute(query)
 
-__all__ = ["TestBinLogStreamReader"]
+        self.resetBinLog()
+        
+        query = "UPDATE test SET data = 'Toto'"
+        self.execute(query)
+        self.execute("COMMIT")
+
+        #RotateEvent
+        self.stream.fetchone()
+        #FormatDescription
+        self.stream.fetchone()
+
+        #QueryEvent for the BEGIN
+        self.stream.fetchone()
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+
+        event = self.stream.fetchone()
+        self.assertEqual(event.event_type, UPDATE_ROWS_EVENT)        
+        self.assertIsInstance(event, UpdateRowsEvent)
+        self.assertEqual(len(event.rows), 2)
+        self.assertEqual(event.rows[0]["before_values"][0], 1)        
+        self.assertEqual(event.rows[0]["before_values"][1], "Hello")
+        self.assertEqual(event.rows[0]["after_values"][0], 1)        
+        self.assertEqual(event.rows[0]["after_values"][1], "Toto")
+
+        self.assertEqual(event.rows[1]["before_values"][0], 2)        
+        self.assertEqual(event.rows[1]["before_values"][1], "World")
+        self.assertEqual(event.rows[1]["after_values"][0], 2)        
+        self.assertEqual(event.rows[1]["after_values"][1], "Toto")
+
+__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader"]
 
 if __name__ == "__main__":
     import unittest
