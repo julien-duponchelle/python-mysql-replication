@@ -10,6 +10,7 @@ All examples are available in the [examples directory](https://github.com/noplay
 
 
 This example will dump all replication events to the console:
+
     import pymysql
     from pymysqlreplication import BinLogStreamReader
 
