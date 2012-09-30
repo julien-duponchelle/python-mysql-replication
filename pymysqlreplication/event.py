@@ -1,7 +1,7 @@
 import struct
 from datetime import datetime
 from pymysql.util import byte2int, int2byte
-from pymysql.constants.FIELD_TYPE import *
+from pymysql.constants import FIELD_TYPE
 
 #Constants from PyMYSQL source code
 NULL_COLUMN = 251
@@ -35,10 +35,14 @@ class BinLogEvent(object):
         values = []
 
         for column in self.table_map[self.table_id].column_type_def:
-            if column == LONG:
+            if column == FIELD_TYPE.LONG:
                 values.append(struct.unpack("<I", self._packet_read(4))[0])
-            elif column == VARCHAR:
+            elif column == FIELD_TYPE.VARCHAR:
                 values.append(self._packet_read_length_coded_string())
+            elif column == FIELD_TYPE.STRING:
+                values.append(self._packet_read_length_coded_string())
+            else:
+                raise NotImplementedError("Unknown MySQL column type: %d" % (column))
         return values
 
     def _packet_read(self, size):

@@ -133,9 +133,11 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     def test_var_string(self):
         pass
      
-    @unittest.skip("Not implemented yet")
     def test_string(self):
-        pass
+        create_query = "CREATE TABLE test (test CHAR(255))"
+        insert_query = "INSERT INTO test VALUES('Hello')"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"][0], 'Hello') 
 
     @unittest.skip("Not implemented yet")
     def test_geometry(self):
