@@ -87,9 +87,11 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     def test_newdate(self):
         pass
 
-    @unittest.skip("Not implemented yet")
     def test_varchar(self):
-        pass
+        create_query = "CREATE TABLE test (test VARCHAR(255))"
+        insert_query = "INSERT INTO test VALUES('Hello')"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"][0], 'Hello')   
 
     @unittest.skip("Not implemented yet")
     def test_bit(self):
@@ -127,11 +129,9 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     def test_blob(self):
         pass
 
+    @unittest.skip("Not implemented yet")
     def test_var_string(self):
-        create_query = "CREATE TABLE test (test VARCHAR(255))"
-        insert_query = "INSERT INTO test VALUES('Hello')"
-        event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"][0], 'Hello')   
+        pass
      
     @unittest.skip("Not implemented yet")
     def test_string(self):
