@@ -30,15 +30,15 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         return event
 
     @unittest.skip("Not implemented yet")
-    def test_decimal():
+    def test_decimal(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_tiny():
+    def test_tiny(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_short():
+    def test_short(self):
         pass
 
     def test_long(self):
@@ -48,95 +48,97 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"][0], 1)   
 
     @unittest.skip("Not implemented yet")
-    def test_float():
+    def test_float(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_double():
+    def test_double(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_timestamp():
+    def test_timestamp(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_longlong():
+    def test_longlong(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_int24():
+    def test_int24(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_date():
+    def test_date(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_time():
+    def test_time(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_datetime():
+    def test_datetime(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_year():
+    def test_year(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_newdate():
+    def test_newdate(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_varchar():
+    def test_varchar(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_bit():
+    def test_bit(self):
         pass
             
     @unittest.skip("Not implemented yet")
-    def test_newdate():
+    def test_newdate(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_newdecimal():
+    def test_newdecimal(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_enum():
+    def test_enum(self):
         pass
      
     @unittest.skip("Not implemented yet")
-    def test_set():
+    def test_set(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_tiny_blob():
+    def test_tiny_blob(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_medium_blob():
+    def test_medium_blob(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_long_blob():
+    def test_long_blob(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_blob():
+    def test_blob(self):
         pass
 
-    @unittest.skip("Not implemented yet")
-    def test_var_string():
-        pass
+    def test_var_string(self):
+        create_query = "CREATE TABLE test (test VARCHAR(255))"
+        insert_query = "INSERT INTO test VALUES('Hello')"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"][0], 'Hello')   
      
     @unittest.skip("Not implemented yet")
-    def test_string():
+    def test_string(self):
         pass
 
     @unittest.skip("Not implemented yet")
-    def test_geometry():
+    def test_geometry(self):
         pass
      
 
