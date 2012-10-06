@@ -4,6 +4,18 @@ from pymysql.constants.COMMAND import *
 from constants.BINLOG import *
 from event import *
 
+#Constants from PyMYSQL source code
+NULL_COLUMN = 251
+UNSIGNED_CHAR_COLUMN = 251
+UNSIGNED_SHORT_COLUMN = 252
+UNSIGNED_INT24_COLUMN = 253
+UNSIGNED_INT64_COLUMN = 254
+UNSIGNED_CHAR_LENGTH = 1
+UNSIGNED_SHORT_LENGTH = 2
+UNSIGNED_INT24_LENGTH = 3
+UNSIGNED_INT64_LENGTH = 8
+
+
 class BinLogStreamReader(object):
     '''Connect to replication stream and read event'''
     
@@ -97,7 +109,9 @@ class BinLogPacketWrapper(object):
         if not from_packet.is_ok_packet():
             raise ValueError('Cannot create ' + str(self.__class__.__name__)
                 + ' object from invalid packet type')
-        
+       
+        self.read_bytes = 0 #-1 because we ignore the ok byte
+
         # Ok Value
         self.packet = from_packet
         self.packet.advance(1)
@@ -118,6 +132,48 @@ class BinLogPacketWrapper(object):
         except KeyError:
             raise NotImplementedError("Unknown MySQL bin log event type: " + hex(self.event_type))
         self.event = event_class(self, event_size_without_header, table_map)
+
+    def read(self, size):
+        self.read_bytes += size
+        return self.packet.read(size)
+
+    def advance(self, size):
+        self.read_bytes += size
+        self.packet.advance(size)
+
+    def read_length_coded_binary(self):
+        """Read a 'Length Coded Binary' number from the data buffer.
+
+        Length coded numbers can be anywhere from 1 to 9 bytes depending
+        on the value of the first byte.
+
+        From PyMYSQL source code
+        """
+        c = byte2int(self.read(1))
+        if c == NULL_COLUMN:
+          return None
+        if c < UNSIGNED_CHAR_COLUMN:
+          return c
+        elif c == UNSIGNED_SHORT_COLUMN:
+            return unpack_int16(self.read(UNSIGNED_INT16_LENGTH))
+        elif c == UNSIGNED_INT24_COLUMN:
+          return unpack_int24(self.read(UNSIGNED_INT24_LENGTH))
+        elif c == UNSIGNED_INT64_COLUMN:
+          return unpack_int64(self.read(UNSIGNED_INT64_LENGTH))
+
+    def read_length_coded_string(self):
+        """Read a 'Length Coded String' from the data buffer.
+
+        A 'Length Coded String' consists first of a length coded
+        (unsigned, positive) integer represented in 1-9 bytes followed by
+        that many bytes of binary data.  (For example "cat" would be "3cat".)
+
+        From PyMYSQL source code
+        """
+        length = self.read_length_coded_binary()
+        if length is None:
+            return None
+        return self.read(length)
 
     def __getattr__(self, key):
         if hasattr(self.packet, key):
