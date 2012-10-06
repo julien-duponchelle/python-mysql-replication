@@ -2,6 +2,7 @@ import base
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
+
 import time
 import unittest
 
@@ -29,9 +30,25 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, WriteRowsEvent)
         return event
 
+
     @unittest.skip("Not implemented yet")
     def test_decimal(self):
-        pass
+        create_query = "CREATE TABLE test (test DECIMAL(2,2))"
+        insert_query = "INSERT INTO test VALUES(4)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"][0], 4) 
+
+
+    @unittest.skip("Not implemented yet")
+    def test_decimal_two_values(self):
+        create_query = "CREATE TABLE test (\
+            test DECIMAL(2,1), \
+            test2 DECIMAL(20,10) \
+        )"
+        insert_query = "INSERT INTO test VALUES(4.2, 42000.123456)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"][0], 4.2)
+        self.assertEqual(event.rows[0]["values"][1], 42000.123456) 
 
     @unittest.skip("Not implemented yet")
     def test_tiny(self):
@@ -42,10 +59,11 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         pass
 
     def test_long(self):
-        create_query = "CREATE TABLE test (id INT NOT NULL)"
-        insert_query = "INSERT INTO test VALUES(1)"
+        create_query = "CREATE TABLE test (id INT UNSIGNED NOT NULL, test INT)"
+        insert_query = "INSERT INTO test VALUES(42, -84)"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"][0], 1)   
+        self.assertEqual(event.rows[0]["values"][0], 42)
+        self.assertEqual(event.rows[0]["values"][1], -84)
 
     @unittest.skip("Not implemented yet")
     def test_float(self):
@@ -88,10 +106,11 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         pass
 
     def test_varchar(self):
-        create_query = "CREATE TABLE test (test VARCHAR(255))"
+        create_query = "CREATE TABLE test (test VARCHAR(242))"
         insert_query = "INSERT INTO test VALUES('Hello')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"][0], 'Hello')   
+        self.assertEqual(event.rows[0]["values"][0], 'Hello')
+        self.assertEqual(event.columns[0].max_length, 242)
 
     @unittest.skip("Not implemented yet")
     def test_bit(self):
@@ -142,7 +161,14 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     @unittest.skip("Not implemented yet")
     def test_geometry(self):
         pass
-     
+
+    @unittest.skip("Not implemented yet")
+    def test_null(self):
+        pass
+
+    @unittest.skip("Not implemented yet")
+    def test_encoding(self):
+        pass
 
 __all__ = ["TestDataType"]
 
