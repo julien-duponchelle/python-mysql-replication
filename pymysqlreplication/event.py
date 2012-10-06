@@ -1,10 +1,10 @@
 import struct
+import decimal
 from datetime import datetime
 from pymysql.util import byte2int, int2byte
 from pymysql.connections import unpack_uint16, unpack_int24,unpack_int64 
 from pymysql.constants import FIELD_TYPE
 from column import Column
-
 
 class BinLogEvent(object):
     def __init__(self, from_packet, event_size, table_map):
@@ -18,10 +18,6 @@ class BinLogEvent(object):
         # Table ID is 6 byte
         table_id = self.packet.read(6) + int2byte(0) + int2byte(0)   # pad little-endian number
         return struct.unpack('<Q', table_id)[0]
-
-    def _packet_read_new_decimal(self):
-        '''Read MySQL's new decimal format introduced in MySQL 5'''
-        pass
 
     def dump(self):
         print "=== %s ===" % (self.__class__.__name__)
@@ -62,10 +58,57 @@ class RowsEvent(BinLogEvent):
             elif column.type == FIELD_TYPE.STRING:
                 values.append(self.packet.read_length_coded_string())
             elif column.type == FIELD_TYPE.NEWDECIMAL:
-                values.append(self.packet.read_new_decimal())
+                values.append(self.read_new_decimal(column))
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column))
         return values
+
+    def read_new_decimal(self, column):
+        '''Read MySQL's new decimal format introduced in MySQL 5'''
+        
+        # This project was a great source of inspiration for
+        # understanding this code.
+        # https://github.com/jeremycole/mysql_binlog
+
+        digits_per_integer = 9
+        compressed_bytes = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4]
+        integral = (column.precision - column.decimals)
+        uncomp_integral = integral / digits_per_integer
+        uncomp_fractional = column.decimals / digits_per_integer
+        comp_integral = integral - (uncomp_integral * digits_per_integer)
+        comp_fractional = column.decimals - (uncomp_fractional * digits_per_integer)
+
+        #TODO: Support negative
+        mask = 0
+        res = ""
+
+
+        size = compressed_bytes[comp_integral]
+
+        if size > 0:
+            value = self.packet.read_int_by_size(size) ^ mask 
+            value = value & 0x7f
+
+
+            res += str(value)
+
+        
+        for i in range(0, uncomp_integral):
+            value = struct.unpack('>i', self.packet.read(4))[0] ^ mask
+            res += str(value)
+
+        res += "."
+
+        for i in range(0, uncomp_fractional):
+            value = struct.unpack('>i', self.packet.read(4))[0] ^ mask
+            res += str(value)
+
+        size = compressed_bytes[comp_fractional]
+        if size > 0:
+            value = self.packet.read_int_by_size(size) ^ mask
+            res += str(value)
+
+        return decimal.Decimal(res)
 
     def _dump(self):
         super(RowsEvent, self)._dump()
@@ -83,6 +126,7 @@ class RowsEvent(BinLogEvent):
             if self.__rows is None:
                 self._fetch_rows()
             return self.__rows
+
 
 class DeleteRowsEvent(RowsEvent):
     def __init__(self, from_packet, event_size, table_map):

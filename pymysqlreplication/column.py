@@ -18,7 +18,8 @@ class Column(object):
         elif self.type == FIELD_TYPE.DECIMAL:
             pass #2
         elif self.type == FIELD_TYPE.NEWDECIMAL:
-            pass #2
+            self.precision = struct.unpack('<B', packet.read(1))[0]
+            self.decimals = struct.unpack('<B', packet.read(1))[0]
         elif self.type == FIELD_TYPE.DOUBLE:
             pass #1
         elif self.type == FIELD_TYPE.FLOAT:

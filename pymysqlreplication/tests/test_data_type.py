@@ -3,6 +3,7 @@ from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 
+from decimal import Decimal
 import time
 import unittest
 
@@ -31,15 +32,15 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         return event
 
 
-    @unittest.skip("Not implemented yet")
     def test_decimal(self):
-        create_query = "CREATE TABLE test (test DECIMAL(2,2))"
-        insert_query = "INSERT INTO test VALUES(4)"
+        create_query = "CREATE TABLE test (test DECIMAL(2,1))"
+        insert_query = "INSERT INTO test VALUES(4.2)"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"][0], 4) 
+        self.assertEqual(event.columns[0].precision, 2) 
+        self.assertEqual(event.columns[0].decimals, 1) 
+        self.assertEqual(event.rows[0]["values"][0], Decimal("4.2")) 
 
 
-    @unittest.skip("Not implemented yet")
     def test_decimal_two_values(self):
         create_query = "CREATE TABLE test (\
             test DECIMAL(2,1), \
@@ -47,8 +48,8 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         )"
         insert_query = "INSERT INTO test VALUES(4.2, 42000.123456)"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"][0], 4.2)
-        self.assertEqual(event.rows[0]["values"][1], 42000.123456) 
+        self.assertEqual(event.rows[0]["values"][0], Decimal("4.2"))
+        self.assertEqual(event.rows[0]["values"][1], Decimal("42000.123456")) 
 
     @unittest.skip("Not implemented yet")
     def test_tiny(self):

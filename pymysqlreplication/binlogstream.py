@@ -182,3 +182,13 @@ class BinLogPacketWrapper(object):
         raise AttributeError(str(self.__class__)
             + " instance has no attribute '" + key + "'")
 
+    def read_int_by_size(self, size):
+        '''Read an integer values based on byte number'''
+        if size == 1:
+            return struct.unpack('>b', self.read(size))[0]
+        elif size == 2:
+            return struct.unpack('>h', self.read(size))[0]
+        elif size == 4:
+            return struct.unpack('>i', self.read(size))[0]
+        elif size == 8:
+            return struct.unpack('>l', self.read(size))[0]
