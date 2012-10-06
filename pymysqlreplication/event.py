@@ -1,7 +1,9 @@
 import struct
 from datetime import datetime
 from pymysql.util import byte2int, int2byte
+from pymysql.connections import unpack_uint16, unpack_int24,unpack_int64 
 from pymysql.constants import FIELD_TYPE
+from column import Column
 
 #Constants from PyMYSQL source code
 NULL_COLUMN = 251
@@ -13,7 +15,6 @@ UNSIGNED_CHAR_LENGTH = 1
 UNSIGNED_SHORT_LENGTH = 2
 UNSIGNED_INT24_LENGTH = 3
 UNSIGNED_INT64_LENGTH = 8
-
 
 
 class BinLogEvent(object):
@@ -30,20 +31,9 @@ class BinLogEvent(object):
         table_id = self._packet_read(6) + int2byte(0) + int2byte(0)   # pad little-endian number
         return struct.unpack('<Q', table_id)[0]
 
-    def _read_column_data(self):
-        '''Use for WRITE, UPDATE and DELETE events. Return an array of column data'''
-        values = []
-
-        for column in self.table_map[self.table_id].column_type_def:
-            if column == FIELD_TYPE.LONG:
-                values.append(struct.unpack("<I", self._packet_read(4))[0])
-            elif column == FIELD_TYPE.VARCHAR:
-                values.append(self._packet_read_length_coded_string())
-            elif column == FIELD_TYPE.STRING:
-                values.append(self._packet_read_length_coded_string())
-            else:
-                raise NotImplementedError("Unknown MySQL column type: %d" % (column))
-        return values
+    def _packet_read_new_decimal(self):
+        '''Read MySQL's new decimal format introduced in MySQL 5'''
+        pass
 
     def _packet_read(self, size):
         self._read_bytes += size
@@ -67,11 +57,10 @@ class BinLogEvent(object):
         if c < UNSIGNED_CHAR_COLUMN:
           return c
         elif c == UNSIGNED_SHORT_COLUMN:
-          return unpack_uint16(self._packet_read(UNSIGNED_SHORT_LENGTH))
+            return unpack_int16(self._packet_read(UNSIGNED_INT16_LENGTH))
         elif c == UNSIGNED_INT24_COLUMN:
           return unpack_int24(self._packet_read(UNSIGNED_INT24_LENGTH))
         elif c == UNSIGNED_INT64_COLUMN:
-          # TODO: what was 'longlong'?  confirm it wasn't used?
           return unpack_int64(self._packet_read(UNSIGNED_INT64_LENGTH))
 
     def _packet_read_length_coded_string(self):
@@ -112,8 +101,25 @@ class RowsEvent(BinLogEvent):
 
         #Body
         self.number_of_columns = self.packet.read_length_coded_binary()
-
+        self.columns = self.table_map[self.table_id].columns
         self.table = self.table_map[self.table_id]
+
+    def _read_column_data(self):
+        '''Use for WRITE, UPDATE and DELETE events. Return an array of column data'''
+        values = []
+
+        for column in self.columns:
+            if column.type == FIELD_TYPE.LONG:
+                values.append(struct.unpack("<i", self._packet_read(4))[0])
+            elif column.type == FIELD_TYPE.VARCHAR:
+                values.append(self._packet_read_length_coded_string())
+            elif column.type == FIELD_TYPE.STRING:
+                values.append(self._packet_read_length_coded_string())
+            elif column.type == FIELD_TYPE.NEWDECIMAL:
+                values.append(self._packet_read_new_decimal())
+            else:
+                raise NotImplementedError("Unknown MySQL column type: %d" % (column))
+        return values
 
     def _dump(self):
         super(RowsEvent, self)._dump()
@@ -223,13 +229,17 @@ class TableMapEvent(BinLogEvent):
         self._packet_advance(1)
         self.column_count = self.packet.read_length_coded_binary()
 
-        self.column_type_def = []
-        for column in list(self._packet_read(self.column_count)):
-            self.column_type_def.append(byte2int(column))
+        self.columns = []
+
+        #Read columns meta data
+        column_types = list(self._packet_read(self.column_count))
+        metadata_length = self._packet_read_length_coded_binary()
+        for column_type in column_types:
+            col = Column(byte2int(column_type), from_packet)
+            self.columns.append(col)
 
 
         # TODO: get this informations instead of trashing data
-        # lenenc-str     column-def
         # n              NULL-bitmask, length: (column-length * 8) / 7
 
     def _dump(self):
