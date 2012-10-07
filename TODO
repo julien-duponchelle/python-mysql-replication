@@ -1,0 +1,7 @@
+* Return column name
+* Support all field type
+* Support ALTER TABLE
+* End user documentation
+* Test null support
+* Test transaction support
+* Test charset encoding
