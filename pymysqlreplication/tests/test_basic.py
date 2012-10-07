@@ -53,6 +53,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"][0], 1)        
         self.assertEqual(event.rows[0]["values"][1], "Hello World")        
         self.assertEqual(event.columns[1].max_length, 50)
+        self.assertEqual(event.schema, "pymysqlreplication_test")
+        self.assertEqual(event.table, "test")
 
     def test_delete_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"

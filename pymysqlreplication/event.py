@@ -44,7 +44,10 @@ class RowsEvent(BinLogEvent):
         #Body
         self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns = self.table_map[self.table_id].columns
-        self.table = self.table_map[self.table_id]
+
+        #Aditionnal informations
+        self.schema = self.table_map[self.table_id].schema
+        self.table = self.table_map[self.table_id].table
 
     def _read_column_data(self):
         '''Use for WRITE, UPDATE and DELETE events. Return an array of column data'''
@@ -116,7 +119,7 @@ class RowsEvent(BinLogEvent):
 
     def _dump(self):
         super(RowsEvent, self)._dump()
-        print "Table: %s.%s" % (self.table.schema, self.table.table)
+        print "Table: %s.%s" % (self.schema, self.table)
         print "Affected columns: %d" % (self.number_of_columns)
         print "Changed rows: %d" % (len(self.rows))
 
