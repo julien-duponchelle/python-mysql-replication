@@ -67,7 +67,7 @@ class RowsEvent(BinLogEvent):
         '''Read MySQL's new decimal format introduced in MySQL 5'''
         
         # This project was a great source of inspiration for
-        # understanding this code.
+        # understanding this storage format.
         # https://github.com/jeremycole/mysql_binlog
 
         digits_per_integer = 9
@@ -78,21 +78,25 @@ class RowsEvent(BinLogEvent):
         comp_integral = integral - (uncomp_integral * digits_per_integer)
         comp_fractional = column.decimals - (uncomp_fractional * digits_per_integer)
 
-        #TODO: Support negative
-        mask = 0
-        res = ""
+        # Support negative
+        # The sign is encoded in the high bit of the the byte
+        # But this bit can also be used in the value
+        value = struct.unpack('<B', self.packet.read(1))[0]
+        if value & 0x80 != 0:
+            res = ""
+            mask = 0
+        else:
+            mask = -1
+            res = "-"
+        self.packet.unread(struct.pack('<B', value ^ 0x80))
 
 
         size = compressed_bytes[comp_integral]
 
         if size > 0:
-            value = self.packet.read_int_by_size(size) ^ mask 
-            value = value & 0x7f
-
-
+            value = self.packet.read_int_be_by_size(size) ^ mask 
             res += str(value)
 
-        
         for i in range(0, uncomp_integral):
             value = struct.unpack('>i', self.packet.read(4))[0] ^ mask
             res += str(value)
@@ -105,7 +109,7 @@ class RowsEvent(BinLogEvent):
 
         size = compressed_bytes[comp_fractional]
         if size > 0:
-            value = self.packet.read_int_by_size(size) ^ mask
+            value = self.packet.read_int_be_by_size(size) ^ mask
             res += str(value)
 
         return decimal.Decimal(res)

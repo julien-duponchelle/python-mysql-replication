@@ -111,6 +111,7 @@ class BinLogPacketWrapper(object):
                 + ' object from invalid packet type')
        
         self.read_bytes = 0 #-1 because we ignore the ok byte
+        self.__data_buffer = '' #Used when we want to override a value in the data buffer 
 
         # Ok Value
         self.packet = from_packet
@@ -135,11 +136,31 @@ class BinLogPacketWrapper(object):
 
     def read(self, size):
         self.read_bytes += size
+        if len(self.__data_buffer) > 0:
+            data = self.__data_buffer[:size]
+            self.__data_buffer = self.__data_buffer[size:]
+            if len(data) == size:
+                return data
+            else:
+                return data + self.packet.read(size - len(data))
         return self.packet.read(size)
+
+    def unread(self, data):
+        '''Push again data in data buffer. It's use when you want
+        to extract a bit from a value a let the rest of the code normally
+        read the datas'''
+        self.read_bytes -= len(data)
+        self.__data_buffer += data
 
     def advance(self, size):
         self.read_bytes += size
-        self.packet.advance(size)
+        buffer_len = len(self.__data_buffer)
+        if buffer_len > 0:
+            self.__data_buffer = self.__data_buffer[size:]
+            if size > buffer_len:
+                self.packet.advance(size - buffer_len)
+        else:
+            self.packet.advance(size)
 
     def read_length_coded_binary(self):
         """Read a 'Length Coded Binary' number from the data buffer.
@@ -182,8 +203,8 @@ class BinLogPacketWrapper(object):
         raise AttributeError(str(self.__class__)
             + " instance has no attribute '" + key + "'")
 
-    def read_int_by_size(self, size):
-        '''Read an integer values based on byte number'''
+    def read_int_be_by_size(self, size):
+        '''Read a big endian integer values based on byte number'''
         if size == 1:
             return struct.unpack('>b', self.read(size))[0]
         elif size == 2:
