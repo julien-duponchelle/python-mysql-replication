@@ -1,5 +1,7 @@
 import struct
+import copy
 import pymysql
+import pymysql.cursors
 from pymysql.util import byte2int, int2byte
 from pymysql.constants.COMMAND import *
 from constants.BINLOG import *
@@ -27,7 +29,11 @@ class BinLogStreamReader(object):
         blocking: Read on stream is blocking
         only_events: Array of allowed events
         '''
-        self.__connection = pymysql.connect(**connection_settings)
+        self.__stream_connection = pymysql.connect(**connection_settings)
+        ctl_connection_settings = copy.copy(connection_settings)
+        ctl_connection_settings['db'] = 'information_schema'
+        ctl_connection_settings['cursorclass'] = pymysql.cursors.DictCursor
+        self.__ctl_connection = pymysql.connect(**ctl_connection_settings)
         self.__connected = False
         self.__resume_stream = resume_stream
         self.__blocking = blocking
@@ -37,10 +43,11 @@ class BinLogStreamReader(object):
         self.table_map = {}
 
     def close(self):
-        self.__connection.close()
+        self.__stream_connection.close()
+        self.__ctl_connection.close()
 
     def __connect_to_stream(self):
-        cur = self.__connection.cursor()
+        cur = self.__stream_connection.cursor()
         cur.execute("SHOW MASTER STATUS")
         (log_file, log_pos) = cur.fetchone()[:2]
         cur.close()
@@ -62,18 +69,18 @@ class BinLogStreamReader(object):
         else:
             prelude += struct.pack('<h', 1)        
         prelude += struct.pack('<I', 3)
-        self.__connection.wfile.write(prelude + log_file)
-        self.__connection.wfile.flush()
+        self.__stream_connection.wfile.write(prelude + log_file)
+        self.__stream_connection.wfile.flush()
         self.__connected = True
         
     def fetchone(self):
         if self.__connected == False:
             self.__connect_to_stream()
         while True:
-            pkt = self.__connection.read_packet()
+            pkt = self.__stream_connection.read_packet()
             if not pkt.is_ok_packet():
                 return None
-            binlog_event = BinLogPacketWrapper(pkt, self.table_map)
+            binlog_event = BinLogPacketWrapper(pkt, self.table_map, self.__ctl_connection)
             if binlog_event.event_type == TABLE_MAP_EVENT:
                 self.table_map[binlog_event.event.table_id] = binlog_event.event
             if self.__filter_event(binlog_event.event):
@@ -109,7 +116,7 @@ class BinLogPacketWrapper(object):
         XID_EVENT: XidEvent
     }
 
-    def __init__(self, from_packet, table_map):
+    def __init__(self, from_packet, table_map, ctl_connection):
         if not from_packet.is_ok_packet():
             raise ValueError('Cannot create ' + str(self.__class__.__name__)
                 + ' object from invalid packet type')
@@ -136,7 +143,7 @@ class BinLogPacketWrapper(object):
             event_class = self.__event_map[self.event_type]
         except KeyError:
             raise NotImplementedError("Unknown MySQL bin log event type: " + hex(self.event_type))
-        self.event = event_class(self, event_size_without_header, table_map)
+        self.event = event_class(self, event_size_without_header, table_map, ctl_connection)
 
     def read(self, size):
         self.read_bytes += size

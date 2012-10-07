@@ -6,12 +6,13 @@ from pymysql.util import byte2int, int2byte
 
 
 class BinLogEvent(object):
-    def __init__(self, from_packet, event_size, table_map):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
         self.timestamp = self.packet.timestamp
         self.event_size = event_size
+        self._ctl_connection = ctl_connection
 
     def _read_table_id(self):
         # Table ID is 6 byte
@@ -47,8 +48,8 @@ class XidEvent(BinLogEvent):
             xid: Transaction ID for 2PC
     """
 
-    def __init__(self, from_packet, event_size, table_map):
-        super(XidEvent, self).__init__(from_packet, event_size, table_map)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+        super(XidEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
         self.xid = struct.unpack('<Q', self.packet.read(8))[0]
 
     def _dump(self):
@@ -57,8 +58,8 @@ class XidEvent(BinLogEvent):
 
 
 class QueryEvent(BinLogEvent):
-    def __init__(self, from_packet, event_size, table_map):
-        super(QueryEvent, self).__init__(from_packet, event_size, table_map)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+        super(QueryEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
 
         # Post-header
         self.slave_proxy_id = struct.unpack('<I', self.packet.read(4))[0]

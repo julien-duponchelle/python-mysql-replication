@@ -39,7 +39,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.columns[0].precision, 2) 
         self.assertEqual(event.columns[0].decimals, 1) 
-        self.assertEqual(event.rows[0]["values"][0], Decimal("4.2")) 
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("4.2")) 
 
 
     def test_decimal_long_values(self):
@@ -48,14 +48,14 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         )"
         insert_query = "INSERT INTO test VALUES(42000.123456)"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"][0], Decimal("42000.123456")) 
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("42000.123456")) 
     def test_decimal_negative_values(self):
         create_query = "CREATE TABLE test (\
             test DECIMAL(20,10) \
         )"
         insert_query = "INSERT INTO test VALUES(-42000.123456)"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"][0], Decimal("-42000.123456")) 
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("-42000.123456")) 
     def test_decimal_two_values(self):
         create_query = "CREATE TABLE test (\
             test DECIMAL(2,1), \
@@ -63,8 +63,8 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         )"
         insert_query = "INSERT INTO test VALUES(4.2, 42000.123456)"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"][0], Decimal("4.2"))
-        self.assertEqual(event.rows[0]["values"][1], Decimal("42000.123456")) 
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("4.2"))
+        self.assertEqual(event.rows[0]["values"]["test2"], Decimal("42000.123456")) 
 
     @unittest.skip("Not implemented yet")
     def test_tiny(self):
@@ -78,8 +78,8 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (id INT UNSIGNED NOT NULL, test INT)"
         insert_query = "INSERT INTO test VALUES(42, -84)"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"][0], 42)
-        self.assertEqual(event.rows[0]["values"][1], -84)
+        self.assertEqual(event.rows[0]["values"]["id"], 42)
+        self.assertEqual(event.rows[0]["values"]["test"], -84)
 
     @unittest.skip("Not implemented yet")
     def test_float(self):
@@ -125,7 +125,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (test VARCHAR(242))"
         insert_query = "INSERT INTO test VALUES('Hello')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"][0], 'Hello')
+        self.assertEqual(event.rows[0]["values"]["test"], 'Hello')
         self.assertEqual(event.columns[0].max_length, 242)
 
     @unittest.skip("Not implemented yet")
@@ -172,7 +172,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (test CHAR(255))"
         insert_query = "INSERT INTO test VALUES('Hello')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"][0], 'Hello') 
+        self.assertEqual(event.rows[0]["values"]["test"], 'Hello') 
 
     @unittest.skip("Not implemented yet")
     def test_geometry(self):

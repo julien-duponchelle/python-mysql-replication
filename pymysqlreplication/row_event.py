@@ -8,8 +8,8 @@ from column import Column
 
 
 class RowsEvent(BinLogEvent):
-    def __init__(self, from_packet, event_size, table_map):
-        super(RowsEvent, self).__init__(from_packet, event_size, table_map)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+        super(RowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
         self.__rows = None
 
         #Header
@@ -26,17 +26,19 @@ class RowsEvent(BinLogEvent):
 
     def _read_column_data(self):
         '''Use for WRITE, UPDATE and DELETE events. Return an array of column data'''
-        values = []
+        values = {}
 
-        for column in self.columns:
+        for i in range(0, len(self.columns)):
+            column = self.columns[i]
+            name = self.table_map[self.table_id].columns[i].name
             if column.type == FIELD_TYPE.LONG:
-                values.append(struct.unpack("<i", self.packet.read(4))[0])
+                values[name] = struct.unpack("<i", self.packet.read(4))[0]
             elif column.type == FIELD_TYPE.VARCHAR:
-                values.append(self.packet.read_length_coded_string())
+                values[name] = self.packet.read_length_coded_string()
             elif column.type == FIELD_TYPE.STRING:
-                values.append(self.packet.read_length_coded_string())
+                values[name] = self.packet.read_length_coded_string()
             elif column.type == FIELD_TYPE.NEWDECIMAL:
-                values.append(self.read_new_decimal(column))
+                values[name] = self.read_new_decimal(column)
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column))
         return values
@@ -111,8 +113,8 @@ class RowsEvent(BinLogEvent):
 
 
 class DeleteRowsEvent(RowsEvent):
-    def __init__(self, from_packet, event_size, table_map):
-        super(DeleteRowsEvent, self).__init__(from_packet, event_size, table_map)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+        super(DeleteRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
 
     def _fetch_one_row(self):
@@ -128,12 +130,12 @@ class DeleteRowsEvent(RowsEvent):
         print "Values:"
         for row in self.rows:
             print "--"
-            for i in range(len(row["values"])):
-                print "* ", row["values"][i]
+            for key in row["values"]:
+                print "*", key, ":", row["values"][key]
 
 class WriteRowsEvent(RowsEvent):
-    def __init__(self, from_packet, event_size, table_map):
-        super(WriteRowsEvent, self).__init__(from_packet, event_size, table_map)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+        super(WriteRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
 
     def _fetch_one_row(self):
@@ -149,13 +151,13 @@ class WriteRowsEvent(RowsEvent):
         print "Values:"
         for row in self.rows:
             print "--"
-            for i in range(len(row["values"])):
-                print "* ", row["values"][i]
+            for key in row["values"]:
+                print "*", key, ":", row["values"][key]
 
 
 class UpdateRowsEvent(RowsEvent):
-    def __init__(self, from_packet, event_size, table_map):
-        super(UpdateRowsEvent,self).__init__(from_packet, event_size, table_map)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+        super(UpdateRowsEvent,self).__init__(from_packet, event_size, table_map, ctl_connection)
         #Body
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
         self.columns_present_bitmap2 = self.packet.read((self.number_of_columns + 7) / 8)
@@ -179,13 +181,16 @@ class UpdateRowsEvent(RowsEvent):
         print "Values:"
         for row in self.rows:
             print "--"
-            for i in range(len(row["before_values"])):
-                print " * ", row["before_values"][i] , " => ", row["after_values"][i]
+            for key in row["before_values"]:
+                print "*", key, ":", row["before_values"][key], "=>", row["after_values"][key]
 
 
 class TableMapEvent(BinLogEvent):
-    def __init__(self, from_packet, event_size, table_map):
-        super(TableMapEvent, self).__init__(from_packet, event_size, table_map)
+    '''This evenement describe the structure of a table.
+    It's send before a change append on a table.
+    A end user of the lib should have no usage of this'''
+    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+        super(TableMapEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
 
         # Post-Header
         self.table_id = self._read_table_id() 
@@ -203,16 +208,26 @@ class TableMapEvent(BinLogEvent):
 
         self.columns = []
 
+        column_schemas = self.__get_table_informations(self.schema, self.table)
+
         #Read columns meta data
         column_types = list(self.packet.read(self.column_count))
         metadata_length = self.packet.read_length_coded_binary()
-        for column_type in column_types:
-            col = Column(byte2int(column_type), from_packet)
+        for i in range(0, len(column_types)):
+            column_type = column_types[i]
+            column_schema = column_schemas[i]
+            col = Column(byte2int(column_type), column_schema, from_packet)
             self.columns.append(col)
 
 
         # TODO: get this informations instead of trashing data
         # n              NULL-bitmask, length: (column-length * 8) / 7
+
+    def __get_table_informations(self, schema, table):
+        #TODO: Cache this information
+        cur = self._ctl_connection.cursor()
+        cur.execute("""SELECT * FROM columns WHERE table_schema = %s AND table_name = %s""", (schema, table))
+        return cur.fetchall()
 
     def _dump(self):
         super(TableMapEvent, self)._dump()

@@ -51,11 +51,11 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         self.assertEqual(event.event_type, WRITE_ROWS_EVENT)        
         self.assertIsInstance(event, WriteRowsEvent)
-        self.assertEqual(event.rows[0]["values"][0], 1)        
-        self.assertEqual(event.rows[0]["values"][1], "Hello World")        
-        self.assertEqual(event.columns[1].max_length, 50)
+        self.assertEqual(event.rows[0]["values"]["id"], 1)        
+        self.assertEqual(event.rows[0]["values"]["data"], "Hello World")
         self.assertEqual(event.schema, "pymysqlreplication_test")
         self.assertEqual(event.table, "test")
+        self.assertEqual(event.columns[1].name, 'data')
 
     def test_delete_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -83,8 +83,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         self.assertEqual(event.event_type, DELETE_ROWS_EVENT)        
         self.assertIsInstance(event, DeleteRowsEvent)
-        self.assertEqual(event.rows[0]["values"][0], 1)        
-        self.assertEqual(event.rows[0]["values"][1], "Hello World")   
+        self.assertEqual(event.rows[0]["values"]["id"], 1)        
+        self.assertEqual(event.rows[0]["values"]["data"], "Hello World")   
 
     def test_update_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -112,10 +112,10 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         self.assertEqual(event.event_type, UPDATE_ROWS_EVENT)        
         self.assertIsInstance(event, UpdateRowsEvent)
-        self.assertEqual(event.rows[0]["before_values"][0], 1)        
-        self.assertEqual(event.rows[0]["before_values"][1], "Hello")
-        self.assertEqual(event.rows[0]["after_values"][0], 1)        
-        self.assertEqual(event.rows[0]["after_values"][1], "World")
+        self.assertEqual(event.rows[0]["before_values"]["id"], 1)        
+        self.assertEqual(event.rows[0]["before_values"]["data"], "Hello")
+        self.assertEqual(event.rows[0]["after_values"]["id"], 1)        
+        self.assertEqual(event.rows[0]["after_values"]["data"], "World")
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def test_insert_multiple_row_event(self):
@@ -143,11 +143,11 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.event_type, WRITE_ROWS_EVENT) 
         self.assertIsInstance(event, WriteRowsEvent)
         self.assertEqual(len(event.rows), 2)
-        self.assertEqual(event.rows[0]["values"][0], 1)        
-        self.assertEqual(event.rows[0]["values"][1], "Hello")
+        self.assertEqual(event.rows[0]["values"]["id"], 1)        
+        self.assertEqual(event.rows[0]["values"]["data"], "Hello")
 
-        self.assertEqual(event.rows[1]["values"][0], 2)        
-        self.assertEqual(event.rows[1]["values"][1], "World")
+        self.assertEqual(event.rows[1]["values"]["id"], 2)        
+        self.assertEqual(event.rows[1]["values"]["data"], "World")
 
     def test_update_multiple_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -178,15 +178,15 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.event_type, UPDATE_ROWS_EVENT)        
         self.assertIsInstance(event, UpdateRowsEvent)
         self.assertEqual(len(event.rows), 2)
-        self.assertEqual(event.rows[0]["before_values"][0], 1)        
-        self.assertEqual(event.rows[0]["before_values"][1], "Hello")
-        self.assertEqual(event.rows[0]["after_values"][0], 1)        
-        self.assertEqual(event.rows[0]["after_values"][1], "Toto")
+        self.assertEqual(event.rows[0]["before_values"]["id"], 1)        
+        self.assertEqual(event.rows[0]["before_values"]["data"], "Hello")
+        self.assertEqual(event.rows[0]["after_values"]["id"], 1)        
+        self.assertEqual(event.rows[0]["after_values"]["data"], "Toto")
 
-        self.assertEqual(event.rows[1]["before_values"][0], 2)        
-        self.assertEqual(event.rows[1]["before_values"][1], "World")
-        self.assertEqual(event.rows[1]["after_values"][0], 2)        
-        self.assertEqual(event.rows[1]["after_values"][1], "Toto")
+        self.assertEqual(event.rows[1]["before_values"]["id"], 2)        
+        self.assertEqual(event.rows[1]["before_values"]["data"], "World")
+        self.assertEqual(event.rows[1]["after_values"]["id"], 2)        
+        self.assertEqual(event.rows[1]["after_values"]["data"], "Toto")
 
     def test_delete_multiple_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -217,11 +217,11 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.event_type, DELETE_ROWS_EVENT)        
         self.assertIsInstance(event, DeleteRowsEvent)
         self.assertEqual(len(event.rows), 2)
-        self.assertEqual(event.rows[0]["values"][0], 1)        
-        self.assertEqual(event.rows[0]["values"][1], "Hello")
+        self.assertEqual(event.rows[0]["values"]["id"], 1)        
+        self.assertEqual(event.rows[0]["values"]["data"], "Hello")
 
-        self.assertEqual(event.rows[1]["values"][0], 2)        
-        self.assertEqual(event.rows[1]["values"][1], "World")
+        self.assertEqual(event.rows[1]["values"]["id"], 2)        
+        self.assertEqual(event.rows[1]["values"]["data"], "World")
 
 __all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader"]
 

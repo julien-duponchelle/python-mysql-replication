@@ -5,8 +5,9 @@ from pymysql.util import byte2int, int2byte
 class Column(object):
     '''Definition of a column'''
 
-    def __init__(self, column_type, packet):
+    def __init__(self, column_type, column_schema, packet):
         self.type = column_type
+        self.name = column_schema["COLUMN_NAME"]
         if self.type == FIELD_TYPE.STRING:
             self.__read_string_metadata()
         elif self.type == FIELD_TYPE.VAR_STRING:
