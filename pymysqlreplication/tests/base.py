@@ -18,7 +18,7 @@ class PyMySQLReplicationTestCase(unittest.TestCase):
     def tearDown(self):
         self.execute("DROP DATABASE pymysqlreplication_test")
         self.conn_control.close()
-        self.conn_test.close()
+        self.stream.close()
 
     def execute(self, query):
         c = self.conn_control.cursor()
@@ -26,6 +26,6 @@ class PyMySQLReplicationTestCase(unittest.TestCase):
 
     def resetBinLog(self):
         self.execute("RESET MASTER")
-        self.conn_test = pymysql.connect(**self.database)
-        self.stream = BinLogStreamReader(self.conn_test)
+        self.stream = BinLogStreamReader(connection_settings = self.database)
+
 

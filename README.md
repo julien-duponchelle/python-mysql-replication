@@ -38,17 +38,18 @@ All examples are available in the [examples directory](https://github.com/noplay
 
 This example will dump all replication events to the console:
 
-    import pymysql
     from pymysqlreplication import BinLogStreamReader
 
-    conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', passwd='', db='mysql')
+    mysql_settings = {'host': '127.0.0.1', 'port': 3306, 'user': 'root', 'passwd': ''}
 
-    stream = BinLogStreamReader(conn)
+
+    stream = BinLogStreamReader(connection_settings = mysql_settings)
 
     for binlogevent in stream:
         binlogevent.dump()
 
-    conn.close()
+    stream.close()
+
 
 For this SQL sessions:
 

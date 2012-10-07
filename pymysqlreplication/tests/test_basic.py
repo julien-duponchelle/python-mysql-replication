@@ -19,7 +19,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.query, query)
 
     def test_filtering_events(self):
-        self.stream = BinLogStreamReader(self.conn_test, only_events = [QueryEvent])        
+        self.stream = BinLogStreamReader(connection_settings = self.database, only_events = [QueryEvent])        
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 

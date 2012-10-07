@@ -1,8 +1,10 @@
 import struct
+import pymysql
 from pymysql.util import byte2int, int2byte
 from pymysql.constants.COMMAND import *
 from constants.BINLOG import *
 from event import *
+
 
 #Constants from PyMYSQL source code
 NULL_COLUMN = 251
@@ -19,13 +21,13 @@ UNSIGNED_INT64_LENGTH = 8
 class BinLogStreamReader(object):
     '''Connect to replication stream and read event'''
     
-    def __init__(self, connection, resume_stream = False, blocking = False, only_events = None):
+    def __init__(self, connection_settings = {}, resume_stream = False, blocking = False, only_events = None):
         '''
         resume_stream: Start for latest event of binlog or from older available event
         blocking: Read on stream is blocking
         only_events: Array of allowed events
         '''
-        self.__connection = connection
+        self.__connection = pymysql.connect(**connection_settings)
         self.__connected = False
         self.__resume_stream = resume_stream
         self.__blocking = blocking
@@ -34,6 +36,8 @@ class BinLogStreamReader(object):
         #Store table meta informations
         self.table_map = {}
 
+    def close(self):
+        self.__connection.close()
 
     def __connect_to_stream(self):
         cur = self.__connection.cursor()
