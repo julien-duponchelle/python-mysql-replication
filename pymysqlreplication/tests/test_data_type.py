@@ -2,6 +2,7 @@ import base
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
+from pymysqlreplication.row_event import *
 
 from decimal import Decimal
 import time

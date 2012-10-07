@@ -4,7 +4,7 @@ from pymysql.util import byte2int, int2byte
 from pymysql.constants.COMMAND import *
 from constants.BINLOG import *
 from event import *
-
+from row_event import *
 
 #Constants from PyMYSQL source code
 NULL_COLUMN = 251
