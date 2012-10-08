@@ -21,4 +21,4 @@ limitations under the License.
 
 VERSION = (0, 0, 1)
 
-from binlogstream import BinLogStreamReader 
+from .binlogstream import BinLogStreamReader 

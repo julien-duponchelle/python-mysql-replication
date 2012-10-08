@@ -1,10 +1,10 @@
 import struct
 import decimal
 
-from event import BinLogEvent
+from .event import BinLogEvent
 from pymysql.util import byte2int, int2byte
 from pymysql.constants import FIELD_TYPE
-from column import Column
+from .column import Column
 
 
 class RowsEvent(BinLogEvent):
@@ -53,8 +53,8 @@ class RowsEvent(BinLogEvent):
         digits_per_integer = 9
         compressed_bytes = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4]
         integral = (column.precision - column.decimals)
-        uncomp_integral = integral / digits_per_integer
-        uncomp_fractional = column.decimals / digits_per_integer
+        uncomp_integral = int(integral / digits_per_integer)
+        uncomp_fractional = int(column.decimals / digits_per_integer)
         comp_integral = integral - (uncomp_integral * digits_per_integer)
         comp_fractional = column.decimals - (uncomp_fractional * digits_per_integer)
 
@@ -96,9 +96,9 @@ class RowsEvent(BinLogEvent):
 
     def _dump(self):
         super(RowsEvent, self)._dump()
-        print "Table: %s.%s" % (self.schema, self.table)
-        print "Affected columns: %d" % (self.number_of_columns)
-        print "Changed rows: %d" % (len(self.rows))
+        print("Table: %s.%s" % (self.schema, self.table))
+        print("Affected columns: %d" % (self.number_of_columns))
+        print("Changed rows: %d" % (len(self.rows)))
 
     def _fetch_rows(self):
         self.__rows = []
@@ -127,11 +127,11 @@ class DeleteRowsEvent(RowsEvent):
 
     def _dump(self):
         super(DeleteRowsEvent, self)._dump()
-        print "Values:"
+        print("Values:")
         for row in self.rows:
-            print "--"
+            print("--")
             for key in row["values"]:
-                print "*", key, ":", row["values"][key]
+                print("*", key, ":", row["values"][key])
 
 class WriteRowsEvent(RowsEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
@@ -148,11 +148,11 @@ class WriteRowsEvent(RowsEvent):
 
     def _dump(self):
         super(WriteRowsEvent, self)._dump()
-        print "Values:"
+        print("Values:")
         for row in self.rows:
-            print "--"
+            print("--")
             for key in row["values"]:
-                print "*", key, ":", row["values"][key]
+                print("*", key, ":", row["values"][key])
 
 
 class UpdateRowsEvent(RowsEvent):
@@ -177,12 +177,12 @@ class UpdateRowsEvent(RowsEvent):
 
     def _dump(self):
         super(UpdateRowsEvent, self)._dump()
-        print "Affected columns: %d" % (self.number_of_columns)
-        print "Values:"
+        print("Affected columns: %d" % (self.number_of_columns))
+        print("Values:")
         for row in self.rows:
-            print "--"
+            print("--")
             for key in row["before_values"]:
-                print "*", key, ":", row["before_values"][key], "=>", row["after_values"][key]
+                print("*", key, ":", row["before_values"][key], "=>", row["after_values"][key])
 
 
 class TableMapEvent(BinLogEvent):
@@ -199,10 +199,10 @@ class TableMapEvent(BinLogEvent):
 
         # Payload
         self.schema_length =  byte2int(self.packet.read(1))
-        self.schema =  self.packet.read(self.schema_length)
+        self.schema = self.packet.read(self.schema_length).decode()
         self.packet.advance(1)
         self.table_length =  byte2int(self.packet.read(1))
-        self.table =  self.packet.read(self.table_length)
+        self.table = self.packet.read(self.table_length).decode()
         self.packet.advance(1)
         self.column_count = self.packet.read_length_coded_binary()
 
@@ -231,8 +231,8 @@ class TableMapEvent(BinLogEvent):
 
     def _dump(self):
         super(TableMapEvent, self)._dump()
-        print "Table id: %d" % (self.table_id)
-        print "Schema: %s" % (self.schema)
-        print "Table: %s" % (self.table)
-        print "Columns: %s" % (self.column_count)
+        print("Table id: %d" % (self.table_id))
+        print("Schema: %s" % (self.schema))
+        print("Table: %s" % (self.table))
+        print("Columns: %s" % (self.column_count))
 

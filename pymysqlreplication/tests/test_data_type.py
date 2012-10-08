@@ -1,4 +1,4 @@
-import base
+from . import base
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *

@@ -15,7 +15,10 @@ Project status
 The current project is a proof of concept of what you can do with the MySQL
 replication log.
 
-The project is test with MySQL 5.5.
+The project is test with:
+* MySQL 5.5
+* Python 2.7
+* Python 3.2
 
 
 MySQL server settings

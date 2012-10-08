@@ -4,9 +4,9 @@ import pymysql
 import pymysql.cursors
 from pymysql.util import byte2int, int2byte
 from pymysql.constants.COMMAND import *
-from constants.BINLOG import *
-from event import *
-from row_event import *
+from .constants.BINLOG import *
+from .event import *
+from .row_event import *
 
 #Constants from PyMYSQL source code
 NULL_COLUMN = 251
@@ -69,7 +69,7 @@ class BinLogStreamReader(object):
         else:
             prelude += struct.pack('<h', 1)        
         prelude += struct.pack('<I', 3)
-        self.__stream_connection.wfile.write(prelude + log_file)
+        self.__stream_connection.wfile.write(prelude + log_file.encode())
         self.__stream_connection.wfile.flush()
         self.__connected = True
         
@@ -122,7 +122,7 @@ class BinLogPacketWrapper(object):
                 + ' object from invalid packet type')
        
         self.read_bytes = 0 #-1 because we ignore the ok byte
-        self.__data_buffer = '' #Used when we want to override a value in the data buffer 
+        self.__data_buffer = b'' #Used when we want to override a value in the data buffer 
 
         # Ok Value
         self.packet = from_packet
@@ -146,6 +146,7 @@ class BinLogPacketWrapper(object):
         self.event = event_class(self, event_size_without_header, table_map, ctl_connection)
 
     def read(self, size):
+        size = int(size)
         self.read_bytes += size
         if len(self.__data_buffer) > 0:
             data = self.__data_buffer[:size]
@@ -164,6 +165,7 @@ class BinLogPacketWrapper(object):
         self.__data_buffer += data
 
     def advance(self, size):
+        size = int(size)
         self.read_bytes += size
         buffer_len = len(self.__data_buffer)
         if buffer_len > 0:
@@ -205,7 +207,7 @@ class BinLogPacketWrapper(object):
         length = self.read_length_coded_binary()
         if length is None:
             return None
-        return self.read(length)
+        return self.read(length).decode()
 
     def __getattr__(self, key):
         if hasattr(self.packet, key):
