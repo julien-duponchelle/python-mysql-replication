@@ -20,6 +20,11 @@ The project is test with:
 * Python 2.7
 * Python 3.2
 
+Project using this lib
+=========================
+
+* Mysql River Plugin for ElasticSearch: https://github.com/scharron/elasticsearch-river-mysql
+
 
 MySQL server settings
 =========================
