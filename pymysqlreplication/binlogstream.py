@@ -29,6 +29,7 @@ class BinLogStreamReader(object):
         blocking: Read on stream is blocking
         only_events: Array of allowed events
         '''
+        connection_settings['charset'] = 'utf8'
         self.__stream_connection = pymysql.connect(**connection_settings)
         ctl_connection_settings = copy.copy(connection_settings)
         ctl_connection_settings['db'] = 'information_schema'
