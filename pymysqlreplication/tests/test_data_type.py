@@ -129,10 +129,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     def test_year(self):
         pass
 
-    @unittest.skip("Not implemented yet")
-    def test_newdate(self):
-        pass
-
     def test_varchar(self):
         create_query = "CREATE TABLE test (test VARCHAR(242))"
         insert_query = "INSERT INTO test VALUES('Hello')"
