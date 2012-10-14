@@ -38,9 +38,15 @@ class RowsEvent(BinLogEvent):
                 else:
                     values[name] = struct.unpack("<b", self.packet.read(1))[0]
             elif column.type == FIELD_TYPE.SHORT:
-                values[name] = struct.unpack("<h", self.packet.read(2))[0]
+                if unsigned:
+                    values[name] = struct.unpack("<H", self.packet.read(2))[0]
+                else:
+                    values[name] = struct.unpack("<h", self.packet.read(2))[0]
             elif column.type == FIELD_TYPE.LONG:
-                values[name] = struct.unpack("<i", self.packet.read(4))[0]
+                if unsigned:
+                    values[name] = struct.unpack("<I", self.packet.read(4))[0]
+                else:
+                    values[name] = struct.unpack("<i", self.packet.read(4))[0]
             elif column.type == FIELD_TYPE.FLOAT:
                 values[name] = struct.unpack("<f", self.packet.read(4))[0]
             elif column.type == FIELD_TYPE.DOUBLE:
