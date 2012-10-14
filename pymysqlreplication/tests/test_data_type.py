@@ -48,14 +48,16 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         )"
         insert_query = "INSERT INTO test VALUES(42000.123456)"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], Decimal("42000.123456")) 
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("42000.123456"))
+
     def test_decimal_negative_values(self):
         create_query = "CREATE TABLE test (\
             test DECIMAL(20,10) \
         )"
         insert_query = "INSERT INTO test VALUES(-42000.123456)"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], Decimal("-42000.123456")) 
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("-42000.123456"))
+
     def test_decimal_two_values(self):
         create_query = "CREATE TABLE test (\
             test DECIMAL(2,1), \
@@ -68,10 +70,10 @@ class TestDataType(base.PyMySQLReplicationTestCase):
 
     def test_tiny(self):
         create_query = "CREATE TABLE test (id TINYINT UNSIGNED NOT NULL, test TINYINT)"
-        insert_query = "INSERT INTO test VALUES(42, -84)"
+        insert_query = "INSERT INTO test VALUES(255, -128)"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["id"], 42)
-        self.assertEqual(event.rows[0]["values"]["test"], -84)
+        self.assertEqual(event.rows[0]["values"]["id"], 255)
+        self.assertEqual(event.rows[0]["values"]["test"], -128)
 
     def test_short(self):
         create_query = "CREATE TABLE test (id SMALLINT UNSIGNED NOT NULL, test SMALLINT)"

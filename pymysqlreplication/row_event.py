@@ -31,8 +31,12 @@ class RowsEvent(BinLogEvent):
         for i in range(0, len(self.columns)):
             column = self.columns[i]
             name = self.table_map[self.table_id].columns[i].name
+            unsigned = self.table_map[self.table_id].columns[i].unsigned
             if column.type == FIELD_TYPE.TINY:
-                values[name] = struct.unpack("<b", self.packet.read(1))[0]
+                if unsigned:
+                    values[name] = struct.unpack("<B", self.packet.read(1))[0]
+                else:
+                    values[name] = struct.unpack("<b", self.packet.read(1))[0]
             elif column.type == FIELD_TYPE.SHORT:
                 values[name] = struct.unpack("<h", self.packet.read(2))[0]
             elif column.type == FIELD_TYPE.LONG:
