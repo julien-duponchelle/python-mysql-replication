@@ -134,7 +134,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         pass
 
     def test_varchar(self):
-        create_query = "CREATE TABLE test (test VARCHAR(242))"
+        create_query = "CREATE TABLE test (test VARCHAR(242)) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello')"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], 'Hello')
@@ -181,7 +181,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         pass
      
     def test_string(self):
-        create_query = "CREATE TABLE test (test CHAR(255))"
+        create_query = "CREATE TABLE test (test CHAR(255)) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello')"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], 'Hello') 
