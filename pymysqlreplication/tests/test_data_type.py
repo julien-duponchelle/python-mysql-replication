@@ -90,14 +90,14 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], -2147483648)
 
     def test_float(self):
-        create_query = "CREATE TABLE test (id FLOAT UNSIGNED NOT NULL, test FLOAT)"
+        create_query = "CREATE TABLE test (id FLOAT NOT NULL, test FLOAT)"
         insert_query = "INSERT INTO test VALUES(42.42, -84.84)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(round(event.rows[0]["values"]["id"], 2), 42.42)
         self.assertEqual(round(event.rows[0]["values"]["test"],2 ), -84.84)
 
     def test_double(self):
-        create_query = "CREATE TABLE test (id DOUBLE UNSIGNED NOT NULL, test DOUBLE)"
+        create_query = "CREATE TABLE test (id DOUBLE NOT NULL, test DOUBLE)"
         insert_query = "INSERT INTO test VALUES(42.42, -84.84)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(round(event.rows[0]["values"]["id"], 2), 42.42)
