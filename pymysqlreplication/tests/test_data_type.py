@@ -66,9 +66,12 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], Decimal("4.2"))
         self.assertEqual(event.rows[0]["values"]["test2"], Decimal("42000.123456")) 
 
-    @unittest.skip("Not implemented yet")
     def test_tiny(self):
-        pass
+        create_query = "CREATE TABLE test (id TINYINT UNSIGNED NOT NULL, test TINYINT)"
+        insert_query = "INSERT INTO test VALUES(42, -84)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["id"], 42)
+        self.assertEqual(event.rows[0]["values"]["test"], -84)
 
     def test_short(self):
         create_query = "CREATE TABLE test (id SMALLINT UNSIGNED NOT NULL, test SMALLINT)"
