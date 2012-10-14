@@ -39,6 +39,8 @@ class RowsEvent(BinLogEvent):
                 values[name] = struct.unpack("<i", self.packet.read(4))[0]
             elif column.type == FIELD_TYPE.FLOAT:
                 values[name] = struct.unpack("<f", self.packet.read(4))[0]
+            elif column.type == FIELD_TYPE.DOUBLE:
+                values[name] = struct.unpack("<d", self.packet.read(8))[0]
             elif column.type == FIELD_TYPE.VARCHAR:
                 values[name] = self.packet.read_length_coded_string()
             elif column.type == FIELD_TYPE.STRING:

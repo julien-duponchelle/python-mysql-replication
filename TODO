@@ -1,3 +1,4 @@
+* Support unsigned for numeric values
 * Cache column name
 * Support all field type
 * Support ALTER TABLE
