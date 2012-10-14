@@ -70,9 +70,12 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     def test_tiny(self):
         pass
 
-    @unittest.skip("Not implemented yet")
     def test_short(self):
-        pass
+        create_query = "CREATE TABLE test (id SMALLINT UNSIGNED NOT NULL, test SMALLINT)"
+        insert_query = "INSERT INTO test VALUES(42, -84)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["id"], 42)
+        self.assertEqual(event.rows[0]["values"]["test"], -84)
 
     def test_long(self):
         create_query = "CREATE TABLE test (id INT UNSIGNED NOT NULL, test INT)"

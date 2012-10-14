@@ -33,6 +33,8 @@ class RowsEvent(BinLogEvent):
             name = self.table_map[self.table_id].columns[i].name
             if column.type == FIELD_TYPE.LONG:
                 values[name] = struct.unpack("<i", self.packet.read(4))[0]
+            elif column.type == FIELD_TYPE.SHORT:
+                values[name] = struct.unpack("<h", self.packet.read(2))[0]
             elif column.type == FIELD_TYPE.VARCHAR:
                 values[name] = self.packet.read_length_coded_string()
             elif column.type == FIELD_TYPE.STRING:
@@ -40,7 +42,7 @@ class RowsEvent(BinLogEvent):
             elif column.type == FIELD_TYPE.NEWDECIMAL:
                 values[name] = self.read_new_decimal(column)
             else:
-                raise NotImplementedError("Unknown MySQL column type: %d" % (column))
+                raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
         return values
 
     def read_new_decimal(self, column):
