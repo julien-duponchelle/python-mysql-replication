@@ -111,9 +111,14 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     def test_longlong(self):
         pass
 
-    @unittest.skip("Not implemented yet")
     def test_int24(self):
-        pass
+        create_query = "CREATE TABLE test (id MEDIUMINT UNSIGNED NOT NULL, test MEDIUMINT, test2 MEDIUMINT)"
+        insert_query = "INSERT INTO test VALUES(16777215, 8388607, -8388608)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["id"], 16777215)
+        self.assertEqual(event.rows[0]["values"]["test"], 8388607)
+        self.assertEqual(event.rows[0]["values"]["test2"], -8388608)
+        
 
     @unittest.skip("Not implemented yet")
     def test_date(self):

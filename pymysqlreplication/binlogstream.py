@@ -227,3 +227,16 @@ class BinLogPacketWrapper(object):
             return struct.unpack('>i', self.read(size))[0]
         elif size == 8:
             return struct.unpack('>l', self.read(size))[0]
+
+
+    def read_int24(self):
+        a, b, c = struct.unpack("BBB", self.read(3))
+        if a & 128:
+            return a + (b << 8) + (c << 16)
+
+        else:
+            return (a + (b << 8) + (c << 16)) * -1
+
+    def read_uint24(self, unsigned = False):
+        a, b, c = struct.unpack("BBB", self.read(3))
+        return a + (b << 8) + (c << 16)
