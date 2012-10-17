@@ -7,6 +7,8 @@ Use cases
 ===========
 
 * MySQL to NoSQL database replication
+* MySQL to search replication
+* Invalidate cache when something change in database
 * Audit
 
 Project status
