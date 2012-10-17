@@ -197,9 +197,36 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     def test_geometry(self):
         pass
 
-    @unittest.skip("Not implemented yet")
     def test_null(self):
-        pass
+        create_query = "CREATE TABLE test ( \
+            test TINYINT NULL DEFAULT NULL, \
+            test2 TINYINT NULL DEFAULT NULL, \
+            test3 TINYINT NULL DEFAULT NULL, \
+            test4 TINYINT NULL DEFAULT NULL, \
+            test5 TINYINT NULL DEFAULT NULL, \
+            test6 TINYINT NULL DEFAULT NULL, \
+            test7 TINYINT NULL DEFAULT NULL, \
+            test8 TINYINT NULL DEFAULT NULL, \
+            test9 TINYINT NULL DEFAULT NULL, \
+            test10 TINYINT NULL DEFAULT NULL, \
+            test11 TINYINT NULL DEFAULT NULL, \
+            test12 TINYINT NULL DEFAULT NULL, \
+            test13 TINYINT NULL DEFAULT NULL, \
+            test14 TINYINT NULL DEFAULT NULL, \
+            test15 TINYINT NULL DEFAULT NULL, \
+            test16 TINYINT NULL DEFAULT NULL, \
+            test17 TINYINT NULL DEFAULT NULL, \
+            test18 TINYINT NULL DEFAULT NULL, \
+            test19 TINYINT NULL DEFAULT NULL, \
+            test20 TINYINT NULL DEFAULT NULL\
+            )"
+        insert_query = "INSERT INTO test (test, test2, test3, test7, test20) VALUES(NULL, -128, NULL, 42, 84)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], None)
+        self.assertEqual(event.rows[0]["values"]["test2"], -128)
+        self.assertEqual(event.rows[0]["values"]["test3"], None)        
+        self.assertEqual(event.rows[0]["values"]["test7"], 42)
+        self.assertEqual(event.rows[0]["values"]["test20"], 84)        
 
     @unittest.skip("Not implemented yet")
     def test_encoding(self):
