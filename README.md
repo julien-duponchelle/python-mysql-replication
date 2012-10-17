@@ -20,6 +20,9 @@ The project is test with:
 * Python 2.7
 * Python 3.2
 
+It's totally Work in progress a lot of field type is not supported.
+
+
 Project using this lib
 =========================
 
