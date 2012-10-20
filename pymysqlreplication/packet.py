@@ -53,7 +53,7 @@ class BinLogPacketWrapper(object):
         self.event_size = struct.unpack('<I', self.packet.read(4))[0]
         # position of the next event
         self.log_pos = struct.unpack('<I', self.packet.read(4))[0]
-        self.flags = self.read_uint16()
+        self.flags = self.flags = struct.unpack('<H', self.packet.read(2))[0]
         
 
         event_size_without_header = self.event_size - 19
