@@ -75,6 +75,8 @@ class RowsEvent(BinLogEvent):
                 values[name] = self.__read_datetime()
             elif column.type == FIELD_TYPE.TIME:
                 values[name] = self.__read_time()
+            elif column.type == FIELD_TYPE.DATE:
+                values[name] = self.__read_date()
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
         return values
@@ -85,6 +87,16 @@ class RowsEvent(BinLogEvent):
             hour = time / 10000,
             minute = (time % 10000) / 100,
             second = time % 100)
+        return date
+
+    def __read_date(self):
+        time = self.packet.read_uint24()
+ 
+        date = datetime.date(
+            year = (time & ((1 << 15) - 1) << 9) >> 9,
+            month = (time & ((1 << 4) - 1) << 5) >> 5,
+            day = (time & ((1 << 5) - 1))
+        )
         return date
 
     def __read_datetime(self):
