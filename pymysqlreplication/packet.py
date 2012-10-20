@@ -53,7 +53,7 @@ class BinLogPacketWrapper(object):
         self.event_size = struct.unpack('<I', self.packet.read(4))[0]
         # position of the next event
         self.log_pos = struct.unpack('<I', self.packet.read(4))[0]
-        self.flags = struct.unpack('<H', self.packet.read(2))[0]
+        self.flags = self.read_uint16()
         
 
         event_size_without_header = self.event_size - 19
@@ -148,11 +148,11 @@ class BinLogPacketWrapper(object):
     def read_uint_by_size(self, size):
         '''Read a little endian integer values based on byte number'''
         if size == 1:
-            return struct.unpack('<B', self.read(size))[0]
+            return self.read_uint8() 
         elif size == 2:
-            return struct.unpack('<H', self.read(size))[0]
+            return self.read_uint16()
         elif size == 4:
-            return struct.unpack('<H', self.read(size))[0]
+            return struct.unpack('<I', self.read(size))[0]
         elif size == 8:
             return struct.unpack('<L', self.read(size))[0]
 
@@ -175,4 +175,7 @@ class BinLogPacketWrapper(object):
 
     def read_uint8(self):
         return struct.unpack('<B', self.read(1))[0]
+
+    def read_uint16(self):
+        return struct.unpack('<H', self.read(2))[0]
 

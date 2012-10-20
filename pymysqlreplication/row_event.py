@@ -93,7 +93,7 @@ class RowsEvent(BinLogEvent):
         # Support negative
         # The sign is encoded in the high bit of the the byte
         # But this bit can also be used in the value
-        value = struct.unpack('<B', self.packet.read(1))[0]
+        value = self.packet.read_uint8()
         if value & 0x80 != 0:
             res = ""
             mask = 0
