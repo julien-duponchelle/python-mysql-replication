@@ -62,12 +62,15 @@ class RowsEvent(BinLogEvent):
                 values[name] = struct.unpack("<f", self.packet.read(4))[0]
             elif column.type == FIELD_TYPE.DOUBLE:
                 values[name] = struct.unpack("<d", self.packet.read(8))[0]
-            elif column.type == FIELD_TYPE.VARCHAR:
-                values[name] = self.packet.read_length_coded_string()
-            elif column.type == FIELD_TYPE.STRING:
-                values[name] = self.packet.read_length_coded_string()
+            elif column.type == FIELD_TYPE.VARCHAR or column.type == FIELD_TYPE.STRING:
+                if column.max_length > 255:
+                    values[name] = self.packet.read_length_coded_pascal_string(2)
+                else:
+                    values[name] = self.packet.read_length_coded_pascal_string(1)
             elif column.type == FIELD_TYPE.NEWDECIMAL:
                 values[name] = self.read_new_decimal(column)
+            elif column.type == FIELD_TYPE.BLOB:
+                values[name] = self.packet.read_length_coded_pascal_string(column.length_size)
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
         return values

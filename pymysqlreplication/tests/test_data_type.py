@@ -179,16 +179,19 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     def test_long_blob(self):
         pass
 
-    @unittest.skip("Not implemented yet")
     def test_blob(self):
-        pass
+        create_query = "CREATE TABLE test (test BLOB, test2 TEXT) CHARACTER SET latin1 COLLATE latin1_bin;"
+        insert_query = "INSERT INTO test VALUES('Hello', 'World')"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], 'Hello') 
+        self.assertEqual(event.rows[0]["values"]["test2"], 'World') 
 
     @unittest.skip("Not implemented yet")
     def test_var_string(self):
         pass
      
     def test_string(self):
-        create_query = "CREATE TABLE test (test CHAR(255)) CHARACTER SET latin1 COLLATE latin1_bin;"
+        create_query = "CREATE TABLE test (test CHAR(12)) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello')"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], 'Hello') 

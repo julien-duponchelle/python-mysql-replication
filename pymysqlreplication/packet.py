@@ -145,6 +145,21 @@ class BinLogPacketWrapper(object):
         elif size == 8:
             return struct.unpack('>l', self.read(size))[0]
 
+    def read_uint_by_size(self, size):
+        '''Read a little endian integer values based on byte number'''
+        if size == 1:
+            return struct.unpack('<B', self.read(size))[0]
+        elif size == 2:
+            return struct.unpack('<H', self.read(size))[0]
+        elif size == 4:
+            return struct.unpack('<H', self.read(size))[0]
+        elif size == 8:
+            return struct.unpack('<L', self.read(size))[0]
+
+    def read_length_coded_pascal_string(self, size):
+        '''Read a string with length coded using pascal style. The string start by the size of the string'''
+        length = self.read_uint_by_size(size)
+        return self.read(length)
 
     def read_int24(self):
         a, b, c = struct.unpack("BBB", self.read(3))
@@ -157,3 +172,7 @@ class BinLogPacketWrapper(object):
     def read_uint24(self, unsigned = False):
         a, b, c = struct.unpack("BBB", self.read(3))
         return a + (b << 8) + (c << 16)
+
+    def read_uint8(self):
+        return struct.unpack('<B', self.read(1))[0]
+
