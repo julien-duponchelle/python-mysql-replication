@@ -73,9 +73,19 @@ class RowsEvent(BinLogEvent):
                 values[name] = self.packet.read_length_coded_pascal_string(column.length_size)
             elif column.type == FIELD_TYPE.DATETIME:
                 values[name] = self.__read_datetime()
+            elif column.type == FIELD_TYPE.TIME:
+                values[name] = self.__read_time()
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
         return values
+
+    def __read_time(self):
+        time = self.packet.read_uint24()
+        date = datetime.time(
+            hour = time / 10000,
+            minute = (time % 10000) / 100,
+            second = time % 100)
+        return date
 
     def __read_datetime(self):
         value = self.packet.read_uint64()

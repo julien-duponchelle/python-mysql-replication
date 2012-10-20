@@ -5,7 +5,7 @@ from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 
 from decimal import Decimal
-from datetime import datetime
+import datetime
 import time
 import unittest
 
@@ -124,15 +124,17 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     def test_date(self):
         pass
 
-    @unittest.skip("Not implemented yet")
     def test_time(self):
-        pass
+        create_query = "CREATE TABLE test (test TIME);"
+        insert_query = "INSERT INTO test VALUES('12:33:07')"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], datetime.time(12, 33, 7)) 
 
     def test_datetime(self):
         create_query = "CREATE TABLE test (test DATETIME);"
         insert_query = "INSERT INTO test VALUES('1984-12-03 12:33:07')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], datetime(1984, 12, 3, 12, 33, 7)) 
+        self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7)) 
 
     @unittest.skip("Not implemented yet")
     def test_year(self):
