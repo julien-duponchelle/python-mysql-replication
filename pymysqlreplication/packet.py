@@ -154,7 +154,7 @@ class BinLogPacketWrapper(object):
         elif size == 4:
             return self.read_uint32()
         elif size == 8:
-            return struct.unpack('<L', self.read(size))[0]
+            return self.read_uint64()
 
     def read_length_coded_pascal_string(self, size):
         '''Read a string with length coded using pascal style. The string start by the size of the string'''
@@ -182,3 +182,5 @@ class BinLogPacketWrapper(object):
     def read_uint32(self):
         return struct.unpack('<I', self.read(4))[0]
 
+    def read_uint64(self):
+        return struct.unpack('<L', self.read(8))[0]
