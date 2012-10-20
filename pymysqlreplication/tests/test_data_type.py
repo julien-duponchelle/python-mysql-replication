@@ -118,7 +118,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["id"], 16777215)
         self.assertEqual(event.rows[0]["values"]["test"], 8388607)
         self.assertEqual(event.rows[0]["values"]["test2"], -8388608)
-        
 
     @unittest.skip("Not implemented yet")
     def test_date(self):
@@ -167,17 +166,26 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     def test_set(self):
         pass
 
-    @unittest.skip("Not implemented yet")
     def test_tiny_blob(self):
-        pass
+        create_query = "CREATE TABLE test (test TINYBLOB, test2 TINYTEXT) CHARACTER SET latin1 COLLATE latin1_bin;"
+        insert_query = "INSERT INTO test VALUES('Hello', 'World')"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], 'Hello') 
+        self.assertEqual(event.rows[0]["values"]["test2"], 'World') 
 
-    @unittest.skip("Not implemented yet")
     def test_medium_blob(self):
-        pass
+        create_query = "CREATE TABLE test (test MEDIUMBLOB, test2 MEDIUMTEXT) CHARACTER SET latin1 COLLATE latin1_bin;"
+        insert_query = "INSERT INTO test VALUES('Hello', 'World')"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], 'Hello') 
+        self.assertEqual(event.rows[0]["values"]["test2"], 'World') 
 
-    @unittest.skip("Not implemented yet")
     def test_long_blob(self):
-        pass
+        create_query = "CREATE TABLE test (test LONGBLOB, test2 LONGTEXT) CHARACTER SET latin1 COLLATE latin1_bin;"
+        insert_query = "INSERT INTO test VALUES('Hello', 'World')"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], 'Hello') 
+        self.assertEqual(event.rows[0]["values"]["test2"], 'World') 
 
     def test_blob(self):
         create_query = "CREATE TABLE test (test BLOB, test2 TEXT) CHARACTER SET latin1 COLLATE latin1_bin;"
