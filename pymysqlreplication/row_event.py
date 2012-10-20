@@ -1,11 +1,11 @@
 import struct
 import decimal
+import datetime
 
 from .event import BinLogEvent
 from pymysql.util import byte2int, int2byte
 from pymysql.constants import FIELD_TYPE
 from .column import Column
-
 
 class RowsEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
@@ -68,14 +68,30 @@ class RowsEvent(BinLogEvent):
                 else:
                     values[name] = self.packet.read_length_coded_pascal_string(1)
             elif column.type == FIELD_TYPE.NEWDECIMAL:
-                values[name] = self.read_new_decimal(column)
+                values[name] = self.__read_new_decimal(column)
             elif column.type == FIELD_TYPE.BLOB:
                 values[name] = self.packet.read_length_coded_pascal_string(column.length_size)
+            elif column.type == FIELD_TYPE.DATETIME:
+                values[name] = self.__read_datetime()
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
         return values
 
-    def read_new_decimal(self, column):
+    def __read_datetime(self):
+        value = self.packet.read_uint64()
+        date = value / 1000000
+        time = value % 1000000
+        
+        date = datetime.datetime(
+            year = date / 10000,
+            month = (date % 10000) / 100,
+            day = date % 100,
+            hour = time / 10000,
+            minute = (time % 10000) / 100,
+            second = time % 100)
+        return date
+    
+    def __read_new_decimal(self, column):
         '''Read MySQL's new decimal format introduced in MySQL 5'''
         
         # This project was a great source of inspiration for

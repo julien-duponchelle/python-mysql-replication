@@ -207,4 +207,4 @@ class BinLogPacketWrapper(object):
       return a + (b << 8) + (c << 24)
 
     def read_uint64(self):
-        return struct.unpack('<L', self.read(8))[0]
+        return struct.unpack('<Q', self.read(8))[0]
