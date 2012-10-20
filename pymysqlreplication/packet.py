@@ -152,7 +152,7 @@ class BinLogPacketWrapper(object):
         elif size == 2:
             return self.read_uint16()
         elif size == 4:
-            return struct.unpack('<I', self.read(size))[0]
+            return self.read_uint32()
         elif size == 8:
             return struct.unpack('<L', self.read(size))[0]
 
@@ -178,4 +178,7 @@ class BinLogPacketWrapper(object):
 
     def read_uint16(self):
         return struct.unpack('<H', self.read(2))[0]
+
+    def read_uint32(self):
+        return struct.unpack('<I', self.read(4))[0]
 

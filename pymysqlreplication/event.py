@@ -62,11 +62,11 @@ class QueryEvent(BinLogEvent):
         super(QueryEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
 
         # Post-header
-        self.slave_proxy_id = struct.unpack('<I', self.packet.read(4))[0]
-        self.execution_time = struct.unpack('<I', self.packet.read(4))[0]
+        self.slave_proxy_id = self.packet.read_uint32()
+        self.execution_time = self.packet.read_uint32()
         self.schema_length =  byte2int(self.packet.read(1))
-        self.error_code = struct.unpack('<H', self.packet.read(2))[0]
-        self.status_vars_length = struct.unpack('<H', self.packet.read(2))[0]
+        self.error_code = self.packet.read_uint16()
+        self.status_vars_length = self.packet.read_uint16()
 
         # Payload
         self.status_vars = self.packet.read(self.status_vars_length)
