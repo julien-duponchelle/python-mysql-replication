@@ -191,11 +191,11 @@ class UpdateRowsEvent(RowsEvent):
 
     def _fetch_one_row(self):
         row = {}
-        null_bitmap = self.packet.read_int((self.number_of_columns + 7) / 8)
+        null_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
 
         row["before_values"] = self._read_column_data(null_bitmap)
 
-        null_bitmap = self.packet.read_int((self.number_of_columns + 7) / 8)
+        null_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
         row["after_values"] = self._read_column_data(null_bitmap)
         return row
 
