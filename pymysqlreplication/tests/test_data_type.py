@@ -104,9 +104,11 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(round(event.rows[0]["values"]["id"], 2), 42.42)
         self.assertEqual(round(event.rows[0]["values"]["test"],2 ), -84.84)
 
-    @unittest.skip("Not implemented yet")
     def test_timestamp(self):
-        pass
+        create_query = "CREATE TABLE test (test TIMESTAMP);"
+        insert_query = "INSERT INTO test VALUES('1984-12-03 12:33:07')"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7)) 
 
     @unittest.skip("Not implemented yet")
     def test_longlong(self):
