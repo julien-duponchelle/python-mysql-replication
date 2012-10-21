@@ -148,10 +148,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["a"], 1984)
         self.assertEqual(event.rows[0]["values"]["b"], 1984)
 
-    @unittest.skip("Not implemented yet")
-    def test_newdate(self):
-        pass
-
     def test_varchar(self):
         create_query = "CREATE TABLE test (test VARCHAR(242)) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello')"
@@ -163,10 +159,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     def test_bit(self):
         pass
             
-    @unittest.skip("Not implemented yet")
-    def test_newdate(self):
-        pass
-
     @unittest.skip("Not implemented yet")
     def test_enum(self):
         pass
