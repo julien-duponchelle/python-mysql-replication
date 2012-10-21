@@ -208,3 +208,6 @@ class BinLogPacketWrapper(object):
 
     def read_uint64(self):
         return struct.unpack('<Q', self.read(8))[0]
+
+    def read_int64(self):
+        return struct.unpack('<q', self.read(8))[0]

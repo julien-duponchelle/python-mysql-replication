@@ -79,6 +79,11 @@ class RowsEvent(BinLogEvent):
                 values[name] = self.__read_date()
             elif column.type == FIELD_TYPE.TIMESTAMP:
                 values[name] = datetime.datetime.fromtimestamp(self.packet.read_uint32())
+            elif column.type == FIELD_TYPE.LONGLONG:
+                if unsigned:
+                    values[name] = self.packet.read_uint64()
+                else:
+                    values[name] = self.packet.read_int64()
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
         return values

@@ -110,9 +110,12 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7)) 
 
-    @unittest.skip("Not implemented yet")
     def test_longlong(self):
-        pass
+        create_query = "CREATE TABLE test (id BIGINT UNSIGNED NOT NULL, test BIGINT)"
+        insert_query = "INSERT INTO test VALUES(18446744073709551615, -9223372036854775808)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["id"], 18446744073709551615)
+        self.assertEqual(event.rows[0]["values"]["test"], -9223372036854775808)
 
     def test_int24(self):
         create_query = "CREATE TABLE test (id MEDIUMINT UNSIGNED NOT NULL, test MEDIUMINT, test2 MEDIUMINT)"
