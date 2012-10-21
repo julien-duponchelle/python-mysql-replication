@@ -195,10 +195,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], 'Hello') 
         self.assertEqual(event.rows[0]["values"]["test2"], 'World') 
 
-    @unittest.skip("Not implemented yet")
-    def test_var_string(self):
-        pass
-     
     def test_string(self):
         create_query = "CREATE TABLE test (test CHAR(12)) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello')"
