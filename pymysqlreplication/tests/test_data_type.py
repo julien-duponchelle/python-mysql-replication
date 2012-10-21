@@ -159,13 +159,19 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     def test_bit(self):
         pass
             
-    @unittest.skip("Not implemented yet")
     def test_enum(self):
-        pass
+        create_query = "CREATE TABLE test (test ENUM('a', 'ba', 'c'), test2 ENUM('a', 'ba', 'c')) CHARACTER SET latin1 COLLATE latin1_bin;"
+        insert_query = "INSERT INTO test VALUES('ba', 'a')"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], 'ba')
+        self.assertEqual(event.rows[0]["values"]["test2"], 'a')
      
-    @unittest.skip("Not implemented yet")
     def test_set(self):
-        pass
+        create_query = "CREATE TABLE test (test SET('a', 'ba', 'c'), test2 SET('a', 'ba', 'c')) CHARACTER SET latin1 COLLATE latin1_bin;"
+        insert_query = "INSERT INTO test VALUES('ba', 'a')"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], 'ba')
+        self.assertEqual(event.rows[0]["values"]["test2"], 'a')
 
     def test_tiny_blob(self):
         create_query = "CREATE TABLE test (test TINYBLOB, test2 TINYTEXT) CHARACTER SET latin1 COLLATE latin1_bin;"

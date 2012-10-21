@@ -86,6 +86,10 @@ class RowsEvent(BinLogEvent):
                     values[name] = self.packet.read_int64()
             elif column.type == FIELD_TYPE.YEAR:
                 values[name] = self.packet.read_uint8() + 1900
+            elif column.type == FIELD_TYPE.ENUM:
+                values[name] = column.enum_values[self.packet.read_uint_by_size(column.size) - 1]
+            elif column.type == FIELD_TYPE.SET:
+                values[name] = column.set_values[self.packet.read_uint_by_size(column.size) - 1]
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
         return values
