@@ -141,9 +141,12 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7)) 
 
-    @unittest.skip("Not implemented yet")
     def test_year(self):
-        pass
+        create_query = "CREATE TABLE test (a YEAR(4), b YEAR(2))"
+        insert_query = "INSERT INTO test VALUES(1984, 1984)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["a"], 1984)
+        self.assertEqual(event.rows[0]["values"]["b"], 1984)
 
     @unittest.skip("Not implemented yet")
     def test_newdate(self):

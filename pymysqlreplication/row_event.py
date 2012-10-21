@@ -84,6 +84,8 @@ class RowsEvent(BinLogEvent):
                     values[name] = self.packet.read_uint64()
                 else:
                     values[name] = self.packet.read_int64()
+            elif column.type == FIELD_TYPE.YEAR:
+                values[name] = self.packet.read_uint8() + 1900
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
         return values
