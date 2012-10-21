@@ -33,7 +33,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, WriteRowsEvent)
         return event
 
-
     def test_decimal(self):
         create_query = "CREATE TABLE test (test DECIMAL(2,1))"
         insert_query = "INSERT INTO test VALUES(4.2)"
@@ -41,7 +40,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.columns[0].precision, 2) 
         self.assertEqual(event.columns[0].decimals, 1) 
         self.assertEqual(event.rows[0]["values"]["test"], Decimal("4.2")) 
-
 
     def test_decimal_long_values(self):
         create_query = "CREATE TABLE test (\
@@ -164,10 +162,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             
     @unittest.skip("Not implemented yet")
     def test_newdate(self):
-        pass
-
-    @unittest.skip("Not implemented yet")
-    def test_newdecimal(self):
         pass
 
     @unittest.skip("Not implemented yet")
