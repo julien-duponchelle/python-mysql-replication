@@ -8,6 +8,8 @@ from decimal import Decimal
 import datetime
 import time
 import unittest
+import copy
+import platform
 
 class TestDataType(base.PyMySQLReplicationTestCase):
     def create_and_insert_value(self, create_query, insert_query):
@@ -152,7 +154,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (test VARCHAR(242)) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], b'Hello')
+        self.assertEqual(event.rows[0]["values"]["test"], 'Hello')
         self.assertEqual(event.columns[0].max_length, 242)
 
     def test_bit(self):
@@ -199,34 +201,34 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         insert_query = "INSERT INTO test VALUES('Hello', 'World')"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], b'Hello') 
-        self.assertEqual(event.rows[0]["values"]["test2"], b'World') 
+        self.assertEqual(event.rows[0]["values"]["test2"], 'World') 
 
     def test_medium_blob(self):
         create_query = "CREATE TABLE test (test MEDIUMBLOB, test2 MEDIUMTEXT) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello', 'World')"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], b'Hello') 
-        self.assertEqual(event.rows[0]["values"]["test2"], b'World') 
+        self.assertEqual(event.rows[0]["values"]["test2"], 'World') 
 
     def test_long_blob(self):
         create_query = "CREATE TABLE test (test LONGBLOB, test2 LONGTEXT) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello', 'World')"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], b'Hello') 
-        self.assertEqual(event.rows[0]["values"]["test2"], b'World') 
+        self.assertEqual(event.rows[0]["values"]["test2"], 'World') 
 
     def test_blob(self):
         create_query = "CREATE TABLE test (test BLOB, test2 TEXT) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello', 'World')"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], b'Hello') 
-        self.assertEqual(event.rows[0]["values"]["test2"], b'World') 
+        self.assertEqual(event.rows[0]["values"]["test2"], 'World') 
 
     def test_string(self):
         create_query = "CREATE TABLE test (test CHAR(12)) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], b'Hello') 
+        self.assertEqual(event.rows[0]["values"]["test"], 'Hello') 
 
     def test_geometry(self):
         create_query = "CREATE TABLE test (test GEOMETRY);"
@@ -265,9 +267,29 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test7"], 42)
         self.assertEqual(event.rows[0]["values"]["test20"], 84)        
 
-    @unittest.skip("Not implemented yet")
-    def test_encoding(self):
-        pass
+    def test_encoding_latin1(self):
+        db = copy.copy(self.database)
+        db["charset"] = "latin1"
+        self.connect_conn_control(db)
+        if platform.python_version_tuple()[0] == 2:
+            str = unicode("\u00e9")
+        else:
+            str = "\u00e9"
+
+        create_query = "CREATE TABLE test (test CHAR(12)) CHARACTER SET latin1 COLLATE latin1_bin;"
+        insert_query = b"INSERT INTO test VALUES('" + str.encode('latin1') + b"');"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], str)
+
+    def test_encoding_utf8(self):
+        if platform.python_version_tuple()[0] == 2:
+            str = unicode("\u20ac")
+        else:
+            str = "\u20ac"
+        create_query = "CREATE TABLE test (test CHAR(12)) CHARACTER SET utf8 COLLATE utf8_bin;"
+        insert_query = "INSERT INTO test VALUES('%s')" % (str)
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertMultiLineEqual(event.rows[0]["values"]["test"], str)
 
 __all__ = ["TestDataType"]
 

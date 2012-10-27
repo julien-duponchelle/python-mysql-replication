@@ -8,6 +8,9 @@ class Column(object):
     def __init__(self, column_type, column_schema, packet):
         self.type = column_type
         self.name = column_schema["COLUMN_NAME"]
+        self.collation_name = column_schema["COLLATION_NAME"]
+        self.character_set_name = column_schema["CHARACTER_SET_NAME"]
+        self.comment = column_schema["COLUMN_COMMENT"]
         self.unsigned = False
 
         if column_schema["COLUMN_TYPE"].find("unsigned") != -1:

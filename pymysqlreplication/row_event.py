@@ -67,13 +67,13 @@ class RowsEvent(BinLogEvent):
                 values[name] = struct.unpack("<d", self.packet.read(8))[0]
             elif column.type == FIELD_TYPE.VARCHAR or column.type == FIELD_TYPE.STRING:
                 if column.max_length > 255:
-                    values[name] = self.packet.read_length_coded_pascal_string(2)
+                    values[name] = self.__read_string(2, column)
                 else:
-                    values[name] = self.packet.read_length_coded_pascal_string(1)
+                    values[name] = self.__read_string(1, column)
             elif column.type == FIELD_TYPE.NEWDECIMAL:
                 values[name] = self.__read_new_decimal(column)
             elif column.type == FIELD_TYPE.BLOB:
-                values[name] = self.packet.read_length_coded_pascal_string(column.length_size)
+                values[name] = self.__read_string(column.length_size, column)
             elif column.type == FIELD_TYPE.DATETIME:
                 values[name] = self.__read_datetime()
             elif column.type == FIELD_TYPE.TIME:
@@ -100,6 +100,13 @@ class RowsEvent(BinLogEvent):
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
         return values
+
+    def __read_string(self, size, column):
+        str = self.packet.read_length_coded_pascal_string(size)
+        if column.character_set_name is not None:
+            return str.decode(column.character_set_name)
+        else:
+            return str
 
     def __read_bit(self, column):
         """Read MySQL BIT type"""
