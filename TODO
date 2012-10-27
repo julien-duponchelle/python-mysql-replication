@@ -3,6 +3,6 @@
 * Support all field type
 * Support ALTER TABLE
 * End user documentation
-* Test null support
 * Test transaction support
 * Test charset encoding
+* MySQL 5.6 support: http://dev.mysql.com/doc/internals/en/row-based-replication.html#rows-event

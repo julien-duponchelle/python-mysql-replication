@@ -1,11 +1,11 @@
 import struct
 import decimal
+import datetime
 
 from .event import BinLogEvent
 from pymysql.util import byte2int, int2byte
 from pymysql.constants import FIELD_TYPE
 from .column import Column
-
 
 class RowsEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
@@ -24,34 +24,112 @@ class RowsEvent(BinLogEvent):
         self.schema = self.table_map[self.table_id].schema
         self.table = self.table_map[self.table_id].table
 
-    def _read_column_data(self):
+    def __is_null(self, null_bitmap, position):
+        bit = null_bitmap[int(position / 8)]
+        if type(bit) is str:
+            bit = ord(bit)
+        return bit & (1 << (position % 8))
+
+    def _read_column_data(self, null_bitmap):
         '''Use for WRITE, UPDATE and DELETE events. Return an array of column data'''
         values = {}
 
-        for i in range(0, len(self.columns)):
+        nb_columns = len(self.columns)
+        for i in range(0, nb_columns):
             column = self.columns[i]
             name = self.table_map[self.table_id].columns[i].name
-            if column.type == FIELD_TYPE.TINY:
-                values[name] = struct.unpack("<b", self.packet.read(1))[0]
+            unsigned = self.table_map[self.table_id].columns[i].unsigned
+            if self.__is_null(null_bitmap, i):
+                values[name] = None
+            elif column.type == FIELD_TYPE.TINY:
+                if unsigned:
+                    values[name] = struct.unpack("<B", self.packet.read(1))[0]
+                else:
+                    values[name] = struct.unpack("<b", self.packet.read(1))[0]
             elif column.type == FIELD_TYPE.SHORT:
-                values[name] = struct.unpack("<h", self.packet.read(2))[0]
+                if unsigned:
+                    values[name] = struct.unpack("<H", self.packet.read(2))[0]
+                else:
+                    values[name] = struct.unpack("<h", self.packet.read(2))[0]
             elif column.type == FIELD_TYPE.LONG:
-                values[name] = struct.unpack("<i", self.packet.read(4))[0]
+                if unsigned:
+                    values[name] = struct.unpack("<I", self.packet.read(4))[0]
+                else:
+                    values[name] = struct.unpack("<i", self.packet.read(4))[0]
+            elif column.type == FIELD_TYPE.INT24:
+                if unsigned:
+                    values[name] = self.packet.read_uint24()                    
+                else:
+                    values[name] = self.packet.read_int24()
             elif column.type == FIELD_TYPE.FLOAT:
                 values[name] = struct.unpack("<f", self.packet.read(4))[0]
             elif column.type == FIELD_TYPE.DOUBLE:
                 values[name] = struct.unpack("<d", self.packet.read(8))[0]
-            elif column.type == FIELD_TYPE.VARCHAR:
-                values[name] = self.packet.read_length_coded_string()
-            elif column.type == FIELD_TYPE.STRING:
-                values[name] = self.packet.read_length_coded_string()
+            elif column.type == FIELD_TYPE.VARCHAR or column.type == FIELD_TYPE.STRING:
+                if column.max_length > 255:
+                    values[name] = self.packet.read_length_coded_pascal_string(2)
+                else:
+                    values[name] = self.packet.read_length_coded_pascal_string(1)
             elif column.type == FIELD_TYPE.NEWDECIMAL:
-                values[name] = self.read_new_decimal(column)
+                values[name] = self.__read_new_decimal(column)
+            elif column.type == FIELD_TYPE.BLOB:
+                values[name] = self.packet.read_length_coded_pascal_string(column.length_size)
+            elif column.type == FIELD_TYPE.DATETIME:
+                values[name] = self.__read_datetime()
+            elif column.type == FIELD_TYPE.TIME:
+                values[name] = self.__read_time()
+            elif column.type == FIELD_TYPE.DATE:
+                values[name] = self.__read_date()
+            elif column.type == FIELD_TYPE.TIMESTAMP:
+                values[name] = datetime.datetime.fromtimestamp(self.packet.read_uint32())
+            elif column.type == FIELD_TYPE.LONGLONG:
+                if unsigned:
+                    values[name] = self.packet.read_uint64()
+                else:
+                    values[name] = self.packet.read_int64()
+            elif column.type == FIELD_TYPE.YEAR:
+                values[name] = self.packet.read_uint8() + 1900
+            elif column.type == FIELD_TYPE.ENUM:
+                values[name] = column.enum_values[self.packet.read_uint_by_size(column.size) - 1]
+            elif column.type == FIELD_TYPE.SET:
+                values[name] = column.set_values[self.packet.read_uint_by_size(column.size) - 1]
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
         return values
 
-    def read_new_decimal(self, column):
+    def __read_time(self):
+        time = self.packet.read_uint24()
+        date = datetime.time(
+            hour = int(time / 10000),
+            minute = int((time % 10000) / 100),
+            second = int(time % 100))
+        return date
+
+    def __read_date(self):
+        time = self.packet.read_uint24()
+ 
+        date = datetime.date(
+            year = (time & ((1 << 15) - 1) << 9) >> 9,
+            month = (time & ((1 << 4) - 1) << 5) >> 5,
+            day = (time & ((1 << 5) - 1))
+        )
+        return date
+
+    def __read_datetime(self):
+        value = self.packet.read_uint64()
+        date = value / 1000000
+        time = value % 1000000
+        
+        date = datetime.datetime(
+            year = int(date / 10000),
+            month = int((date % 10000) / 100),
+            day = int(date % 100),
+            hour = int(time / 10000),
+            minute = int((time % 10000) / 100),
+            second = int(time % 100))
+        return date
+    
+    def __read_new_decimal(self, column):
         '''Read MySQL's new decimal format introduced in MySQL 5'''
         
         # This project was a great source of inspiration for
@@ -69,7 +147,7 @@ class RowsEvent(BinLogEvent):
         # Support negative
         # The sign is encoded in the high bit of the the byte
         # But this bit can also be used in the value
-        value = struct.unpack('<B', self.packet.read(1))[0]
+        value = self.packet.read_uint8()
         if value & 0x80 != 0:
             res = ""
             mask = 0
@@ -128,9 +206,8 @@ class DeleteRowsEvent(RowsEvent):
     def _fetch_one_row(self):
         row = {}
 
-        #TODO: nul-bitmap, length (bits set in 'columns-present-bitmap'+7)/8
-        self.packet.advance((self.number_of_columns + 7) / 8)
-        row["values"] = self._read_column_data()
+        null_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
+        row["values"] = self._read_column_data(null_bitmap)
         return row
 
     def _dump(self):
@@ -149,9 +226,8 @@ class WriteRowsEvent(RowsEvent):
     def _fetch_one_row(self):
         row = {}
 
-        #TODO: nul-bitmap, length (bits set in 'columns-present-bitmap'+7)/8
-        self.packet.advance((self.number_of_columns + 7) / 8)
-        row["values"] = self._read_column_data()
+        null_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
+        row["values"] = self._read_column_data(null_bitmap)
         return row
 
     def _dump(self):
@@ -172,15 +248,12 @@ class UpdateRowsEvent(RowsEvent):
 
     def _fetch_one_row(self):
         row = {}
-        #TODO: nul-bitmap, length (bits set in 'columns-present-bitmap'+7)/8
-        self.packet.advance((self.number_of_columns + 7) / 8)
+        null_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
 
-        row["before_values"] = self._read_column_data()
+        row["before_values"] = self._read_column_data(null_bitmap)
 
-        #TODO: nul-bitmap, length (bits set in 'columns-present-bitmap'+7)/8
-        self.packet.advance((self.number_of_columns + 7) / 8)
-
-        row["after_values"] = self._read_column_data()
+        null_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
+        row["after_values"] = self._read_column_data(null_bitmap)
         return row
 
     def _dump(self):

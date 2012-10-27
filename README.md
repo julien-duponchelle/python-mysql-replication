@@ -7,6 +7,8 @@ Use cases
 ===========
 
 * MySQL to NoSQL database replication
+* MySQL to search replication
+* Invalidate cache when something change in database
 * Audit
 
 Project status
@@ -19,6 +21,9 @@ The project is test with:
 * MySQL 5.5
 * Python 2.7
 * Python 3.2
+
+It's totally Work in progress a lot of field type is not supported.
+
 
 Project using this lib
 =========================

@@ -21,6 +21,7 @@ for binlogevent in stream:
 
     for row in binlogevent.rows:
         if isinstance(binlogevent, DeleteRowsEvent):
+            vals = row["values"]
             r.delete(prefix + str(vals["id"]))
         elif isinstance(binlogevent, UpdateRowsEvent):
             vals = row["after_values"]
