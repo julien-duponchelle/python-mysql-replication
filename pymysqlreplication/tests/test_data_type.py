@@ -155,10 +155,31 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], b'Hello')
         self.assertEqual(event.columns[0].max_length, 242)
 
-    @unittest.skip("Not implemented yet")
     def test_bit(self):
-        pass
-            
+        create_query = "CREATE TABLE test (test BIT(6), \
+                test2 BIT(16), \
+                test3 BIT(12), \
+                test4 BIT(9), \
+                test5 BIT(64) \
+                );"
+        insert_query = "INSERT INTO test VALUES( \
+                    b'100010', \
+                    b'1000101010111000', \
+                    b'100010101101', \
+                    b'101100111', \
+                    b'1101011010110100100111100011010100010100101110111011101011011010')"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.columns[0].bits, 6)
+        self.assertEqual(event.columns[1].bits, 16)
+        self.assertEqual(event.columns[2].bits, 12)
+        self.assertEqual(event.columns[3].bits, 9)
+        self.assertEqual(event.columns[4].bits, 64)
+        self.assertEqual(event.rows[0]["values"]["test"], "100010")
+        self.assertEqual(event.rows[0]["values"]["test2"], "1000101010111000")
+        self.assertEqual(event.rows[0]["values"]["test3"], "100010101101")
+        self.assertEqual(event.rows[0]["values"]["test4"], "101100111")
+        self.assertEqual(event.rows[0]["values"]["test5"], "1101011010110100100111100011010100010100101110111011101011011010")
+
     def test_enum(self):
         create_query = "CREATE TABLE test (test ENUM('a', 'ba', 'c'), test2 ENUM('a', 'ba', 'c')) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('ba', 'a')"

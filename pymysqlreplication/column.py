@@ -18,15 +18,18 @@ class Column(object):
             self.max_length = struct.unpack('<H', packet.read(2))[0]
         elif self.type == FIELD_TYPE.BLOB:
             self.length_size = packet.read_uint8()
-        elif self.type == FIELD_TYPE.DECIMAL:
-            pass #2
         elif self.type == FIELD_TYPE.NEWDECIMAL:
             self.precision = packet.read_uint8()
             self.decimals = packet.read_uint8()
         elif self.type == FIELD_TYPE.DOUBLE:
-            pass #1
+            self.size = packet.read_uint8()
         elif self.type == FIELD_TYPE.FLOAT:
-            pass #1
+            self.size = packet.read_uint8()
+        elif self.type == FIELD_TYPE.BIT:
+            bits = packet.read_uint8()
+            bytes = packet.read_uint8()
+            self.bits = (bytes * 8) + bits
+            self.bytes = int((self.bits + 7) / 8)
 
     def __read_string_metadata(self, packet, column_schema):
         metadata  = (packet.read_uint8() << 8) + packet.read_uint8()

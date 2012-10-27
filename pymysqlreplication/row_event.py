@@ -93,9 +93,34 @@ class RowsEvent(BinLogEvent):
                 values[name] = column.enum_values[self.packet.read_uint_by_size(column.size) - 1]
             elif column.type == FIELD_TYPE.SET:
                 values[name] = column.set_values[self.packet.read_uint_by_size(column.size) - 1]
+            elif column.type == FIELD_TYPE.BIT:
+                values[name] = self.__read_bit(column)
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
         return values
+
+    def __read_bit(self, column):
+        """Read MySQL BIT type"""
+        resp = ""
+        for byte in range(0, column.bytes):
+            current_byte = ""
+            data = self.packet.read_uint8()
+            if byte == 0:
+                if column.bytes == 1:
+                    end = column.bits
+                else:
+                    end = column.bits % 8
+                    if end == 0:
+                        end = 8
+            else:
+                end = 8
+            for bit in range(0, end):
+                if data & (1 << bit):
+                    current_byte += "1"
+                else:
+                    current_byte += "0"
+            resp += current_byte[::-1]
+        return resp
 
     def __read_time(self):
         time = self.packet.read_uint24()
@@ -217,6 +242,7 @@ class DeleteRowsEvent(RowsEvent):
             print("--")
             for key in row["values"]:
                 print("*", key, ":", row["values"][key])
+
 
 class WriteRowsEvent(RowsEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
