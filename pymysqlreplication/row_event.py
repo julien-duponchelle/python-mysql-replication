@@ -95,6 +95,8 @@ class RowsEvent(BinLogEvent):
                 values[name] = column.set_values[self.packet.read_uint_by_size(column.size) - 1]
             elif column.type == FIELD_TYPE.BIT:
                 values[name] = self.__read_bit(column)
+            elif column.type == FIELD_TYPE.GEOMETRY:
+                values[name] = self.packet.read_length_coded_pascal_string(column.length_size)
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
         return values

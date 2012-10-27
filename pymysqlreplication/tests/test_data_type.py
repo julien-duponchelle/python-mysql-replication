@@ -228,10 +228,12 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], b'Hello') 
 
-    @unittest.skip("Not implemented yet")
     def test_geometry(self):
-        pass
-
+        create_query = "CREATE TABLE test (test GEOMETRY);"
+        insert_query = "INSERT INTO test VALUES(GeomFromText('POINT(1 1)'))"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], b'\x00\x00\x00\x00\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\xf0?')
+    
     def test_null(self):
         create_query = "CREATE TABLE test ( \
             test TINYINT NULL DEFAULT NULL, \

@@ -18,6 +18,8 @@ class Column(object):
             self.max_length = struct.unpack('<H', packet.read(2))[0]
         elif self.type == FIELD_TYPE.BLOB:
             self.length_size = packet.read_uint8()
+        elif self.type == FIELD_TYPE.GEOMETRY:
+            self.length_size = packet.read_uint8()
         elif self.type == FIELD_TYPE.NEWDECIMAL:
             self.precision = packet.read_uint8()
             self.decimals = packet.read_uint8()
