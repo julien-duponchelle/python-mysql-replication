@@ -104,9 +104,8 @@ class RowsEvent(BinLogEvent):
     def __read_string(self, size, column):
         str = self.packet.read_length_coded_pascal_string(size)
         if column.character_set_name is not None:
-            return str.decode(column.character_set_name)
-        else:
-            return str
+            str = str.decode(column.character_set_name)
+        return str
 
     def __read_bit(self, column):
         """Read MySQL BIT type"""

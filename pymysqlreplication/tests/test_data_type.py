@@ -271,23 +271,26 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         db = copy.copy(self.database)
         db["charset"] = "latin1"
         self.connect_conn_control(db)
-        if platform.python_version_tuple()[0] == 2:
-            str = unicode("\u00e9")
+
+        if platform.python_version_tuple()[0] == "2":
+            str = unichr(233)
         else:
             str = "\u00e9"
 
         create_query = "CREATE TABLE test (test CHAR(12)) CHARACTER SET latin1 COLLATE latin1_bin;"
-        insert_query = b"INSERT INTO test VALUES('" + str.encode('latin1') + b"');"
+        insert_query = b"INSERT INTO test VALUES('" + str.encode('latin-1') + b"');"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], str)
 
     def test_encoding_utf8(self):
-        if platform.python_version_tuple()[0] == 2:
-            str = unicode("\u20ac")
+        if platform.python_version_tuple()[0] == "2":
+            str = unichr(0x20ac)
         else:
             str = "\u20ac"
+
         create_query = "CREATE TABLE test (test CHAR(12)) CHARACTER SET utf8 COLLATE utf8_bin;"
-        insert_query = "INSERT INTO test VALUES('%s')" % (str)
+        insert_query = b"INSERT INTO test VALUES('" + str.encode('utf-8') + b"')"
+
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertMultiLineEqual(event.rows[0]["values"]["test"], str)
 

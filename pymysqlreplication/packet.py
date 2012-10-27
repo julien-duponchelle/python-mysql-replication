@@ -45,6 +45,7 @@ class BinLogPacketWrapper(object):
         # Ok Value
         self.packet = from_packet
         self.packet.advance(1)
+        self.charset = ctl_connection.charset
   
         # Header
         self.timestamp = struct.unpack('<I', self.packet.read(4))[0]
