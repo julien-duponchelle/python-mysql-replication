@@ -11,7 +11,7 @@ from .constants.BINLOG import TABLE_MAP_EVENT
 class BinLogStreamReader(object):
     '''Connect to replication stream and read event'''
     
-    def __init__(self, connection_settings = {}, resume_stream = False, blocking = False, only_events = None):
+    def __init__(self, connection_settings = {}, resume_stream = False, blocking = False, only_events = None, server_id = 255):
         '''
         resume_stream: Start for latest event of binlog or from older available event
         blocking: Read on stream is blocking
@@ -27,6 +27,7 @@ class BinLogStreamReader(object):
         self.__resume_stream = resume_stream
         self.__blocking = blocking
         self.__only_events = only_events
+        self.__server_id = server_id
 
         #Store table meta informations
         self.table_map = {}
@@ -57,7 +58,7 @@ class BinLogStreamReader(object):
             prelude += struct.pack('<h', 0)
         else:
             prelude += struct.pack('<h', 1)        
-        prelude += struct.pack('<I', 3)
+        prelude += struct.pack('<I', self.__server_id)
         self.__stream_connection.wfile.write(prelude + log_file.encode())
         self.__stream_connection.wfile.flush()
         self.__connected = True
