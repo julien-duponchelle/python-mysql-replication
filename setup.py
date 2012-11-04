@@ -22,9 +22,8 @@ class TestCommand(Command):
         import unittest
         unittest.main(tests, argv=sys.argv[:1])
 
-version_tuple = __import__('pymysqlreplication').VERSION
 
-version = "%d.%d.%d" % version_tuple
+version = "0.0.1"
 
 setup(
     name = "PyMySQLReplication",
@@ -36,5 +35,5 @@ setup(
     license = "Apache 2",
     packages = ['pymysqlreplication', 'pymysqlreplication.constants', 'pymysqlreplication.tests'],
     cmdclass = {'test': TestCommand},
-    requires = ['pymysql'],
+    install_requires = ['pymysql'],
 )
