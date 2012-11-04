@@ -21,14 +21,19 @@ Vagrant::Config.run do |config|
      chef.add_recipe "python"
      chef.add_recipe "mysql::client"
      chef.add_recipe "mysql::server"
+     chef.add_recipe "pymysqlreplication-test"
   #   chef.add_role "web"
   #
   #   # You may also specify custom JSON attributes:
     chef.json = {
         :mysql => {
+            :bind_address => "127.0.0.1",
             :tunable => {
                 :log_bin => "mysql-bin.log"
-            }
+            },
+            :server_root_password => "",
+            :server_repl_password => "",
+            :server_debian_password => "maint"
         }
     }
   end
