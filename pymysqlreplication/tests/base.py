@@ -14,7 +14,10 @@ class PyMySQLReplicationTestCase(unittest.TestCase):
     }
 
     def setUp(self):
-        self.conn_control = pymysql.connect(**self.database)
+        self.conn_control = None
+        db = copy.copy(self.database)
+        db["db"] = None
+        self.connect_conn_control(db)
         self.execute("DROP DATABASE IF EXISTS pymysqlreplication_test")
         self.execute("CREATE DATABASE pymysqlreplication_test")
         db = copy.copy(self.database)
