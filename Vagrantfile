@@ -29,7 +29,9 @@ Vagrant::Config.run do |config|
         :mysql => {
             :bind_address => "127.0.0.1",
             :tunable => {
-                :log_bin => "mysql-bin.log"
+                :log_bin => "mysql-bin.log",
+                :server_id => 1,
+                :binlog_format => "row"
             },
             :server_root_password => "",
             :server_repl_password => "",

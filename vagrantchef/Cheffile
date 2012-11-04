@@ -4,6 +4,7 @@
 site 'http://community.opscode.com/api/v1'
 
 cookbook 'git'
-cookbook 'mysql'
+cookbook 'mysql',
+    :git => "https://github.com/noplay/mysql.git"
 cookbook 'python'
 
