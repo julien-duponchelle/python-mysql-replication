@@ -4,3 +4,4 @@
 * MySQL 5.6 support: http://dev.mysql.com/doc/internals/en/row-based-replication.html#rows-event
 * Support binlog_row_image=minimal or binlog_row_image=noblob
 * Support connection lost
+* Test log file change

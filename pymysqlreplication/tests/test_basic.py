@@ -19,6 +19,30 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, QueryEvent)
         self.assertEqual(event.query, query)
 
+    def test_connection_lost_event(self):
+        self.stream.close()
+        self.stream = BinLogStreamReader(connection_settings = self.database, blocking = True)
+        
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        query2 = "INSERT INTO test (data) VALUES('a')";
+        for i in range(0, 1000):
+            self.execute(query2)
+
+        #RotateEvent
+        self.stream.fetchone()
+
+        self.conn_control.kill(self.stream._stream_connection.thread_id())
+        #FormatDescription
+        self.stream.fetchone()
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, QueryEvent)
+        self.assertEqual(event.query, query)
+        for i in range(0, 1000):
+            event = self.stream.fetchone()
+        self.assertEqual(event.query, query2)
+
     def test_filtering_events(self):
         self.stream.close()
         self.stream = BinLogStreamReader(connection_settings = self.database, only_events = [QueryEvent])        

@@ -18,7 +18,7 @@ class BinLogStreamReader(object):
         only_events: Array of allowed events
         '''
         connection_settings['charset'] = 'utf8'
-        self.__stream_connection = pymysql.connect(**connection_settings)
+        self._stream_connection = pymysql.connect(**connection_settings)
         ctl_connection_settings = copy.copy(connection_settings)
         ctl_connection_settings['db'] = 'information_schema'
         ctl_connection_settings['cursorclass'] = pymysql.cursors.DictCursor
@@ -28,16 +28,17 @@ class BinLogStreamReader(object):
         self.__blocking = blocking
         self.__only_events = only_events
         self.__server_id = server_id
+        self.__log_pos = None
 
         #Store table meta informations
         self.table_map = {}
 
     def close(self):
-        self.__stream_connection.close()
+        self._stream_connection.close()
         self.__ctl_connection.close()
 
     def __connect_to_stream(self):
-        cur = self.__stream_connection.cursor()
+        cur = self._stream_connection.cursor()
         cur.execute("SHOW MASTER STATUS")
         (log_file, log_pos) = cur.fetchone()[:2]
         cur.close()
@@ -50,24 +51,27 @@ class BinLogStreamReader(object):
         command = COM_BINLOG_DUMP
         prelude = struct.pack('<i', len(log_file) + 11) \
                 + int2byte(command)
-        if self.__resume_stream:
-            prelude += struct.pack('<I', log_pos)            
+        if self.__log_pos is None:
+            if self.__resume_stream:
+                prelude += struct.pack('<I', log_pos)            
+            else:
+                prelude += struct.pack('<I', 4)
         else:
-            prelude += struct.pack('<I', 4)
+            prelude += struct.pack('<I', self.__log_pos)
         if self.__blocking:
             prelude += struct.pack('<h', 0)
         else:
             prelude += struct.pack('<h', 1)        
         prelude += struct.pack('<I', self.__server_id)
-        self.__stream_connection.wfile.write(prelude + log_file.encode())
-        self.__stream_connection.wfile.flush()
+        self._stream_connection.wfile.write(prelude + log_file.encode())
+        self._stream_connection.wfile.flush()
         self.__connected = True
         
     def fetchone(self):
         if self.__connected == False:
             self.__connect_to_stream()
         while True:
-            pkt = self.__stream_connection.read_packet()
+            pkt = self._stream_connection.read_packet()
             if not pkt.is_ok_packet():
                 return None
             binlog_event = BinLogPacketWrapper(pkt, self.table_map, self.__ctl_connection)
