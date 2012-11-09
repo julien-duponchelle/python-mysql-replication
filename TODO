@@ -1,4 +1,3 @@
-* Cache column name
 * Support ALTER TABLE
 * End user documentation
 * Test transaction support

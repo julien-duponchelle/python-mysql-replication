@@ -323,14 +323,17 @@ class TableMapEvent(BinLogEvent):
 
         self.columns = []
 
-        column_schemas = self.__get_table_informations(self.schema, self.table)
+        if self.table_id in table_map:
+            self.column_schemas = table_map[self.table_id].column_schemas
+        else:
+            self.column_schemas = self.__get_table_informations(self.schema, self.table)
 
         #Read columns meta data
         column_types = list(self.packet.read(self.column_count))
         metadata_length = self.packet.read_length_coded_binary()
         for i in range(0, len(column_types)):
             column_type = column_types[i]
-            column_schema = column_schemas[i]
+            column_schema = self.column_schemas[i]
             col = Column(byte2int(column_type), column_schema, from_packet)
             self.columns.append(col)
 
@@ -339,7 +342,6 @@ class TableMapEvent(BinLogEvent):
         # n              NULL-bitmask, length: (column-length * 8) / 7
 
     def __get_table_informations(self, schema, table):
-        #TODO: Cache this information
         cur = self._ctl_connection.cursor()
         cur.execute("""SELECT * FROM columns WHERE table_schema = %s AND table_name = %s""", (schema, table))
         return cur.fetchall()
