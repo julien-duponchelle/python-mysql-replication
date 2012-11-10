@@ -26,22 +26,25 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
         query2 = "INSERT INTO test (data) VALUES('a')";
-        for i in range(0, 1000):
+        for i in range(0, 10000):
             self.execute(query2)
+        self.execute("COMMIT")
 
         #RotateEvent
         self.stream.fetchone()
 
-        self.conn_control.kill(self.stream._stream_connection.thread_id())
+
         #FormatDescription
         self.stream.fetchone()
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, QueryEvent)
         self.assertEqual(event.query, query)
+
+        self.conn_control.kill(self.stream._stream_connection.thread_id())
         for i in range(0, 1000):
             event = self.stream.fetchone()
-        self.assertEqual(event.query, query2)
+            self.assertIsNotNone(event)
 
     def test_filtering_events(self):
         self.stream.close()

@@ -17,9 +17,9 @@ class BinLogStreamReader(object):
         blocking: Read on stream is blocking
         only_events: Array of allowed events
         '''
-        connection_settings['charset'] = 'utf8'
-        self._stream_connection = pymysql.connect(**connection_settings)
-        ctl_connection_settings = copy.copy(connection_settings)
+        self.__connection_settings = connection_settings
+        self.__connection_settings['charset'] = 'utf8'
+        ctl_connection_settings = copy.copy(self.__connection_settings)
         ctl_connection_settings['db'] = 'information_schema'
         ctl_connection_settings['cursorclass'] = pymysql.cursors.DictCursor
         self.__ctl_connection = pymysql.connect(**ctl_connection_settings)
@@ -34,10 +34,13 @@ class BinLogStreamReader(object):
         self.table_map = {}
 
     def close(self):
-        self._stream_connection.close()
+        if self.__connected:
+            self._stream_connection.close()
+            self.__connected = False
         self.__ctl_connection.close()
 
     def __connect_to_stream(self):
+        self._stream_connection = pymysql.connect(**self.__connection_settings)
         cur = self._stream_connection.cursor()
         cur.execute("SHOW MASTER STATUS")
         (log_file, log_pos) = cur.fetchone()[:2]
@@ -68,10 +71,16 @@ class BinLogStreamReader(object):
         self.__connected = True
         
     def fetchone(self):
-        if self.__connected == False:
-            self.__connect_to_stream()
         while True:
-            pkt = self._stream_connection.read_packet()
+            if self.__connected == False:
+                self.__connect_to_stream()
+            pkt = None
+            try:
+                pkt = self._stream_connection.read_packet()
+            except pymysql.OperationalError as (code, message): 
+                if code == 2013: #2013: Connection Lost
+                    self.__connected = False
+                    continue
             if not pkt.is_ok_packet():
                 return None
             binlog_event = BinLogPacketWrapper(pkt, self.table_map, self.__ctl_connection)
@@ -79,6 +88,7 @@ class BinLogStreamReader(object):
                 self.table_map[binlog_event.event.table_id] = binlog_event.event
             if self.__filter_event(binlog_event.event):
                 continue
+            self.__log_pos = binlog_event.log_pos
             return binlog_event.event
 
     def __filter_event(self, event):
