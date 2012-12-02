@@ -226,7 +226,9 @@ To run tests:
 
     python setup.py test
 
-
+Similar projects
+==================
+Kodoma: Ruby-binlog based MySQL replication listener https://github.com/y310/kodama
 
 Licence
 =======
