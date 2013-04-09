@@ -4,7 +4,7 @@ import datetime
 
 from .event import BinLogEvent
 from pymysql.util import byte2int, int2byte
-from pymysql.constants import FIELD_TYPE
+from .constants import FIELD_TYPE
 from .constants import BINLOG
 from .column import Column
 
@@ -84,12 +84,18 @@ class RowsEvent(BinLogEvent):
                 values[name] = self.__read_string(column.length_size, column)
             elif column.type == FIELD_TYPE.DATETIME:
                 values[name] = self.__read_datetime()
-            elif column.type == FIELD_TYPE.TIME:
+            elif column.type == FIELD_TYPE.DATETIME2:
+                values[name] = self.__read_datetime2()
+            elif column.type == FIELD_TYPE.TIME
                 values[name] = self.__read_time()
+            elif  column.type == FIELD_TYPE.TIME2:
+                values[name] = self.__read_time2()
             elif column.type == FIELD_TYPE.DATE:
                 values[name] = self.__read_date()
             elif column.type == FIELD_TYPE.TIMESTAMP:
                 values[name] = datetime.datetime.fromtimestamp(self.packet.read_uint32())
+            elif column.type == FIELD_TYPE.TIMESTAMP2:
+                values[name] = datetime.datetime.fromtimestamp2(self.packet.read_uint32())
             elif column.type == FIELD_TYPE.LONGLONG:
                 if unsigned:
                     values[name] = self.packet.read_uint64()

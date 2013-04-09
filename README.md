@@ -32,7 +32,7 @@ The current project is a proof of concept of what you can do with the MySQL
 replication log.
 
 The project is test with:
-* MySQL 5.5 (5.6 is not supported)
+* MySQL 5.5 and 5.6
 * Python 2.7
 * Python 3.2
 
@@ -266,3 +266,5 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+

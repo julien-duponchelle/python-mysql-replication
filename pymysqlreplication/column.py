@@ -1,5 +1,5 @@
 import struct
-from pymysql.constants import FIELD_TYPE
+from .constants import FIELD_TYPE
 from pymysql.util import byte2int, int2byte
 
 class Column(object):
