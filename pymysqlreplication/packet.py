@@ -25,6 +25,9 @@ class BinLogPacketWrapper(object):
 
     __event_map = {
         QUERY_EVENT: QueryEvent,
+        UPDATE_ROWS_EVENT_V1: UpdateRowsEvent,
+        WRITE_ROWS_EVENT_V1: WriteRowsEvent,
+        DELETE_ROWS_EVENT_V1: DeleteRowsEvent,
         UPDATE_ROWS_EVENT: UpdateRowsEvent,
         WRITE_ROWS_EVENT: WriteRowsEvent,
         DELETE_ROWS_EVENT: DeleteRowsEvent,
@@ -61,7 +64,7 @@ class BinLogPacketWrapper(object):
         try:
             event_class = self.__event_map[self.event_type]
         except KeyError:
-            raise NotImplementedError("Unknown MySQL bin log event type: " + hex(self.event_type))
+            raise NotImplementedError("Unknown MySQL bin log event type: " + hex(self.event_type) + " (" + str(self.event_type) + ")")
         self.event = event_class(self, event_size_without_header, table_map, ctl_connection)
 
     def read(self, size):
@@ -108,11 +111,11 @@ class BinLogPacketWrapper(object):
         if c < UNSIGNED_CHAR_COLUMN:
           return c
         elif c == UNSIGNED_SHORT_COLUMN:
-            return unpack_int16(self.read(UNSIGNED_INT16_LENGTH))
+            return self.unpack_uint16(self.read(UNSIGNED_SHORT_LENGTH))
         elif c == UNSIGNED_INT24_COLUMN:
-          return unpack_int24(self.read(UNSIGNED_INT24_LENGTH))
+          return self.unpack_int24(self.read(UNSIGNED_INT24_LENGTH))
         elif c == UNSIGNED_INT64_COLUMN:
-          return unpack_int64(self.read(UNSIGNED_INT64_LENGTH))
+          return self.unpack_int64(self.read(UNSIGNED_INT64_LENGTH))
 
     def read_length_coded_string(self):
         """Read a 'Length Coded String' from the data buffer.
@@ -221,3 +224,20 @@ class BinLogPacketWrapper(object):
 
     def read_int64(self):
         return struct.unpack('<q', self.read(8))[0]
+
+    def unpack_uint16(self, n):
+      return struct.unpack('<H', n[0:2])[0]
+
+    def unpack_int24(self, n):
+        try:
+            return struct.unpack('B',n[0])[0] + (struct.unpack('B', n[1])[0] << 8) +\
+                (struct.unpack('B',n[2])[0] << 16)
+        except TypeError:
+            return n[0] + (n[1] << 8) + (n[2] << 16)
+
+    def unpack_int32(self, n):
+        try:
+            return struct.unpack('B',n[0])[0] + (struct.unpack('B', n[1])[0] << 8) +\
+                (struct.unpack('B',n[2])[0] << 16) + (struct.unpack('B', n[3])[0] << 24)
+        except TypeError:
+            return n[0] + (n[1] << 8) + (n[2] << 16) + (n[3] << 24)

@@ -5,6 +5,7 @@ import datetime
 from .event import BinLogEvent
 from pymysql.util import byte2int, int2byte
 from pymysql.constants import FIELD_TYPE
+from .constants import BINLOG
 from .column import Column
 
 class RowsEvent(BinLogEvent):
@@ -15,6 +16,13 @@ class RowsEvent(BinLogEvent):
         #Header
         self.table_id = self._read_table_id()
         self.flags = struct.unpack('<H', self.packet.read(2))[0]
+
+        #Event V2
+        if self.event_type == BINLOG.WRITE_ROWS_EVENT or \
+            self.event_type == BINLOG.DELETE_ROWS_EVENT or \
+            self.event_type == BINLOG.UPDATE_ROWS_EVENT:
+            self.extra_data_length = struct.unpack('<H', self.packet.read(2))[0]
+            self.extra_data = self.packet.read(self.extra_data_length / 8)
 
         #Body
         self.number_of_columns = self.packet.read_length_coded_binary()
