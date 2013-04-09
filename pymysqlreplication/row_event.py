@@ -92,7 +92,10 @@ class RowsEvent(BinLogEvent):
             elif column.type == FIELD_TYPE.ENUM:
                 values[name] = column.enum_values[self.packet.read_uint_by_size(column.size) - 1]
             elif column.type == FIELD_TYPE.SET:
-                values[name] = column.set_values[self.packet.read_uint_by_size(column.size) - 1]
+                #We read set columns as a bitmap telling us which options are enabled
+                bit_mask = self.packet.read_uint_by_size(column.size)
+                values[name] = {val for idx,val in enumerate(column.set_values) if bit_mask & 2**idx} or None
+
             elif column.type == FIELD_TYPE.BIT:
                 values[name] = self.__read_bit(column)
             elif column.type == FIELD_TYPE.GEOMETRY:
