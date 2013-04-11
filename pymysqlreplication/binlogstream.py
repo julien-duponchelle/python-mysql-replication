@@ -6,6 +6,8 @@ from pymysql.constants.COMMAND import *
 from pymysql.util import byte2int, int2byte
 from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT
+import logging
+
 
 
 class BinLogStreamReader(object):
@@ -81,9 +83,17 @@ class BinLogStreamReader(object):
                 if code == 2013: #2013: Connection Lost
                     self.__connected = False
                     continue
+            except NotImplementedError:
+                logging.exception("Error iterating log!")
+                continue
             if not pkt.is_ok_packet():
                 return None
-            binlog_event = BinLogPacketWrapper(pkt, self.table_map, self.__ctl_connection)
+            try:
+                binlog_event = BinLogPacketWrapper(pkt, self.table_map, self.__ctl_connection)
+            except:
+                logging.exception("Error iterating log!")
+                continue
+
             if binlog_event.event_type == TABLE_MAP_EVENT:
                 self.table_map[binlog_event.event.table_id] = binlog_event.event
             if self.__filter_event(binlog_event.event):
@@ -101,5 +111,7 @@ class BinLogStreamReader(object):
 
     def __iter__(self):
         return iter(self.fetchone, None)
+
+
 
 
