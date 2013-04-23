@@ -7,5 +7,5 @@ Cookbooks are manage via [librarian](https://github.com/applicationsonline/libra
 
 For installing it:
 
-    gem instal librarian
+    gem instal librarian-chef
     librarian-chef install
