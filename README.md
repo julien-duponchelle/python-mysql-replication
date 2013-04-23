@@ -231,6 +231,11 @@ Similar projects
 ==================
 Kodoma: Ruby-binlog based MySQL replication listener https://github.com/y310/kodama
 
+Special thanks
+================
+* MySQL binlog from Jeremy Cole was a great souce of knowledge about MySQL replication protocol https://github.com/jeremycole/mysql_binlog
+* Samuel Charron for his help https://github.com/scharron
+
 Licence
 =======
 Copyright 2012 Julien Duponchelle
