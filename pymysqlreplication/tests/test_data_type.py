@@ -161,6 +161,12 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], None)
 
+    def test_broken_datetime(self):
+        create_query = "CREATE TABLE test (test DATETIME NOT NULL);"
+        insert_query = "INSERT INTO test VALUES('2013-00-00 00:00:00')"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], None)
+
     def test_year(self):
         create_query = "CREATE TABLE test (a YEAR(4), b YEAR(2))"
         insert_query = "INSERT INTO test VALUES(1984, 1984)"
