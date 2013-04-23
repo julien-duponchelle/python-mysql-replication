@@ -67,7 +67,37 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         insert_query = "INSERT INTO test VALUES(4.2, 42000.123456)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], Decimal("4.2"))
-        self.assertEqual(event.rows[0]["values"]["test2"], Decimal("42000.123456")) 
+        self.assertEqual(event.rows[0]["values"]["test2"], Decimal("42000.123456"))
+
+    def test_decimal_with_zero_scale_1(self):
+        create_query = "CREATE TABLE test (test DECIMAL(23,0))"
+        insert_query = "INSERT INTO test VALUES(10)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("10"))
+
+    def test_decimal_with_zero_scale_2(self):
+        create_query = "CREATE TABLE test (test DECIMAL(23,0))"
+        insert_query = "INSERT INTO test VALUES(12345678912345678912345)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("12345678912345678912345"))
+
+    def test_decimal_with_zero_scale_3(self):
+        create_query = "CREATE TABLE test (test DECIMAL(23,0))"
+        insert_query = "INSERT INTO test VALUES(100000.0)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("100000"))
+
+    def test_decimal_with_zero_scale_4(self):
+        create_query = "CREATE TABLE test (test DECIMAL(23,0))"
+        insert_query = "INSERT INTO test VALUES(-100000.0)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("-100000"))
+
+    def test_decimal_with_zero_scale_6(self):
+        create_query = "CREATE TABLE test (test DECIMAL(23,0))"
+        insert_query = "INSERT INTO test VALUES(-1234567891234567891234)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("-1234567891234567891234"))
 
     def test_tiny(self):
         create_query = "CREATE TABLE test (id TINYINT UNSIGNED NOT NULL, test TINYINT)"
