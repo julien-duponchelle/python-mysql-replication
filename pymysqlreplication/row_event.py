@@ -162,12 +162,18 @@ class RowsEvent(BinLogEvent):
             return None
 
         date = value / 1000000
-        time = value % 1000000
+        time = int(value % 1000000)
+
+        year = int(date / 10000)
+        month = int((date % 10000) / 100)
+        day = int(date % 100)
+        if year == 0 or month == 0 or day == 0:
+            return None
 
         date = datetime.datetime(
-            year = int(date / 10000),
-            month = int((date % 10000) / 100),
-            day = int(date % 100),
+            year = year,
+            month = month,
+            day = day,
             hour = int(time / 10000),
             minute = int((time % 10000) / 100),
             second = int(time % 100))
