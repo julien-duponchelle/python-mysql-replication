@@ -129,19 +129,37 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (test DATE);"
         insert_query = "INSERT INTO test VALUES('1984-12-03')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], datetime.date(1984, 12, 3)) 
+        self.assertEqual(event.rows[0]["values"]["test"], datetime.date(1984, 12, 3))
+
+    def test_zero_date(self):
+        create_query = "CREATE TABLE test (id INTEGER, test DATE);"
+        insert_query = "INSERT INTO test (id) VALUES(1)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], None)
 
     def test_time(self):
         create_query = "CREATE TABLE test (test TIME);"
         insert_query = "INSERT INTO test VALUES('12:33:07')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], datetime.time(12, 33, 7)) 
+        self.assertEqual(event.rows[0]["values"]["test"], datetime.time(12, 33, 7))
+
+    def test_zero_time(self):
+        create_query = "CREATE TABLE test (id INTEGER, test TIME NOT NULL);"
+        insert_query = "INSERT INTO test (id) VALUES(1)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], None)
 
     def test_datetime(self):
         create_query = "CREATE TABLE test (test DATETIME);"
         insert_query = "INSERT INTO test VALUES('1984-12-03 12:33:07')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7)) 
+        self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7))
+
+    def test_zero_datetime(self):
+        create_query = "CREATE TABLE test (id INTEGER, test DATETIME NOT NULL);"
+        insert_query = "INSERT INTO test (id) VALUES(1)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], None)
 
     def test_year(self):
         create_query = "CREATE TABLE test (a YEAR(4), b YEAR(2))"
