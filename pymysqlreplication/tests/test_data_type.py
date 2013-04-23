@@ -140,6 +140,30 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7))
 
+    def test_timestamp_mysql56(self):
+        create_query = '''CREATE TABLE test (test0 TIMESTAMP(0),
+            test1 TIMESTAMP(1),
+            test2 TIMESTAMP(2),
+            test3 TIMESTAMP(3),
+            test4 TIMESTAMP(4),
+            test5 TIMESTAMP(5),
+            test6 TIMESTAMP(6));'''
+        insert_query = '''INSERT INTO test VALUES('1984-12-03 12:33:07',
+            '1984-12-03 12:33:07.1',
+            '1984-12-03 12:33:07.12',
+            '1984-12-03 12:33:07.123',
+            '1984-12-03 12:33:07.1234',
+            '1984-12-03 12:33:07.12345',
+            '1984-12-03 12:33:07.123456')'''
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test0"], datetime.datetime(1984, 12, 3, 12, 33, 7))
+        self.assertEqual(event.rows[0]["values"]["test1"], datetime.datetime(1984, 12, 3, 12, 33, 7, 1))
+        self.assertEqual(event.rows[0]["values"]["test2"], datetime.datetime(1984, 12, 3, 12, 33, 7, 12))
+        self.assertEqual(event.rows[0]["values"]["test3"], datetime.datetime(1984, 12, 3, 12, 33, 7, 123))
+        self.assertEqual(event.rows[0]["values"]["test4"], datetime.datetime(1984, 12, 3, 12, 33, 7, 1234))
+        self.assertEqual(event.rows[0]["values"]["test5"], datetime.datetime(1984, 12, 3, 12, 33, 7, 12345))
+        self.assertEqual(event.rows[0]["values"]["test6"], datetime.datetime(1984, 12, 3, 12, 33, 7, 123456))
+
     def test_longlong(self):
         create_query = "CREATE TABLE test (id BIGINT UNSIGNED NOT NULL, test BIGINT)"
         insert_query = "INSERT INTO test VALUES(18446744073709551615, -9223372036854775808)"

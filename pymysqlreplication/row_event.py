@@ -84,18 +84,20 @@ class RowsEvent(BinLogEvent):
                 values[name] = self.__read_string(column.length_size, column)
             elif column.type == FIELD_TYPE.DATETIME:
                 values[name] = self.__read_datetime()
-            elif column.type == FIELD_TYPE.DATETIME2:
-                values[name] = self.__read_datetime2()
-            elif column.type == FIELD_TYPE.TIME
+            elif column.type == FIELD_TYPE.TIME:
                 values[name] = self.__read_time()
-            elif  column.type == FIELD_TYPE.TIME2:
-                values[name] = self.__read_time2()
             elif column.type == FIELD_TYPE.DATE:
                 values[name] = self.__read_date()
             elif column.type == FIELD_TYPE.TIMESTAMP:
                 values[name] = datetime.datetime.fromtimestamp(self.packet.read_uint32())
+
+            # For new date format: http://dev.mysql.com/doc/internals/en/date-and-time-data-type-representation.html
+            elif column.type == FIELD_TYPE.DATETIME2:
+                values[name] = self.__read_datetime2()
+            elif  column.type == FIELD_TYPE.TIME2:
+                values[name] = self.__read_time2()
             elif column.type == FIELD_TYPE.TIMESTAMP2:
-                values[name] = datetime.datetime.fromtimestamp2(self.packet.read_uint32())
+                values[name] = self.__read_fsp(datetime.datetime.fromtimestamp(self.packet.read_int_be_by_size(4)), column)
             elif column.type == FIELD_TYPE.LONGLONG:
                 if unsigned:
                     values[name] = self.packet.read_uint64()
@@ -117,6 +119,23 @@ class RowsEvent(BinLogEvent):
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
         return values
+
+    # For new date format: http://dev.mysql.com/doc/internals/en/date-and-time-data-type-representation.html
+    def __read_fsp(self, time, column):
+        read = 0
+        if column.fsp == 1 or column.fsp == 2:
+            read = 1
+        elif column.fsp == 3 or column.fsp == 4:
+            read = 2
+        elif column.fsp == 5 or column.fsp == 6:
+            read = 3
+        if read > 0:
+            microsecond = self.packet.read_int_be_by_size(read)
+            if column.fsp % 2:
+                time = time.replace(microsecond = microsecond / 10)
+            else:
+                time = time.replace(microsecond = microsecond)
+        return time
 
     def __read_string(self, size, column):
         str = self.packet.read_length_coded_pascal_string(size)
