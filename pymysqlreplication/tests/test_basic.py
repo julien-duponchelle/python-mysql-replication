@@ -3,7 +3,7 @@ from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
-import time
+
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def test_read_query_event(self):
@@ -19,13 +19,25 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, QueryEvent)
         self.assertEqual(event.query, query)
 
+    def test_reading_rotate_event(self):
+        query = "CREATE TABLE test_2 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+
+        rotate_event = self.stream.fetchone()
+        self.stream.close()
+
+        query = "CREATE TABLE test_3 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+
+        rotate_event = self.stream.fetchone()
+
     def test_connection_lost_event(self):
         self.stream.close()
         self.stream = BinLogStreamReader(connection_settings = self.database, blocking = True)
 
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query2 = "INSERT INTO test (data) VALUES('a')";
+        query2 = "INSERT INTO test (data) VALUES('a')"
         for i in range(0, 10000):
             self.execute(query2)
         self.execute("COMMIT")
