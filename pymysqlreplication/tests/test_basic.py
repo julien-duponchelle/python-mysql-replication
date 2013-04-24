@@ -34,7 +34,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         rotate_event = self.stream.fetchone()
 
-    def test_connection_lost_event(self):
+    def test_connection_stream_lost_event(self):
         self.stream.close()
         self.stream = BinLogStreamReader(connection_settings = self.database, blocking = True)
 
@@ -47,7 +47,6 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         #RotateEvent
         self.stream.fetchone()
-
 
         #FormatDescription
         self.stream.fetchone()
