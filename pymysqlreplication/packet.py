@@ -38,15 +38,15 @@ class BinLogPacketWrapper(object):
         if not from_packet.is_ok_packet():
             raise ValueError('Cannot create ' + str(self.__class__.__name__)
                 + ' object from invalid packet type')
-       
+
         self.read_bytes = 0 #-1 because we ignore the ok byte
-        self.__data_buffer = b'' #Used when we want to override a value in the data buffer 
+        self.__data_buffer = b'' #Used when we want to override a value in the data buffer
 
         # Ok Value
         self.packet = from_packet
         self.packet.advance(1)
         self.charset = ctl_connection.charset
-  
+
         # Header
         self.timestamp = struct.unpack('<I', self.packet.read(4))[0]
         self.event_type = byte2int(self.packet.read(1))
@@ -55,7 +55,7 @@ class BinLogPacketWrapper(object):
         # position of the next event
         self.log_pos = struct.unpack('<I', self.packet.read(4))[0]
         self.flags = self.flags = struct.unpack('<H', self.packet.read(2))[0]
-        
+
 
         event_size_without_header = self.event_size - 19
         try:
@@ -131,7 +131,7 @@ class BinLogPacketWrapper(object):
     def __getattr__(self, key):
         if hasattr(self.packet, key):
             return getattr(self.packet, key)
-        
+
         raise AttributeError(str(self.__class__)
             + " instance has no attribute '" + key + "'")
 
@@ -141,6 +141,8 @@ class BinLogPacketWrapper(object):
             return struct.unpack('>b', self.read(size))[0]
         elif size == 2:
             return struct.unpack('>h', self.read(size))[0]
+        elif size == 3:
+            return self.read_int24_be()
         elif size == 4:
             return struct.unpack('>i', self.read(size))[0]
         elif size == 8:
@@ -149,7 +151,7 @@ class BinLogPacketWrapper(object):
     def read_uint_by_size(self, size):
         '''Read a little endian integer values based on byte number'''
         if size == 1:
-            return self.read_uint8() 
+            return self.read_uint8()
         elif size == 2:
             return self.read_uint16()
         elif size == 3:
@@ -181,6 +183,13 @@ class BinLogPacketWrapper(object):
     def read_uint24(self, unsigned = False):
         a, b, c = struct.unpack("BBB", self.read(3))
         return a + (b << 8) + (c << 16)
+
+    def read_int24_be(self):
+        a, b, c = struct.unpack('BBB', self.read(3))
+        if a & 128 == 0:
+            return (a << 16) | (b << 8) | c
+        else:
+            return (-1 << 24) | (a << 16) | (b << 8) | c
 
     def read_uint8(self):
         return struct.unpack('<B', self.read(1))[0]
