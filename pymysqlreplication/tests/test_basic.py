@@ -11,7 +11,10 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.execute(query)
 
         #RotateEvent
-        self.stream.fetchone()
+        event = self.stream.fetchone()
+        self.assertEqual(event.position, 4)
+        self.assertEqual(event.next_binlog, "mysql-bin.000001")
+
         #FormatDescription
         self.stream.fetchone()
 
