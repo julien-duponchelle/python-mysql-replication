@@ -10,7 +10,7 @@ from .constants.BINLOG import TABLE_MAP_EVENT
 
 class BinLogStreamReader(object):
     '''Connect to replication stream and read event'''
-    
+
     def __init__(self, connection_settings = {}, resume_stream = False, blocking = False, only_events = None, server_id = 255):
         '''
         resume_stream: Start for latest event of binlog or from older available event
@@ -56,7 +56,7 @@ class BinLogStreamReader(object):
                 + int2byte(command)
         if self.__log_pos is None:
             if self.__resume_stream:
-                prelude += struct.pack('<I', log_pos)            
+                prelude += struct.pack('<I', log_pos)
             else:
                 prelude += struct.pack('<I', 4)
         else:
@@ -64,12 +64,12 @@ class BinLogStreamReader(object):
         if self.__blocking:
             prelude += struct.pack('<h', 0)
         else:
-            prelude += struct.pack('<h', 1)        
+            prelude += struct.pack('<h', 1)
         prelude += struct.pack('<I', self.__server_id)
         self._stream_connection.wfile.write(prelude + log_file.encode())
         self._stream_connection.wfile.flush()
         self.__connected = True
-        
+
     def fetchone(self):
         while True:
             if self.__connected == False:
@@ -77,7 +77,7 @@ class BinLogStreamReader(object):
             pkt = None
             try:
                 pkt = self._stream_connection.read_packet()
-            except pymysql.OperationalError as (code, message): 
+            except pymysql.OperationalError as (code, message):
                 if code == 2013: #2013: Connection Lost
                     self.__connected = False
                     continue

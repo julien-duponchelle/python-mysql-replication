@@ -1,4 +1,4 @@
-import struct 
+import struct
 from datetime import datetime
 
 from pymysql.util import byte2int, int2byte
@@ -26,7 +26,7 @@ class BinLogEvent(object):
         print("Read bytes: %d" % (self.packet.read_bytes))
         self._dump()
         print()
-    
+
     def _dump(self):
         '''Core data dumped for the event'''
         pass
@@ -79,6 +79,6 @@ class QueryEvent(BinLogEvent):
     def _dump(self):
         super(QueryEvent, self)._dump()
         print("Schema: %s" % (self.schema))
-        print("Execution time: %d" % (self.execution_time)) 
+        print("Execution time: %d" % (self.execution_time))
         print("Query: %s" % (self.query))
 

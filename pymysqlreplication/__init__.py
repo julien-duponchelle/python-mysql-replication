@@ -20,4 +20,4 @@ limitations under the License.
 '''
 
 
-from .binlogstream import BinLogStreamReader 
+from .binlogstream import BinLogStreamReader
