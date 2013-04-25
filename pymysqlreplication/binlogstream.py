@@ -98,7 +98,7 @@ class BinLogStreamReader(object):
             if not pkt.is_ok_packet():
                 return None
             try:
-                binlog_event = BinLogPacketWrapper(pkt, self.table_map, self.__ctl_connection)
+                binlog_event = BinLogPacketWrapper(pkt, self.table_map, self._ctl_connection)
             except:
                 logging.exception("Error iterating log!")
                 continue
