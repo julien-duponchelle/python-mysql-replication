@@ -94,6 +94,7 @@ class BinLogStreamReader(object):
                 logging.exception("Error iterating log!")
                 continue
 
+
             if binlog_event.event_type == TABLE_MAP_EVENT:
                 self.table_map[binlog_event.event.table_id] = binlog_event.event
             if self.__filter_event(binlog_event.event):
@@ -106,6 +107,7 @@ class BinLogStreamReader(object):
             for allowed_event in self.__only_events:
                 if isinstance(event, allowed_event):
                     return False
+            logging.info("Event type (%d) - %s not handled", event.event_type,  event.__class__.__name__)
             return True
         return False
 
