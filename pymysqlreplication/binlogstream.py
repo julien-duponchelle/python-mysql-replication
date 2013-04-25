@@ -11,7 +11,7 @@ from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
 class BinLogStreamReader(object):
     '''Connect to replication stream and read event'''
 
-    def __init__(self, connection_settings = {}, resume_stream = False, blocking = False, only_events = None, server_id = 255):
+    def __init__(self, connection_settings={}, resume_stream=False, blocking=False, only_events=None, server_id=255):
         '''
         resume_stream: Start for latest event of binlog or from older available event
         blocking: Read on stream is blocking
@@ -45,6 +45,7 @@ class BinLogStreamReader(object):
         self._ctl_connection_settings['db'] = 'information_schema'
         self._ctl_connection_settings['cursorclass'] = pymysql.cursors.DictCursor
         self._ctl_connection = pymysql.connect(**self._ctl_connection_settings)
+        self.__connected_ctl = True
 
     def __connect_to_stream(self):
         self._stream_connection = pymysql.connect(**self.__connection_settings)
@@ -55,13 +56,13 @@ class BinLogStreamReader(object):
 
         if self.__log_file is None:
             self.__log_file = log_file
-        # binlog_pos (4) -- position in the binlog-file to start the stream with
+            # binlog_pos (4) -- position in the binlog-file to start the stream with
         # flags (2) BINLOG_DUMP_NON_BLOCK (0 or 1)
         # server_id (4) -- server id of this slave
         # binlog-filename (string.EOF) -- filename of the binlog on the master
         command = COM_BINLOG_DUMP
         prelude = struct.pack('<i', len(self.__log_file) + 11) \
-                + int2byte(command)
+                  + int2byte(command)
         if self.__log_pos is None:
             if self.__resume_stream:
                 prelude += struct.pack('<I', log_pos)
@@ -80,9 +81,9 @@ class BinLogStreamReader(object):
 
     def fetchone(self):
         while True:
-            if self.__connected_stream == False:
+            if not self.__connected_stream:
                 self.__connect_to_stream()
-            if self.__connected_ctl == False:
+            if not self.__connected_ctl:
                 self.__connect_to_ctl()
             pkt = None
             try:
