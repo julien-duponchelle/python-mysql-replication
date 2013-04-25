@@ -1,6 +1,6 @@
 import struct
 from pymysql.constants import FIELD_TYPE
-from pymysql.util import byte2int, int2byte 
+from pymysql.util import byte2int, int2byte
 
 class Column(object):
     '''Definition of a column'''

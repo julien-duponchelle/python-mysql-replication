@@ -48,6 +48,7 @@ In your MySQL server configuration file you need to enable replication:
     log_bin			 = /var/log/mysql/mysql-bin.log
     expire_logs_days = 10
     max_binlog_size  = 100M
+    binlog-checksum = NONE
     binlog-format    = row #Very important if you want to receive write, update and delete row events
 
 Examples
@@ -229,6 +230,11 @@ To run tests:
 Similar projects
 ==================
 Kodoma: Ruby-binlog based MySQL replication listener https://github.com/y310/kodama
+
+Special thanks
+================
+* MySQL binlog from Jeremy Cole was a great souce of knowledge about MySQL replication protocol https://github.com/jeremycole/mysql_binlog
+* Samuel Charron for his help https://github.com/scharron
 
 Licence
 =======

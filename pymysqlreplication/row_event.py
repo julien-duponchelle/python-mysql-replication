@@ -58,7 +58,7 @@ class RowsEvent(BinLogEvent):
                     values[name] = struct.unpack("<i", self.packet.read(4))[0]
             elif column.type == FIELD_TYPE.INT24:
                 if unsigned:
-                    values[name] = self.packet.read_uint24()                    
+                    values[name] = self.packet.read_uint24()
                 else:
                     values[name] = self.packet.read_int24()
             elif column.type == FIELD_TYPE.FLOAT:
@@ -135,6 +135,9 @@ class RowsEvent(BinLogEvent):
 
     def __read_time(self):
         time = self.packet.read_uint24()
+        if time == 0:
+            return None
+
         date = datetime.time(
             hour = int(time / 10000),
             minute = int((time % 10000) / 100),
@@ -143,7 +146,9 @@ class RowsEvent(BinLogEvent):
 
     def __read_date(self):
         time = self.packet.read_uint24()
- 
+        if time == 0:  # nasty mysql 0000-00-00 dates
+            return None
+
         date = datetime.date(
             year = (time & ((1 << 15) - 1) << 9) >> 9,
             month = (time & ((1 << 4) - 1) << 5) >> 5,
@@ -153,21 +158,30 @@ class RowsEvent(BinLogEvent):
 
     def __read_datetime(self):
         value = self.packet.read_uint64()
+        if value == 0:  # nasty mysql 0000-00-00 dates
+            return None
+
         date = value / 1000000
-        time = value % 1000000
-        
+        time = int(value % 1000000)
+
+        year = int(date / 10000)
+        month = int((date % 10000) / 100)
+        day = int(date % 100)
+        if year == 0 or month == 0 or day == 0:
+            return None
+
         date = datetime.datetime(
-            year = int(date / 10000),
-            month = int((date % 10000) / 100),
-            day = int(date % 100),
+            year = year,
+            month = month,
+            day = day,
             hour = int(time / 10000),
             minute = int((time % 10000) / 100),
             second = int(time % 100))
         return date
-    
+
     def __read_new_decimal(self, column):
         '''Read MySQL's new decimal format introduced in MySQL 5'''
-        
+
         # This project was a great source of inspiration for
         # understanding this storage format.
         # https://github.com/jeremycole/mysql_binlog
@@ -194,9 +208,8 @@ class RowsEvent(BinLogEvent):
 
 
         size = compressed_bytes[comp_integral]
-
         if size > 0:
-            value = self.packet.read_int_be_by_size(size) ^ mask 
+            value = self.packet.read_int_be_by_size(size) ^ mask
             res += str(value)
 
         for i in range(0, uncomp_integral):
@@ -226,7 +239,7 @@ class RowsEvent(BinLogEvent):
         self.__rows = []
         while self.packet.read_bytes + 1 < self.event_size:
             self.__rows.append(self._fetch_one_row())
-    
+
     def __getattr__(self, name):
         if name == "rows":
             if self.__rows is None:
@@ -311,7 +324,7 @@ class TableMapEvent(BinLogEvent):
         super(TableMapEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
 
         # Post-Header
-        self.table_id = self._read_table_id() 
+        self.table_id = self._read_table_id()
         self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
 

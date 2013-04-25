@@ -31,7 +31,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, TableMapEvent)
 
         event = self.stream.fetchone()
-        self.assertEqual(event.event_type, WRITE_ROWS_EVENT)        
+        self.assertEqual(event.event_type, WRITE_ROWS_EVENT)
         self.assertIsInstance(event, WriteRowsEvent)
         return event
 
@@ -39,9 +39,9 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (test DECIMAL(2,1))"
         insert_query = "INSERT INTO test VALUES(4.2)"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.columns[0].precision, 2) 
-        self.assertEqual(event.columns[0].decimals, 1) 
-        self.assertEqual(event.rows[0]["values"]["test"], Decimal("4.2")) 
+        self.assertEqual(event.columns[0].precision, 2)
+        self.assertEqual(event.columns[0].decimals, 1)
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("4.2"))
 
     def test_decimal_long_values(self):
         create_query = "CREATE TABLE test (\
@@ -67,7 +67,37 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         insert_query = "INSERT INTO test VALUES(4.2, 42000.123456)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], Decimal("4.2"))
-        self.assertEqual(event.rows[0]["values"]["test2"], Decimal("42000.123456")) 
+        self.assertEqual(event.rows[0]["values"]["test2"], Decimal("42000.123456"))
+
+    def test_decimal_with_zero_scale_1(self):
+        create_query = "CREATE TABLE test (test DECIMAL(23,0))"
+        insert_query = "INSERT INTO test VALUES(10)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("10"))
+
+    def test_decimal_with_zero_scale_2(self):
+        create_query = "CREATE TABLE test (test DECIMAL(23,0))"
+        insert_query = "INSERT INTO test VALUES(12345678912345678912345)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("12345678912345678912345"))
+
+    def test_decimal_with_zero_scale_3(self):
+        create_query = "CREATE TABLE test (test DECIMAL(23,0))"
+        insert_query = "INSERT INTO test VALUES(100000.0)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("100000"))
+
+    def test_decimal_with_zero_scale_4(self):
+        create_query = "CREATE TABLE test (test DECIMAL(23,0))"
+        insert_query = "INSERT INTO test VALUES(-100000.0)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("-100000"))
+
+    def test_decimal_with_zero_scale_6(self):
+        create_query = "CREATE TABLE test (test DECIMAL(23,0))"
+        insert_query = "INSERT INTO test VALUES(-1234567891234567891234)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], Decimal("-1234567891234567891234"))
 
     def test_tiny(self):
         create_query = "CREATE TABLE test (id TINYINT UNSIGNED NOT NULL, test TINYINT)"
@@ -108,7 +138,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (test TIMESTAMP);"
         insert_query = "INSERT INTO test VALUES('1984-12-03 12:33:07')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7)) 
+        self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7))
 
     def test_longlong(self):
         create_query = "CREATE TABLE test (id BIGINT UNSIGNED NOT NULL, test BIGINT)"
@@ -129,19 +159,43 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (test DATE);"
         insert_query = "INSERT INTO test VALUES('1984-12-03')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], datetime.date(1984, 12, 3)) 
+        self.assertEqual(event.rows[0]["values"]["test"], datetime.date(1984, 12, 3))
+
+    def test_zero_date(self):
+        create_query = "CREATE TABLE test (id INTEGER, test DATE);"
+        insert_query = "INSERT INTO test (id) VALUES(1)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], None)
 
     def test_time(self):
         create_query = "CREATE TABLE test (test TIME);"
         insert_query = "INSERT INTO test VALUES('12:33:07')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], datetime.time(12, 33, 7)) 
+        self.assertEqual(event.rows[0]["values"]["test"], datetime.time(12, 33, 7))
+
+    def test_zero_time(self):
+        create_query = "CREATE TABLE test (id INTEGER, test TIME NOT NULL);"
+        insert_query = "INSERT INTO test (id) VALUES(1)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], None)
 
     def test_datetime(self):
         create_query = "CREATE TABLE test (test DATETIME);"
         insert_query = "INSERT INTO test VALUES('1984-12-03 12:33:07')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7)) 
+        self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7))
+
+    def test_zero_datetime(self):
+        create_query = "CREATE TABLE test (id INTEGER, test DATETIME NOT NULL);"
+        insert_query = "INSERT INTO test (id) VALUES(1)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], None)
+
+    def test_broken_datetime(self):
+        create_query = "CREATE TABLE test (test DATETIME NOT NULL);"
+        insert_query = "INSERT INTO test VALUES('2013-00-00 00:00:00')"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], None)
 
     def test_year(self):
         create_query = "CREATE TABLE test (a YEAR(4), b YEAR(2))"
@@ -188,7 +242,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], 'ba')
         self.assertEqual(event.rows[0]["values"]["test2"], 'a')
-     
+
     def test_set(self):
         create_query = "CREATE TABLE test (test SET('a', 'ba', 'c'), test2 SET('a', 'ba', 'c')) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('ba,a,c', 'a,c')"
@@ -200,42 +254,42 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (test TINYBLOB, test2 TINYTEXT) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello', 'World')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], b'Hello') 
-        self.assertEqual(event.rows[0]["values"]["test2"], 'World') 
+        self.assertEqual(event.rows[0]["values"]["test"], b'Hello')
+        self.assertEqual(event.rows[0]["values"]["test2"], 'World')
 
     def test_medium_blob(self):
         create_query = "CREATE TABLE test (test MEDIUMBLOB, test2 MEDIUMTEXT) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello', 'World')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], b'Hello') 
-        self.assertEqual(event.rows[0]["values"]["test2"], 'World') 
+        self.assertEqual(event.rows[0]["values"]["test"], b'Hello')
+        self.assertEqual(event.rows[0]["values"]["test2"], 'World')
 
     def test_long_blob(self):
         create_query = "CREATE TABLE test (test LONGBLOB, test2 LONGTEXT) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello', 'World')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], b'Hello') 
-        self.assertEqual(event.rows[0]["values"]["test2"], 'World') 
+        self.assertEqual(event.rows[0]["values"]["test"], b'Hello')
+        self.assertEqual(event.rows[0]["values"]["test2"], 'World')
 
     def test_blob(self):
         create_query = "CREATE TABLE test (test BLOB, test2 TEXT) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello', 'World')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], b'Hello') 
-        self.assertEqual(event.rows[0]["values"]["test2"], 'World') 
+        self.assertEqual(event.rows[0]["values"]["test"], b'Hello')
+        self.assertEqual(event.rows[0]["values"]["test2"], 'World')
 
     def test_string(self):
         create_query = "CREATE TABLE test (test CHAR(12)) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('Hello')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], 'Hello') 
+        self.assertEqual(event.rows[0]["values"]["test"], 'Hello')
 
     def test_geometry(self):
         create_query = "CREATE TABLE test (test GEOMETRY);"
         insert_query = "INSERT INTO test VALUES(GeomFromText('POINT(1 1)'))"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], b'\x00\x00\x00\x00\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\xf0?')
-    
+
     def test_null(self):
         create_query = "CREATE TABLE test ( \
             test TINYINT NULL DEFAULT NULL, \
@@ -263,9 +317,9 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], None)
         self.assertEqual(event.rows[0]["values"]["test2"], -128)
-        self.assertEqual(event.rows[0]["values"]["test3"], None)        
+        self.assertEqual(event.rows[0]["values"]["test3"], None)
         self.assertEqual(event.rows[0]["values"]["test7"], 42)
-        self.assertEqual(event.rows[0]["values"]["test20"], 84)        
+        self.assertEqual(event.rows[0]["values"]["test20"], 84)
 
     def test_encoding_latin1(self):
         db = copy.copy(self.database)

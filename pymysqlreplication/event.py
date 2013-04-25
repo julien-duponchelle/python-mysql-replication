@@ -1,4 +1,4 @@
-import struct 
+import struct
 from datetime import datetime
 
 from pymysql.util import byte2int, int2byte
@@ -26,14 +26,29 @@ class BinLogEvent(object):
         print("Read bytes: %d" % (self.packet.read_bytes))
         self._dump()
         print()
-    
+
     def _dump(self):
         '''Core data dumped for the event'''
         pass
 
-
 class RotateEvent(BinLogEvent):
-    pass
+    """
+        Change MySQL bin log file
+
+        Attributes:
+            position: Position inside next binlog
+            next_binlog: Name of next binlog file
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+        super(RotateEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
+        self.position = struct.unpack('<Q', self.packet.read(8))[0]
+        self.next_binlog = self.packet.read(event_size - 8).decode()
+
+    def dump(self):
+        print("=== %s ===" % (self.__class__.__name__))
+        print("Position: %d" % self.position)
+        print("Next binlog file: %d" % self.next_binlog)
+        print()
 
 
 class FormatDescriptionEvent(BinLogEvent):
@@ -79,6 +94,6 @@ class QueryEvent(BinLogEvent):
     def _dump(self):
         super(QueryEvent, self)._dump()
         print("Schema: %s" % (self.schema))
-        print("Execution time: %d" % (self.execution_time)) 
+        print("Execution time: %d" % (self.execution_time))
         print("Query: %s" % (self.query))
 

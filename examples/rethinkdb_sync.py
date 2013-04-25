@@ -3,7 +3,7 @@
 # Insert a new element in  a RethinkDB database
 # when an evenement is trigger in MySQL replication log
 #
-# Please test with MySQL employees DB available here: https://launchpad.net/test-db/ 
+# Please test with MySQL employees DB available here: https://launchpad.net/test-db/
 #
 
 import datetime
