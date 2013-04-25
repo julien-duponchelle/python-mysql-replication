@@ -56,7 +56,7 @@ class BinLogStreamReader(object):
 
         if self.__log_file is None:
             self.__log_file = log_file
-            # binlog_pos (4) -- position in the binlog-file to start the stream with
+        # binlog_pos (4) -- position in the binlog-file to start the stream with
         # flags (2) BINLOG_DUMP_NON_BLOCK (0 or 1)
         # server_id (4) -- server id of this slave
         # binlog-filename (string.EOF) -- filename of the binlog on the master
