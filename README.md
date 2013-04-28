@@ -12,6 +12,12 @@ Use cases
 * Audit
 * Real time analytics
 
+Documentation
+==============
+
+A work in progress documentation is available here: https://python-mysql-replication.readthedocs.org/en/latest/
+
+
 Project status
 ================
 
