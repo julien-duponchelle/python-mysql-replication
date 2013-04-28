@@ -248,6 +248,7 @@ class RowsEvent(BinLogEvent):
 
 
 class DeleteRowsEvent(RowsEvent):
+    '''This evenement is trigger when a row in database is removed'''
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
         super(DeleteRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
@@ -269,6 +270,7 @@ class DeleteRowsEvent(RowsEvent):
 
 
 class WriteRowsEvent(RowsEvent):
+    '''This evenement is trigger when a row in database is added'''
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
         super(WriteRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
@@ -290,6 +292,7 @@ class WriteRowsEvent(RowsEvent):
 
 
 class UpdateRowsEvent(RowsEvent):
+    '''This evenement is trigger when a row in database change'''
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
         super(UpdateRowsEvent,self).__init__(from_packet, event_size, table_map, ctl_connection)
         #Body
