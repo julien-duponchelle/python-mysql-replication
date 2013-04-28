@@ -235,6 +235,8 @@ Special thanks
 ================
 * MySQL binlog from Jeremy Cole was a great souce of knowledge about MySQL replication protocol https://github.com/jeremycole/mysql_binlog
 * Samuel Charron for his help https://github.com/scharron
+* bjoernhaeuser for his bugs fixing https://github.com/bjoernhaeuser
+* Dvir Volk for bug fix https://github.com/dvirsky
 
 Licence
 =======

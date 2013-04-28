@@ -2,7 +2,6 @@ import struct
 import copy
 import pymysql
 import socket
-import pymysql.cursors
 from pymysql.constants.COMMAND import *
 from pymysql.util import byte2int, int2byte
 from .packet import BinLogPacketWrapper
@@ -50,6 +49,7 @@ class BinLogStreamReader(object):
         self._ctl_connection_settings['db'] = 'information_schema'
         self._ctl_connection_settings['cursorclass'] = pymysql.cursors.DictCursor
         self._ctl_connection = pymysql.connect(**self._ctl_connection_settings)
+        self.__connected_ctl = True
 
     def __connect_to_stream(self):
         self._stream_connection = pymysql.connect(**self.__connection_settings)
@@ -66,7 +66,7 @@ class BinLogStreamReader(object):
         # binlog-filename (string.EOF) -- filename of the binlog on the master
         command = COM_BINLOG_DUMP
         prelude = struct.pack('<i', len(self.__log_file) + 11) \
-                + int2byte(command)
+                  + int2byte(command)
         if self.__log_pos is None:
             if self.__resume_stream:
                 prelude += struct.pack('<I', log_pos)
@@ -92,9 +92,9 @@ class BinLogStreamReader(object):
     def fetchone(self):
         self.__is_running = True
         while self.__is_running:
-            if self.__connected_stream == False:
+            if not self.__connected_stream:
                 self.__connect_to_stream()
-            if self.__connected_ctl == False:
+            if not self.__connected_ctl:
                 self.__connect_to_ctl()
             pkt = None
             try:

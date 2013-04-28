@@ -52,7 +52,7 @@ class RotateEvent(BinLogEvent):
     def dump(self):
         print("=== %s ===" % (self.__class__.__name__))
         print("Position: %d" % self.position)
-        print("Next binlog file: %d" % self.next_binlog)
+        print("Next binlog file: %s" % self.next_binlog)
         print()
 
 
