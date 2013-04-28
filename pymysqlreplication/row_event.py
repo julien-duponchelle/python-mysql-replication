@@ -8,8 +8,8 @@ from pymysql.constants import FIELD_TYPE
 from .column import Column
 
 class RowsEvent(BinLogEvent):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
-        super(RowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
+        super(RowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
         self.__rows = None
 
         #Header
@@ -248,8 +248,8 @@ class RowsEvent(BinLogEvent):
 
 
 class DeleteRowsEvent(RowsEvent):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
-        super(DeleteRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
+        super(DeleteRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
 
     def _fetch_one_row(self):
@@ -269,8 +269,8 @@ class DeleteRowsEvent(RowsEvent):
 
 
 class WriteRowsEvent(RowsEvent):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
-        super(WriteRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
+        super(WriteRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
 
     def _fetch_one_row(self):
@@ -290,8 +290,8 @@ class WriteRowsEvent(RowsEvent):
 
 
 class UpdateRowsEvent(RowsEvent):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
-        super(UpdateRowsEvent,self).__init__(from_packet, event_size, table_map, ctl_connection)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
+        super(UpdateRowsEvent,self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
         #Body
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
         self.columns_present_bitmap2 = self.packet.read((self.number_of_columns + 7) / 8)
@@ -320,8 +320,8 @@ class TableMapEvent(BinLogEvent):
     '''This evenement describe the structure of a table.
     It's send before a change append on a table.
     A end user of the lib should have no usage of this'''
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
-        super(TableMapEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
+        super(TableMapEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
 
         # Post-Header
         self.table_id = self._read_table_id()

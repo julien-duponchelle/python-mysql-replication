@@ -13,10 +13,10 @@ from pymysqlreplication.row_event import *
 mysql_settings = {'host': '127.0.0.1', 'port': 3306, 'user': 'root', 'passwd': ''}
 
 
-stream = BinLogStreamReader(connection_settings = mysql_settings,
+__stream = BinLogStreamReader(connection_settings = mysql_settings,
                            only_events = [DeleteRowsEvent, WriteRowsEvent, UpdateRowsEvent])
 
-for binlogevent in stream:
+for binlogevent in __stream:
     prefix = "%s:%s:" % (binlogevent.schema, binlogevent.table)
 
     for row in binlogevent.rows:
@@ -30,7 +30,7 @@ for binlogevent in stream:
             vals = row["values"]
             r.hmset(prefix + str(vals["id"]), vals)
 
-stream.close()
+__stream.close()
 
 
 

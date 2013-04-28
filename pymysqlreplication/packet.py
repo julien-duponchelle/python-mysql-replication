@@ -34,7 +34,7 @@ class BinLogPacketWrapper(object):
         XID_EVENT: XidEvent
     }
 
-    def __init__(self, from_packet, table_map, ctl_connection):
+    def __init__(self, from_packet, table_map, ctl_connection, log_persistancer = None):
         if not from_packet.is_ok_packet():
             raise ValueError('Cannot create ' + str(self.__class__.__name__)
                 + ' object from invalid packet type')
@@ -62,7 +62,8 @@ class BinLogPacketWrapper(object):
             event_class = self.__event_map[self.event_type]
         except KeyError:
             raise NotImplementedError("Unknown MySQL bin log event type: " + hex(self.event_type))
-        self.event = event_class(self, event_size_without_header, table_map, ctl_connection)
+
+        self.event = event_class(self, event_size_without_header, table_map, ctl_connection, log_persistancer)
 
     def read(self, size):
         size = int(size)

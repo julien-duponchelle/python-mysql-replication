@@ -1,6 +1,7 @@
 import struct
 import copy
 import pymysql
+import socket
 import pymysql.cursors
 from pymysql.constants.COMMAND import *
 from pymysql.util import byte2int, int2byte
@@ -12,7 +13,8 @@ from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
 class BinLogStreamReader(object):
     '''Connect to replication stream and read event'''
 
-    def __init__(self, connection_settings = {}, resume_stream = False, blocking = False, only_events = None, server_id = 255):
+    def __init__(self, connection_settings = {}, resume_stream = False, blocking = False, only_events = None, server_id = 255,
+                 last_log_persistancer = None):
         '''
         resume_stream: Start for latest event of binlog or from older available event
         blocking: Read on stream is blocking
@@ -27,8 +29,10 @@ class BinLogStreamReader(object):
         self.__blocking = blocking
         self.__only_events = only_events
         self.__server_id = server_id
-        self.__log_pos = None
+        self.__log_pos = last_log_persistancer.load() if last_log_persistancer else None
+        self.__last_log_persistancer = last_log_persistancer
         self.__log_file = None
+        self.__is_running = False
 
         #Store table meta informations
         self.table_map = {}
@@ -79,8 +83,15 @@ class BinLogStreamReader(object):
         self._stream_connection.wfile.flush()
         self.__connected_stream = True
 
+    def stop(self):
+        self.__is_running = False
+        #print "stop closing {0}".format(id(self._stream_connection))
+        # forcing socket to close. Idealy, self._stream_connection.close() would have worked, but if the socked is blocked on reading, it doesn't.
+        self._stream_connection.socket.shutdown(socket.SHUT_RDWR)
+
     def fetchone(self):
-        while True:
+        self.__is_running = True
+        while self.__is_running:
             if self.__connected_stream == False:
                 self.__connect_to_stream()
             if self.__connected_ctl == False:
@@ -98,7 +109,7 @@ class BinLogStreamReader(object):
             if not pkt.is_ok_packet():
                 return None
             try:
-                binlog_event = BinLogPacketWrapper(pkt, self.table_map, self._ctl_connection)
+                binlog_event = BinLogPacketWrapper(pkt, self.table_map, self._ctl_connection, self.__last_log_persistancer)
             except:
                 logging.exception("Error iterating log!")
                 continue
@@ -114,6 +125,8 @@ class BinLogStreamReader(object):
             else:
                 self.__log_pos = binlog_event.log_pos
             return binlog_event.event
+
+        logging.debug("Ending fetchone")
 
     def __filter_event(self, event):
         if self.__only_events is not None:

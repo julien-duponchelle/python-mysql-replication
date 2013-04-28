@@ -6,13 +6,14 @@ from pymysql.util import byte2int, int2byte
 
 
 class BinLogEvent(object):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
         self.timestamp = self.packet.timestamp
         self.event_size = event_size
         self._ctl_connection = ctl_connection
+        self.__log_persistancer = log_persistancer
 
     def _read_table_id(self):
         # Table ID is 6 byte
@@ -31,6 +32,10 @@ class BinLogEvent(object):
         '''Core data dumped for the event'''
         pass
 
+    def mark_processed(self):
+        if self.__log_persistancer:
+            self.__log_persistancer.save(self.packet.log_pos)
+
 class RotateEvent(BinLogEvent):
     """
         Change MySQL bin log file
@@ -39,8 +44,8 @@ class RotateEvent(BinLogEvent):
             position: Position inside next binlog
             next_binlog: Name of next binlog file
     """
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
-        super(RotateEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
+        super(RotateEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
         self.position = struct.unpack('<Q', self.packet.read(8))[0]
         self.next_binlog = self.packet.read(event_size - 8).decode()
 
@@ -63,8 +68,8 @@ class XidEvent(BinLogEvent):
             xid: Transaction ID for 2PC
     """
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
-        super(XidEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
+        super(XidEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
         self.xid = struct.unpack('<Q', self.packet.read(8))[0]
 
     def _dump(self):
@@ -73,8 +78,8 @@ class XidEvent(BinLogEvent):
 
 
 class QueryEvent(BinLogEvent):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
-        super(QueryEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
+        super(QueryEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
 
         # Post-header
         self.slave_proxy_id = self.packet.read_uint32()

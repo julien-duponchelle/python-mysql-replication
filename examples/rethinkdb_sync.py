@@ -27,11 +27,11 @@ for table in tables:
 
 #MySQL
 mysql_settings = {'host': '127.0.0.1', 'port': 3306, 'user': 'root', 'passwd': ''}
-stream = BinLogStreamReader(connection_settings = mysql_settings,
+__stream = BinLogStreamReader(connection_settings = mysql_settings,
                            only_events = [DeleteRowsEvent, WriteRowsEvent, UpdateRowsEvent], blocking = True)
 
 #Process Feed
-for binlogevent in stream:
+for binlogevent in __stream:
     prefix = "%s:%s:" % (binlogevent.schema, binlogevent.table)
 
     for row in binlogevent.rows:
@@ -45,7 +45,7 @@ for binlogevent in stream:
                         vals[str(k)] = v
                 r.table(binlogevent.table).insert(vals).run()
 
-stream.close()
+__stream.close()
 
 
 
