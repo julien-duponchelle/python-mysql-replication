@@ -15,6 +15,7 @@ Contents:
     binlogstream
     events
     examples
+    support
     licence
 
 Contributing
