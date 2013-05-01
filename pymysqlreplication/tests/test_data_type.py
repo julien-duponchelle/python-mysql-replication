@@ -31,7 +31,10 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, TableMapEvent)
 
         event = self.stream.fetchone()
-        self.assertEqual(event.event_type, WRITE_ROWS_EVENT)
+        if self.isMySQL56AndMore():
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT)
+        else:
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
         self.assertIsInstance(event, WriteRowsEvent)
         return event
 
@@ -141,6 +144,8 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7))
 
     def test_timestamp_mysql56(self):
+        if not self.isMySQL56AndMore():
+            self.skipTest("Not supported in this version of MySQL")
         create_query = '''CREATE TABLE test (test0 TIMESTAMP(0),
             test1 TIMESTAMP(1),
             test2 TIMESTAMP(2),
