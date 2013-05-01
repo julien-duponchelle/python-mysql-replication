@@ -91,7 +91,10 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, TableMapEvent)
 
         event = self.stream.fetchone()
-        self.assertEqual(event.event_type, WRITE_ROWS_EVENT)
+        if self.isMySQL56AndMore():
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT)
+        else:
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
         self.assertIsInstance(event, WriteRowsEvent)
         self.assertEqual(event.rows[0]["values"]["id"], 1)
         self.assertEqual(event.rows[0]["values"]["data"], "Hello World")
@@ -123,7 +126,10 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, TableMapEvent)
 
         event = self.stream.fetchone()
-        self.assertEqual(event.event_type, DELETE_ROWS_EVENT)
+        if self.isMySQL56AndMore():
+            self.assertEqual(event.event_type, DELETE_ROWS_EVENT)
+        else:
+            self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V1)
         self.assertIsInstance(event, DeleteRowsEvent)
         self.assertEqual(event.rows[0]["values"]["id"], 1)
         self.assertEqual(event.rows[0]["values"]["data"], "Hello World")
@@ -152,7 +158,10 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, TableMapEvent)
 
         event = self.stream.fetchone()
-        self.assertEqual(event.event_type, UPDATE_ROWS_EVENT)
+        if self.isMySQL56AndMore():
+            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT)
+        else:
+            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
         self.assertIsInstance(event, UpdateRowsEvent)
         self.assertEqual(event.rows[0]["before_values"]["id"], 1)
         self.assertEqual(event.rows[0]["before_values"]["data"], "Hello")
@@ -182,7 +191,10 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, TableMapEvent)
 
         event = self.stream.fetchone()
-        self.assertEqual(event.event_type, WRITE_ROWS_EVENT)
+        if self.isMySQL56AndMore():
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT)
+        else:
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
         self.assertIsInstance(event, WriteRowsEvent)
         self.assertEqual(len(event.rows), 2)
         self.assertEqual(event.rows[0]["values"]["id"], 1)
@@ -217,7 +229,10 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, TableMapEvent)
 
         event = self.stream.fetchone()
-        self.assertEqual(event.event_type, UPDATE_ROWS_EVENT)
+        if self.isMySQL56AndMore():
+           self.assertEqual(event.event_type, UPDATE_ROWS_EVENT)
+        else:
+           self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
         self.assertIsInstance(event, UpdateRowsEvent)
         self.assertEqual(len(event.rows), 2)
         self.assertEqual(event.rows[0]["before_values"]["id"], 1)
@@ -256,7 +271,10 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, TableMapEvent)
 
         event = self.stream.fetchone()
-        self.assertEqual(event.event_type, DELETE_ROWS_EVENT)
+        if self.isMySQL56AndMore():
+            self.assertEqual(event.event_type, DELETE_ROWS_EVENT)
+        else:
+            self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V1)
         self.assertIsInstance(event, DeleteRowsEvent)
         self.assertEqual(len(event.rows), 2)
         self.assertEqual(event.rows[0]["values"]["id"], 1)
