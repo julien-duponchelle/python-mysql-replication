@@ -201,7 +201,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (id INTEGER, test TIME NOT NULL);"
         insert_query = "INSERT INTO test (id) VALUES(1)"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], None)
+        self.assertEqual(event.rows[0]["values"]["test"], datetime.time(0,0))
 
     def test_datetime(self):
         create_query = "CREATE TABLE test (test DATETIME);"

@@ -134,7 +134,7 @@ class RowsEvent(BinLogEvent):
         if read > 0:
             microsecond = self.packet.read_int_be_by_size(read)
             if column.fsp % 2:
-                time = time.replace(microsecond = microsecond / 10)
+                time = time.replace(microsecond = int(microsecond / 10))
             else:
                 time = time.replace(microsecond = microsecond)
         return time
@@ -170,9 +170,6 @@ class RowsEvent(BinLogEvent):
 
     def __read_time(self):
         time = self.packet.read_uint24()
-        if time == 0:
-            return None
-
         date = datetime.time(
             hour = int(time / 10000),
             minute = int((time % 10000) / 100),
@@ -242,13 +239,16 @@ class RowsEvent(BinLogEvent):
 40 bits = 5 bytes'''
         data = self.packet.read_int_be_by_size(5)
         year_month = self.__read_binary_slice(data, 1, 17, 40)
-        t = datetime.datetime(
-            year = int(year_month / 13),
-            month = year_month % 13,
-            day = self.__read_binary_slice(data, 18, 5, 40),
-            hour = self.__read_binary_slice(data, 23, 5, 40),
-            minute = self.__read_binary_slice(data, 28, 6, 40),
-            second = self.__read_binary_slice(data, 34, 6, 40))
+        try:
+            t = datetime.datetime(
+                year = int(year_month / 13),
+                month = year_month % 13,
+                day = self.__read_binary_slice(data, 18, 5, 40),
+                hour = self.__read_binary_slice(data, 23, 5, 40),
+                minute = self.__read_binary_slice(data, 28, 6, 40),
+                second = self.__read_binary_slice(data, 34, 6, 40))
+        except ValueError:
+            return None
         return self.__add_fsp_to_time(t, column)
 
     def __read_new_decimal(self, column):
