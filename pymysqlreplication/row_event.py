@@ -93,11 +93,11 @@ class RowsEvent(BinLogEvent):
 
             # For new date format: http://dev.mysql.com/doc/internals/en/date-and-time-data-type-representation.html
             elif column.type == FIELD_TYPE.DATETIME2:
-                values[name] = self.__read_datetime2()
+                values[name] = self.__read_datetime2(column)
             elif  column.type == FIELD_TYPE.TIME2:
-                values[name] = self.__read_time2()
+                values[name] = self.__read_time2(column)
             elif column.type == FIELD_TYPE.TIMESTAMP2:
-                values[name] = self.__read_fsp(datetime.datetime.fromtimestamp(self.packet.read_int_be_by_size(4)), column)
+                values[name] = self.__add_fsp_to_time(datetime.datetime.fromtimestamp(self.packet.read_int_be_by_size(4)), column)
             elif column.type == FIELD_TYPE.LONGLONG:
                 if unsigned:
                     values[name] = self.packet.read_uint64()
@@ -120,8 +120,10 @@ class RowsEvent(BinLogEvent):
                 raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
         return values
 
-    # For new date format: http://dev.mysql.com/doc/internals/en/date-and-time-data-type-representation.html
-    def __read_fsp(self, time, column):
+    def __add_fsp_to_time(self, time, column):
+        '''Read and add the fractionnal part of time
+         For more details about new date format: http://dev.mysql.com/doc/internals/en/date-and-time-data-type-representation.html
+        '''
         read = 0
         if column.fsp == 1 or column.fsp == 2:
             read = 1
@@ -177,6 +179,22 @@ class RowsEvent(BinLogEvent):
             second = int(time % 100))
         return date
 
+    def __read_time2(self, column):
+        '''TIME encoding for nonfractional part:
+ 1 bit sign    (1= non-negative, 0= negative)
+ 1 bit unused  (reserved for future extensions)
+10 bits hour   (0-838)
+ 6 bits minute (0-59)
+ 6 bits second (0-59)
+---------------------
+24 bits = 3 bytes'''
+        data = self.packet.read_int_be_by_size(3)
+        t = datetime.time(
+            hour = self.__read_binary_slice(data, 2, 10, 24),
+            minute = self.__read_binary_slice(data, 12, 6, 24),
+            second = self.__read_binary_slice(data, 18, 6, 24))
+        return self.__add_fsp_to_time(t, column)
+
     def __read_date(self):
         time = self.packet.read_uint24()
         if time == 0:  # nasty mysql 0000-00-00 dates
@@ -211,6 +229,27 @@ class RowsEvent(BinLogEvent):
             minute = int((time % 10000) / 100),
             second = int(time % 100))
         return date
+
+    def __read_datetime2(self, column):
+        ''' DATETIME
+1 bit  sign           (1= non-negative, 0= negative)
+17 bits year*13+month  (year 0-9999, month 0-12)
+ 5 bits day            (0-31)
+ 5 bits hour           (0-23)
+ 6 bits minute         (0-59)
+ 6 bits second         (0-59)
+---------------------------
+40 bits = 5 bytes'''
+        data = self.packet.read_int_be_by_size(5)
+        year_month = self.__read_binary_slice(data, 1, 17, 40)
+        t = datetime.datetime(
+            year = int(year_month / 13),
+            month = year_month % 13,
+            day = self.__read_binary_slice(data, 18, 5, 40),
+            hour = self.__read_binary_slice(data, 23, 5, 40),
+            minute = self.__read_binary_slice(data, 28, 6, 40),
+            second = self.__read_binary_slice(data, 34, 6, 40))
+        return self.__add_fsp_to_time(t, column)
 
     def __read_new_decimal(self, column):
         '''Read MySQL's new decimal format introduced in MySQL 5'''
@@ -261,6 +300,18 @@ class RowsEvent(BinLogEvent):
             res += str(value)
 
         return decimal.Decimal(res)
+
+    def __read_binary_slice(self, binary, start, size, data_length):
+        '''
+        Read a part of binary data and extract a number
+        binary: the data
+        start: From which bit (1 to X)
+        size: How many bits should be read
+        data_length: data size
+        '''
+        binary = binary >> data_length - (start + size)
+        mask = ((1 << size) - 1)
+        return binary & mask
 
     def _dump(self):
         super(RowsEvent, self)._dump()

@@ -148,6 +148,8 @@ class BinLogPacketWrapper(object):
             return self.read_int24_be()
         elif size == 4:
             return struct.unpack('>i', self.read(size))[0]
+        elif size == 5:
+            return self.read_int40_be()
         elif size == 8:
             return struct.unpack('>l', self.read(size))[0]
 
@@ -193,13 +195,6 @@ class BinLogPacketWrapper(object):
         a, b, c = struct.unpack("BBB", self.read(3))
         return a + (b << 8) + (c << 16)
 
-    def read_int24_be(self):
-        a, b, c = struct.unpack('BBB', self.read(3))
-        if a & 128 == 0:
-            return (a << 16) | (b << 8) | c
-        else:
-            return (-1 << 24) | (a << 16) | (b << 8) | c
-
     def read_uint8(self):
         return struct.unpack('<B', self.read(1))[0]
 
@@ -216,6 +211,10 @@ class BinLogPacketWrapper(object):
     def read_uint40(self):
       a, b = struct.unpack("<BI", self.read(5))
       return a + (b << 8)
+
+    def read_int40_be(self):
+      a, b = struct.unpack(">IB", self.read(5))
+      return b + (a << 8)
 
     def read_uint48(self):
       a, b, c = struct.unpack("<HHH", self.read(6))

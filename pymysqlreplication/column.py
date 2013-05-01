@@ -37,6 +37,11 @@ class Column(object):
             self.bytes = int((self.bits + 7) / 8)
         elif self.type == FIELD_TYPE.TIMESTAMP2:
             self.fsp = packet.read_uint8()
+        elif self.type == FIELD_TYPE.DATETIME2:
+            self.fsp = packet.read_uint8()
+        elif self.type == FIELD_TYPE.TIME2:
+            self.fsp = packet.read_uint8()
+
 
     def __read_string_metadata(self, packet, column_schema):
         metadata  = (packet.read_uint8() << 8) + packet.read_uint8()
