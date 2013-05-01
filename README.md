@@ -17,6 +17,13 @@ Documentation
 
 A work in progress documentation is available here: https://python-mysql-replication.readthedocs.org/en/latest/
 
+Installation
+=============
+
+```
+pip install mysql-replication
+```
+
 Mailling List
 ==============
 

@@ -26,7 +26,7 @@ class TestCommand(Command):
 version = "0.1.0"
 
 setup(
-    name = "PyMySQLReplication",
+    name = "mysql-replication",
     version = version,
     url = 'https://github.com/noplay/python-mysql-replication',
     author = 'Julien Duponchelle',
