@@ -32,7 +32,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT)
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
         else:
             self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
         self.assertIsInstance(event, WriteRowsEvent)
