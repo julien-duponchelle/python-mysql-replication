@@ -107,15 +107,15 @@ class BinLogPacketWrapper(object):
         """
         c = byte2int(self.read(1))
         if c == NULL_COLUMN:
-          return None
+            return None
         if c < UNSIGNED_CHAR_COLUMN:
-          return c
+            return c
         elif c == UNSIGNED_SHORT_COLUMN:
             return self.unpack_uint16(self.read(UNSIGNED_SHORT_LENGTH))
         elif c == UNSIGNED_INT24_COLUMN:
-          return self.unpack_int24(self.read(UNSIGNED_INT24_LENGTH))
+            return self.unpack_int24(self.read(UNSIGNED_INT24_LENGTH))
         elif c == UNSIGNED_INT64_COLUMN:
-          return self.unpack_int64(self.read(UNSIGNED_INT64_LENGTH))
+            return self.unpack_int64(self.read(UNSIGNED_INT64_LENGTH))
 
     def read_length_coded_string(self):
         """Read a 'Length Coded String' from the data buffer.
