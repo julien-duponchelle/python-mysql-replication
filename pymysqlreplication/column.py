@@ -2,8 +2,9 @@ import struct
 from .constants import FIELD_TYPE
 from pymysql.util import byte2int, int2byte
 
+
 class Column(object):
-    '''Definition of a column'''
+    """Definition of a column"""
 
     def __init__(self, column_type, column_schema, packet):
         self.type = column_type
@@ -12,6 +13,7 @@ class Column(object):
         self.character_set_name = column_schema["CHARACTER_SET_NAME"]
         self.comment = column_schema["COLUMN_COMMENT"]
         self.unsigned = False
+        self.type_is_bool = False
 
         if column_schema["COLUMN_TYPE"].find("unsigned") != -1:
             self.unsigned = True
@@ -41,10 +43,11 @@ class Column(object):
             self.fsp = packet.read_uint8()
         elif self.type == FIELD_TYPE.TIME2:
             self.fsp = packet.read_uint8()
-
+        elif self.type == FIELD_TYPE.TINY and column_schema["COLUMN_TYPE"] == "tinyint(1)":
+            self.type_is_bool = True
 
     def __read_string_metadata(self, packet, column_schema):
-        metadata  = (packet.read_uint8() << 8) + packet.read_uint8()
+        metadata = (packet.read_uint8() << 8) + packet.read_uint8()
         real_type = metadata >> 8
         if real_type == FIELD_TYPE.SET or real_type == FIELD_TYPE.ENUM:
             self.type = real_type
