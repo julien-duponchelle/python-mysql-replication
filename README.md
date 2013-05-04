@@ -68,7 +68,7 @@ In your MySQL server configuration file you need to enable replication:
     log_bin			 = /var/log/mysql/mysql-bin.log
     expire_logs_days = 10
     max_binlog_size  = 100M
-    binlog-checksum = NONE
+    binlog-checksum = NONE #Only need for MySQL 5.6 until we implement checksum verification
     binlog-format    = row #Very important if you want to receive write, update and delete row events
 
 Examples
@@ -79,27 +79,29 @@ All examples are available in the [examples directory](https://github.com/noplay
 
 This example will dump all replication events to the console:
 
-    from pymysqlreplication import BinLogStreamReader
+```python
+from pymysqlreplication import BinLogStreamReader
 
-    mysql_settings = {'host': '127.0.0.1', 'port': 3306, 'user': 'root', 'passwd': ''}
+mysql_settings = {'host': '127.0.0.1', 'port': 3306, 'user': 'root', 'passwd': ''}
 
+stream = BinLogStreamReader(connection_settings = mysql_settings)
 
-    stream = BinLogStreamReader(connection_settings = mysql_settings)
+for binlogevent in stream:
+    binlogevent.dump()
 
-    for binlogevent in stream:
-        binlogevent.dump()
-
-    stream.close()
-
+stream.close()
+```
 
 For this SQL sessions:
 
-    CREATE DATABASE test;
-    use test;
-    CREATE TABLE test4 (id int NOT NULL AUTO_INCREMENT, data VARCHAR(255), data2 VARCHAR(255), PRIMARY KEY(id));
-    INSERT INTO test4 (data,data2) VALUES ("Hello", "World");
-    UPDATE test4 SET data = "World", data2="Hello" WHERE id = 1;
-    DELETE FROM test4 WHERE id = 1;
+```sql
+CREATE DATABASE test;
+use test;
+CREATE TABLE test4 (id int NOT NULL AUTO_INCREMENT, data VARCHAR(255), data2 VARCHAR(255), PRIMARY KEY(id));
+INSERT INTO test4 (data,data2) VALUES ("Hello", "World");
+UPDATE test4 SET data = "World", data2="Hello" WHERE id = 1;
+DELETE FROM test4 WHERE id = 1;
+```
 
 Output will be:
 
