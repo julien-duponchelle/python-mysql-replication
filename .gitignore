@@ -31,3 +31,6 @@ _build
 
 #Vagrant
 .vagrant
+
+#Text Editor Backupfile 
+*~
