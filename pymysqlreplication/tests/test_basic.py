@@ -230,9 +230,9 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
-           self.assertEqual(event.event_type, UPDATE_ROWS_EVENT)
+            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT)
         else:
-           self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
+            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
         self.assertIsInstance(event, UpdateRowsEvent)
         self.assertEqual(len(event.rows), 2)
         self.assertEqual(event.rows[0]["before_values"]["id"], 1)
