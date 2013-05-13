@@ -29,7 +29,7 @@ class BinLogStreamReader(object):
         self.__log_pos = None
         self.__log_file = None
 
-        #Store table meta informations
+        #Store table meta information
         self.table_map = {}
 
     def close(self):
@@ -97,7 +97,7 @@ class BinLogStreamReader(object):
                 return None
             binlog_event = BinLogPacketWrapper(pkt, self.table_map, self._ctl_connection)
             if binlog_event.event_type == TABLE_MAP_EVENT:
-                self.table_map[binlog_event.event.table_id] = binlog_event.event
+                self.table_map[binlog_event.event.table_id] = binlog_event.event.get_table()
             if self.__filter_event(binlog_event.event):
                 continue
             if binlog_event.event_type == ROTATE_EVENT:

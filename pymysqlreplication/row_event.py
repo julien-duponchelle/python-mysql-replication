@@ -7,6 +7,7 @@ from pymysql.util import byte2int, int2byte
 from .constants import FIELD_TYPE
 from .constants import BINLOG
 from .column import Column
+from .table import Table
 
 
 class RowsEvent(BinLogEvent):
@@ -447,14 +448,23 @@ class TableMapEvent(BinLogEvent):
             col = Column(byte2int(column_type), column_schema, from_packet)
             self.columns.append(col)
 
+        self.table_obj = Table(self.column_schemas, self.table_id, self.schema, self.table, self.columns)
 
         # TODO: get this informations instead of trashing data
         # n              NULL-bitmask, length: (column-length * 8) / 7
 
     def __get_table_information(self, schema, table):
         cur = self._ctl_connection.cursor()
-        cur.execute("""SELECT * FROM columns WHERE table_schema = %s AND table_name = %s""", (schema, table))
+        cur.execute("""SELECT
+                         COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME, COLUMN_COMMENT, COLUMN_TYPE
+                       FROM
+                         columns
+                       WHERE
+                         table_schema = %s AND table_name = %s""", (schema, table))
         return cur.fetchall()
+
+    def get_table(self):
+        return self.table_obj
 
     def _dump(self):
         super(TableMapEvent, self)._dump()
