@@ -215,10 +215,11 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], datetime.date(1984, 12, 3))
 
     def test_zero_date(self):
-        create_query = "CREATE TABLE test (id INTEGER, test DATE);"
-        insert_query = "INSERT INTO test (id) VALUES(1)"
+        create_query = "CREATE TABLE test (id INTEGER, test DATE, test2 DATE);"
+        insert_query = "INSERT INTO test (id, test2) VALUES(1, '0000-01-21')"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], None)
+        self.assertEqual(event.rows[0]["values"]["test2"], None)
 
     def test_time(self):
         create_query = "CREATE TABLE test (test TIME);"
