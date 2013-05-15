@@ -203,10 +203,17 @@ class RowsEvent(BinLogEvent):
         if time == 0:  # nasty mysql 0000-00-00 dates
             return None
 
+        year = (time & ((1 << 15) - 1) << 9) >> 9
+        if year == 0:
+            return None
+
+        month = (time & ((1 << 4) - 1) << 5) >> 5
+        day = (time & ((1 << 5) - 1))
+
         date = datetime.date(
-            year=(time & ((1 << 15) - 1) << 9) >> 9,
-            month=(time & ((1 << 4) - 1) << 5) >> 5,
-            day=(time & ((1 << 5) - 1))
+            year=year,
+            month=month,
+            day=day
         )
         return date
 
