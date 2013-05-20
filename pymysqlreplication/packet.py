@@ -28,13 +28,15 @@ class BinLogPacketWrapper(object):
         UPDATE_ROWS_EVENT_V1: UpdateRowsEvent,
         WRITE_ROWS_EVENT_V1: WriteRowsEvent,
         DELETE_ROWS_EVENT_V1: DeleteRowsEvent,
-        UPDATE_ROWS_EVENT: UpdateRowsEvent,
-        WRITE_ROWS_EVENT: WriteRowsEvent,
-        DELETE_ROWS_EVENT: DeleteRowsEvent,
+        UPDATE_ROWS_EVENT_V2: UpdateRowsEvent,
+        WRITE_ROWS_EVENT_V2: WriteRowsEvent,
+        DELETE_ROWS_EVENT_V2: DeleteRowsEvent,
         TABLE_MAP_EVENT: TableMapEvent,
         ROTATE_EVENT: RotateEvent,
         FORMAT_DESCRIPTION_EVENT: FormatDescriptionEvent,
-        XID_EVENT: XidEvent
+        XID_EVENT: XidEvent,
+        INTVAR_EVENT: NullEvent,
+        GTID_LOG_EVENT: NullEvent
     }
 
     def __init__(self, from_packet, table_map, ctl_connection):
