@@ -109,6 +109,30 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["id"], 255)
         self.assertEqual(event.rows[0]["values"]["test"], -128)
 
+    def test_tiny_maps_to_boolean_true(self):
+        create_query = "CREATE TABLE test (id TINYINT UNSIGNED NOT NULL, test BOOLEAN)"
+        insert_query = "INSERT INTO test VALUES(1, TRUE)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["id"], 1)
+        self.assertEqual(type(event.rows[0]["values"]["test"]), type(True))
+        self.assertEqual(event.rows[0]["values"]["test"], True)
+
+    def test_tiny_maps_to_boolean_false(self):
+        create_query = "CREATE TABLE test (id TINYINT UNSIGNED NOT NULL, test BOOLEAN)"
+        insert_query = "INSERT INTO test VALUES(1, FALSE)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["id"], 1)
+        self.assertEqual(type(event.rows[0]["values"]["test"]), type(True))
+        self.assertEqual(event.rows[0]["values"]["test"], False)
+
+    def test_tiny_maps_to_none(self):
+        create_query = "CREATE TABLE test (id TINYINT UNSIGNED NOT NULL, test BOOLEAN)"
+        insert_query = "INSERT INTO test VALUES(1, NULL)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["id"], 1)
+        self.assertEqual(type(event.rows[0]["values"]["test"]), type(None))
+        self.assertEqual(event.rows[0]["values"]["test"], None)
+
     def test_short(self):
         create_query = "CREATE TABLE test (id SMALLINT UNSIGNED NOT NULL, test SMALLINT)"
         insert_query = "INSERT INTO test VALUES(65535, -32768)"
@@ -191,10 +215,11 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], datetime.date(1984, 12, 3))
 
     def test_zero_date(self):
-        create_query = "CREATE TABLE test (id INTEGER, test DATE);"
-        insert_query = "INSERT INTO test (id) VALUES(1)"
+        create_query = "CREATE TABLE test (id INTEGER, test DATE, test2 DATE);"
+        insert_query = "INSERT INTO test (id, test2) VALUES(1, '0000-01-21')"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], None)
+        self.assertEqual(event.rows[0]["values"]["test2"], None)
 
     def test_time(self):
         create_query = "CREATE TABLE test (test TIME);"

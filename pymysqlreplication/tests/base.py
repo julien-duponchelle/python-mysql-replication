@@ -3,14 +3,15 @@ import unittest
 import copy
 from pymysqlreplication import BinLogStreamReader
 
+
 class PyMySQLReplicationTestCase(unittest.TestCase):
     '''Test the module. Be carefull it will reset your MySQL server'''
-    database =  {"host":"localhost",
-        "user":"root",
-        "passwd":"",
-        "use_unicode": True,
-        "charset": "utf8",
-        "db": "pymysqlreplication_test"
+    database = {"host": "localhost",
+                "user": "root",
+                "passwd": "",
+                "use_unicode": True,
+                "charset": "utf8",
+                "db": "pymysqlreplication_test"
     }
 
     def setUp(self):
@@ -57,5 +58,5 @@ class PyMySQLReplicationTestCase(unittest.TestCase):
         self.execute("RESET MASTER")
         if self.stream is not None:
             self.stream.close()
-        self.stream = BinLogStreamReader(connection_settings = self.database)
+        self.stream = BinLogStreamReader(connection_settings=self.database)
 

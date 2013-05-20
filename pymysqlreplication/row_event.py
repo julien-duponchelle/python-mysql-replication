@@ -7,6 +7,8 @@ from pymysql.util import byte2int, int2byte
 from .constants import FIELD_TYPE
 from .constants import BINLOG
 from .column import Column
+from .table import Table
+
 
 class RowsEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
@@ -18,9 +20,9 @@ class RowsEvent(BinLogEvent):
         self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
         #Event V2
-        if self.event_type == BINLOG.WRITE_ROWS_EVENT_V2 or \
-            self.event_type == BINLOG.DELETE_ROWS_EVENT_V2 or \
-            self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2:
+        if self.event_type == BINLOG.WRITE_ROWS_EVENT or \
+                        self.event_type == BINLOG.DELETE_ROWS_EVENT or \
+                        self.event_type == BINLOG.UPDATE_ROWS_EVENT:
             self.extra_data_length = struct.unpack('<H', self.packet.read(2))[0]
             self.extra_data = self.packet.read(self.extra_data_length / 8)
 
@@ -54,6 +56,9 @@ class RowsEvent(BinLogEvent):
                     values[name] = struct.unpack("<B", self.packet.read(1))[0]
                 else:
                     values[name] = struct.unpack("<b", self.packet.read(1))[0]
+
+                if column.type_is_bool:
+                    values[name] = bool(values[name])
             elif column.type == FIELD_TYPE.SHORT:
                 if unsigned:
                     values[name] = struct.unpack("<H", self.packet.read(2))[0]
@@ -94,10 +99,11 @@ class RowsEvent(BinLogEvent):
             # For new date format: http://dev.mysql.com/doc/internals/en/date-and-time-data-type-representation.html
             elif column.type == FIELD_TYPE.DATETIME2:
                 values[name] = self.__read_datetime2(column)
-            elif  column.type == FIELD_TYPE.TIME2:
+            elif column.type == FIELD_TYPE.TIME2:
                 values[name] = self.__read_time2(column)
             elif column.type == FIELD_TYPE.TIMESTAMP2:
-                values[name] = self.__add_fsp_to_time(datetime.datetime.fromtimestamp(self.packet.read_int_be_by_size(4)), column)
+                values[name] = self.__add_fsp_to_time(
+                    datetime.datetime.fromtimestamp(self.packet.read_int_be_by_size(4)), column)
             elif column.type == FIELD_TYPE.LONGLONG:
                 if unsigned:
                     values[name] = self.packet.read_uint64()
@@ -110,7 +116,7 @@ class RowsEvent(BinLogEvent):
             elif column.type == FIELD_TYPE.SET:
                 #We read set columns as a bitmap telling us which options are enabled
                 bit_mask = self.packet.read_uint_by_size(column.size)
-                values[name] = {val for idx,val in enumerate(column.set_values) if bit_mask & 2**idx} or None
+                values[name] = {val for idx, val in enumerate(column.set_values) if bit_mask & 2 ** idx} or None
 
             elif column.type == FIELD_TYPE.BIT:
                 values[name] = self.__read_bit(column)
@@ -134,9 +140,9 @@ class RowsEvent(BinLogEvent):
         if read > 0:
             microsecond = self.packet.read_int_be_by_size(read)
             if column.fsp % 2:
-                time = time.replace(microsecond = int(microsecond / 10))
+                time = time.replace(microsecond=int(microsecond / 10))
             else:
-                time = time.replace(microsecond = microsecond)
+                time = time.replace(microsecond=microsecond)
         return time
 
     def __read_string(self, size, column):
@@ -171,9 +177,9 @@ class RowsEvent(BinLogEvent):
     def __read_time(self):
         time = self.packet.read_uint24()
         date = datetime.time(
-            hour = int(time / 10000),
-            minute = int((time % 10000) / 100),
-            second = int(time % 100))
+            hour=int(time / 10000),
+            minute=int((time % 10000) / 100),
+            second=int(time % 100))
         return date
 
     def __read_time2(self, column):
@@ -187,9 +193,9 @@ class RowsEvent(BinLogEvent):
 24 bits = 3 bytes'''
         data = self.packet.read_int_be_by_size(3)
         t = datetime.time(
-            hour = self.__read_binary_slice(data, 2, 10, 24),
-            minute = self.__read_binary_slice(data, 12, 6, 24),
-            second = self.__read_binary_slice(data, 18, 6, 24))
+            hour=self.__read_binary_slice(data, 2, 10, 24),
+            minute=self.__read_binary_slice(data, 12, 6, 24),
+            second=self.__read_binary_slice(data, 18, 6, 24))
         return self.__add_fsp_to_time(t, column)
 
     def __read_date(self):
@@ -197,10 +203,17 @@ class RowsEvent(BinLogEvent):
         if time == 0:  # nasty mysql 0000-00-00 dates
             return None
 
+        year = (time & ((1 << 15) - 1) << 9) >> 9
+        if year == 0:
+            return None
+
+        month = (time & ((1 << 4) - 1) << 5) >> 5
+        day = (time & ((1 << 5) - 1))
+
         date = datetime.date(
-            year = (time & ((1 << 15) - 1) << 9) >> 9,
-            month = (time & ((1 << 4) - 1) << 5) >> 5,
-            day = (time & ((1 << 5) - 1))
+            year=year,
+            month=month,
+            day=day
         )
         return date
 
@@ -219,12 +232,12 @@ class RowsEvent(BinLogEvent):
             return None
 
         date = datetime.datetime(
-            year = year,
-            month = month,
-            day = day,
-            hour = int(time / 10000),
-            minute = int((time % 10000) / 100),
-            second = int(time % 100))
+            year=year,
+            month=month,
+            day=day,
+            hour=int(time / 10000),
+            minute=int((time % 10000) / 100),
+            second=int(time % 100))
         return date
 
     def __read_datetime2(self, column):
@@ -241,12 +254,12 @@ class RowsEvent(BinLogEvent):
         year_month = self.__read_binary_slice(data, 1, 17, 40)
         try:
             t = datetime.datetime(
-                year = int(year_month / 13),
-                month = year_month % 13,
-                day = self.__read_binary_slice(data, 18, 5, 40),
-                hour = self.__read_binary_slice(data, 23, 5, 40),
-                minute = self.__read_binary_slice(data, 28, 6, 40),
-                second = self.__read_binary_slice(data, 34, 6, 40))
+                year=int(year_month / 13),
+                month=year_month % 13,
+                day=self.__read_binary_slice(data, 18, 5, 40),
+                hour=self.__read_binary_slice(data, 23, 5, 40),
+                minute=self.__read_binary_slice(data, 28, 6, 40),
+                second=self.__read_binary_slice(data, 34, 6, 40))
         except ValueError:
             return None
         return self.__add_fsp_to_time(t, column)
@@ -277,7 +290,6 @@ class RowsEvent(BinLogEvent):
             mask = -1
             res = "-"
         self.packet.unread(struct.pack('<B', value ^ 0x80))
-
 
         size = compressed_bytes[comp_integral]
         if size > 0:
@@ -316,7 +328,7 @@ class RowsEvent(BinLogEvent):
     def _dump(self):
         super(RowsEvent, self)._dump()
         print("Table: %s.%s" % (self.schema, self.table))
-        print("Affected columns: %d" % (self.number_of_columns))
+        print("Affected columns: %d" % self.number_of_columns)
         print("Changed rows: %d" % (len(self.rows)))
 
     def _fetch_rows(self):
@@ -332,7 +344,8 @@ class RowsEvent(BinLogEvent):
 
 
 class DeleteRowsEvent(RowsEvent):
-    '''This evenement is trigger when a row in database is removed'''
+    """This event is trigger when a row in the database is removed"""
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
         super(DeleteRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
@@ -354,7 +367,8 @@ class DeleteRowsEvent(RowsEvent):
 
 
 class WriteRowsEvent(RowsEvent):
-    '''This evenement is trigger when a row in database is added'''
+    """This event is triggered when a row in database is added"""
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
         super(WriteRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
@@ -376,9 +390,10 @@ class WriteRowsEvent(RowsEvent):
 
 
 class UpdateRowsEvent(RowsEvent):
-    '''This evenement is trigger when a row in database change'''
+    """This event is triggered when a row in the database is changed"""
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
-        super(UpdateRowsEvent,self).__init__(from_packet, event_size, table_map, ctl_connection)
+        super(UpdateRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
         #Body
         self.columns_present_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
         self.columns_present_bitmap2 = self.packet.read((self.number_of_columns + 7) / 8)
@@ -395,7 +410,7 @@ class UpdateRowsEvent(RowsEvent):
 
     def _dump(self):
         super(UpdateRowsEvent, self)._dump()
-        print("Affected columns: %d" % (self.number_of_columns))
+        print("Affected columns: %d" % self.number_of_columns)
         print("Values:")
         for row in self.rows:
             print("--")
@@ -407,6 +422,7 @@ class TableMapEvent(BinLogEvent):
     '''This evenement describe the structure of a table.
     It's send before a change append on a table.
     A end user of the lib should have no usage of this'''
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
         super(TableMapEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
 
@@ -414,12 +430,11 @@ class TableMapEvent(BinLogEvent):
         self.table_id = self._read_table_id()
         self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
-
         # Payload
-        self.schema_length =  byte2int(self.packet.read(1))
+        self.schema_length = byte2int(self.packet.read(1))
         self.schema = self.packet.read(self.schema_length).decode()
         self.packet.advance(1)
-        self.table_length =  byte2int(self.packet.read(1))
+        self.table_length = byte2int(self.packet.read(1))
         self.table = self.packet.read(self.table_length).decode()
         self.packet.advance(1)
         self.column_count = self.packet.read_length_coded_binary()
@@ -429,7 +444,7 @@ class TableMapEvent(BinLogEvent):
         if self.table_id in table_map:
             self.column_schemas = table_map[self.table_id].column_schemas
         else:
-            self.column_schemas = self.__get_table_informations(self.schema, self.table)
+            self.column_schemas = self.__get_table_information(self.schema, self.table)
 
         #Read columns meta data
         column_types = list(self.packet.read(self.column_count))
@@ -440,14 +455,23 @@ class TableMapEvent(BinLogEvent):
             col = Column(byte2int(column_type), column_schema, from_packet)
             self.columns.append(col)
 
+        self.table_obj = Table(self.column_schemas, self.table_id, self.schema, self.table, self.columns)
 
         # TODO: get this informations instead of trashing data
         # n              NULL-bitmask, length: (column-length * 8) / 7
 
-    def __get_table_informations(self, schema, table):
+    def __get_table_information(self, schema, table):
         cur = self._ctl_connection.cursor()
-        cur.execute("""SELECT * FROM columns WHERE table_schema = %s AND table_name = %s""", (schema, table))
+        cur.execute("""SELECT
+                         COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME, COLUMN_COMMENT, COLUMN_TYPE
+                       FROM
+                         columns
+                       WHERE
+                         table_schema = %s AND table_name = %s""", (schema, table))
         return cur.fetchall()
+
+    def get_table(self):
+        return self.table_obj
 
     def _dump(self):
         super(TableMapEvent, self)._dump()
