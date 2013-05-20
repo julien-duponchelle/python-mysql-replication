@@ -99,3 +99,7 @@ class QueryEvent(BinLogEvent):
         print("Execution time: %d" % (self.execution_time))
         print("Query: %s" % (self.query))
 
+class NullEvent(BinLogEvent):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
+        super(NullEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
+        self.packet.advance(event_size)

@@ -34,7 +34,9 @@ class BinLogPacketWrapper(object):
         TABLE_MAP_EVENT: TableMapEvent,
         ROTATE_EVENT: RotateEvent,
         FORMAT_DESCRIPTION_EVENT: FormatDescriptionEvent,
-        XID_EVENT: XidEvent
+        XID_EVENT: XidEvent,
+        INTVAR_EVENT: NullEvent,
+        GTID_LOG_EVENT: NullEvent
     }
 
     def __init__(self, from_packet, table_map, ctl_connection):
