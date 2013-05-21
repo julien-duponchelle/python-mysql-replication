@@ -20,9 +20,9 @@ class RowsEvent(BinLogEvent):
         self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
         #Event V2
-        if self.event_type == BINLOG.WRITE_ROWS_EVENT or \
-                        self.event_type == BINLOG.DELETE_ROWS_EVENT or \
-                        self.event_type == BINLOG.UPDATE_ROWS_EVENT:
+        if self.event_type == BINLOG.WRITE_ROWS_EVENT_V2 or \
+            self.event_type == BINLOG.DELETE_ROWS_EVENT_V2 or \
+            self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2:
             self.extra_data_length = struct.unpack('<H', self.packet.read(2))[0]
             self.extra_data = self.packet.read(self.extra_data_length / 8)
 
