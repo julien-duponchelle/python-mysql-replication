@@ -100,6 +100,6 @@ class QueryEvent(BinLogEvent):
         print("Query: %s" % (self.query))
 
 class NotImplementedEvent(BinLogEvent):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection, log_persistancer = None):
-        super(NullEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, log_persistancer)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+        super(NullEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
         self.packet.advance(event_size)
