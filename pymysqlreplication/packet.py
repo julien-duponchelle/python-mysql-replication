@@ -50,7 +50,7 @@ class BinLogPacketWrapper(object):
 
     }
 
-    def __init__(self, from_packet, table_map, ctl_connection):
+    def __init__(self, from_packet, table_map, ctl_connection, use_checksum):
         if not from_packet.is_ok_packet():
             raise ValueError(
                 "Cannot create %s object from invalid packet type" %
@@ -75,7 +75,12 @@ class BinLogPacketWrapper(object):
         self.log_pos = struct.unpack('<I', self.packet.read(4))[0]
         self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
-        event_size_without_header = self.event_size - 19
+        # MySQL 5.6 and more if binlog-checksum = CRC32
+        if use_checksum:
+            event_size_without_header = self.event_size - 23
+        else:
+            event_size_without_header = self.event_size - 19
+
 
         try:
             event_class = self.__event_map[self.event_type]
