@@ -101,5 +101,5 @@ class QueryEvent(BinLogEvent):
 
 class NotImplementedEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
-        super(NullEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
+        super(NotImplementedEvent, self).__init__(from_packet, event_size, table_map, ctl_connection)
         self.packet.advance(event_size)
