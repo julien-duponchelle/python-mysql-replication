@@ -5,11 +5,18 @@ from pymysqlreplication.table import Table
 
 from pymysqlreplication.tests import base
 
+__all__ = ["TestDataObjects"]
+
 
 class TestDataObjects(base.PyMySQLReplicationTestCase):
     def test_column(self):
-        col = Column(1, {"COLUMN_NAME": "test", "COLLATION_NAME": "utf8_general_ci", "CHARACTER_SET_NAME": "UTF8",
-                         "COLUMN_COMMENT": "", "COLUMN_TYPE": "tinyint(2)"}, None)
+        col = Column(1,
+                     {"COLUMN_NAME": "test",
+                      "COLLATION_NAME": "utf8_general_ci",
+                      "CHARACTER_SET_NAME": "UTF8",
+                      "COLUMN_COMMENT": "",
+                      "COLUMN_TYPE": "tinyint(2)"},
+                     None)
 
         serialized = col.serializable_data()
         self.assertIn("type", serialized)
@@ -35,9 +42,5 @@ class TestDataObjects(base.PyMySQLReplicationTestCase):
         self.assertEqual(tbl, Table(**serialized))
 
 
-__all__ = ["TestDataObjects"]
-
 if __name__ == "__main__":
-    import unittest
-
     unittest.main()

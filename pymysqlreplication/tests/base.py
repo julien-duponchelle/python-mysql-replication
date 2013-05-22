@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import pymysql
 import unittest
 import copy
@@ -5,13 +7,14 @@ from pymysqlreplication import BinLogStreamReader
 
 
 class PyMySQLReplicationTestCase(unittest.TestCase):
-    '''Test the module. Be carefull it will reset your MySQL server'''
-    database = {"host": "localhost",
-                "user": "root",
-                "passwd": "",
-                "use_unicode": True,
-                "charset": "utf8",
-                "db": "pymysqlreplication_test"
+    """Test the module. Be carefull it will reset your MySQL server"""
+    database = {
+        "host": "localhost",
+        "user": "root",
+        "passwd": "",
+        "use_unicode": True,
+        "charset": "utf8",
+        "db": "pymysqlreplication_test"
     }
 
     def setUp(self):
@@ -28,8 +31,9 @@ class PyMySQLReplicationTestCase(unittest.TestCase):
         self.isMySQL56AndMore()
 
     def getMySQLVersion(self):
-        '''Return the MySQL version of the server
-        If version is 5.6.10-log the result is 5.6.10'''
+        """Return the MySQL version of the server
+        If version is 5.6.10-log the result is 5.6.10
+        """
         return self.execute("SELECT VERSION()").fetchone()[0].split('-')[0]
 
     def isMySQL56AndMore(self):
@@ -59,4 +63,3 @@ class PyMySQLReplicationTestCase(unittest.TestCase):
         if self.stream is not None:
             self.stream.close()
         self.stream = BinLogStreamReader(connection_settings=self.database)
-

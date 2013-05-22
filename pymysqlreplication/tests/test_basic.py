@@ -1,8 +1,12 @@
+# -*- coding: utf-8 -*-
+
 from pymysqlreplication.tests import base
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
+
+__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader"]
 
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
@@ -283,7 +287,6 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[1]["values"]["id"], 2)
         self.assertEqual(event.rows[1]["values"]["data"], "World")
 
-__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader"]
 
 if __name__ == "__main__":
     import unittest
