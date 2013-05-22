@@ -251,7 +251,8 @@ To run tests:
 
 Similar projects
 ==================
-Kodoma: Ruby-binlog based MySQL replication listener https://github.com/y310/kodama
+* Kodoma: Ruby-binlog based MySQL replication listener https://github.com/y310/kodama
+* MySQL Hadoop Applier: C++ version http://dev.mysql.com/tech-resources/articles/mysql-hadoop-applier.html
 
 Special thanks
 ================
