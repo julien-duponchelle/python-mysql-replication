@@ -4,9 +4,7 @@ import struct
 
 from pymysql.util import byte2int
 
-import constants
-import event
-import row_event
+from pymysqlreplication import constants, event, row_event
 
 # Constants from PyMYSQL source code
 NULL_COLUMN = 251
