@@ -265,6 +265,7 @@ Contributors
 * bjoernhaeuser for his bugs fixing and improvements https://github.com/bjoernhaeuser
 * Dvir Volk for bug fix https://github.com/dvirsky
 * Lior Sion code cleanup and improvements https://github.com/liorsion
+* Lx Yu code improvements https://github.com/lxyu
 
 Licence
 =======
