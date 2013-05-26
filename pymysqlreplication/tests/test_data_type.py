@@ -1,15 +1,19 @@
+# -*- coding: utf-8 -*-
+
+import copy
+import datetime
+import platform
+import unittest
+
+from decimal import Decimal
+
 from pymysqlreplication.tests import base
-from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 
-from decimal import Decimal
-import datetime
-import time
-import unittest
-import copy
-import platform
+__all__ = ["TestDataType"]
+
 
 class TestDataType(base.PyMySQLReplicationTestCase):
     def create_and_insert_value(self, create_query, insert_query):
@@ -402,8 +406,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertMultiLineEqual(event.rows[0]["values"]["test"], str)
 
-__all__ = ["TestDataType"]
 
 if __name__ == "__main__":
-    import unittest
     unittest.main()

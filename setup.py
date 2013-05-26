@@ -30,12 +30,15 @@ version = "0.1.0"
 setup(
     name="mysql-replication",
     version=version,
-    url='https://github.com/noplay/python-mysql-replication',
-    author='Julien Duponchelle',
-    author_email='julien@duponchelle.info',
-    description='Pure Python Implementation of MySQL replication protocol build on top of PyMYSQL.',
+    url="https://github.com/noplay/python-mysql-replication",
+    author="Julien Duponchelle",
+    author_email="julien@duponchelle.info",
+    description=("Pure Python Implementation of MySQL replication protocol"
+                 "build on top of PyMYSQL."),
     license="Apache 2",
-    packages=['pymysqlreplication', 'pymysqlreplication.constants', 'pymysqlreplication.tests'],
-    cmdclass={'test': TestCommand},
-    install_requires=['pymysql'],
+    packages=["pymysqlreplication",
+              "pymysqlreplication.constants",
+              "pymysqlreplication.tests"],
+    cmdclass={"test": TestCommand},
+    install_requires=["pymysql"],
 )

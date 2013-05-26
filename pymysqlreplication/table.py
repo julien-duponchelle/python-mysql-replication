@@ -1,7 +1,15 @@
+# -*- coding: utf-8 -*-
+
+
 class Table(object):
     def __init__(self, column_schemas, table_id, schema, table, columns):
-        self.data = {"column_schemas": column_schemas, "table_id": table_id, "schema": schema, "table": table,
-                     "columns": columns}
+        self.data = {
+            "column_schemas": column_schemas,
+            "table_id": table_id,
+            "schema": schema,
+            "table": table,
+            "columns": columns
+        }
 
     def __getattr__(self, item):
         if item in self.data:
@@ -17,6 +25,3 @@ class Table(object):
 
     def serializable_data(self):
         return self.data
-
-
-

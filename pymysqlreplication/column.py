@@ -1,10 +1,13 @@
+# -*- coding: utf-8 -*-
+
 import struct
+
 from .constants import FIELD_TYPE
-from pymysql.util import byte2int, int2byte
 
 
 class Column(object):
-    """Definition of a column"""
+    """Definition of a column
+    """
 
     def __init__(self, *args, **kwargs):
         self.data = {}
@@ -24,7 +27,8 @@ class Column(object):
 
         if column_schema["COLUMN_TYPE"].find("unsigned") != -1:
             self.data["unsigned"] = True
-        if self.type == FIELD_TYPE.VAR_STRING or self.type == FIELD_TYPE.STRING:
+        if self.type == FIELD_TYPE.VAR_STRING or \
+                self.type == FIELD_TYPE.STRING:
             self.__read_string_metadata(packet, column_schema)
         elif self.type == FIELD_TYPE.VARCHAR:
             self.data["max_length"] = struct.unpack('<H', packet.read(2))[0]
@@ -50,7 +54,8 @@ class Column(object):
             self.data["fsp"] = packet.read_uint8()
         elif self.type == FIELD_TYPE.TIME2:
             self.data["fsp"] = packet.read_uint8()
-        elif self.type == FIELD_TYPE.TINY and column_schema["COLUMN_TYPE"] == "tinyint(1)":
+        elif self.type == FIELD_TYPE.TINY and \
+                column_schema["COLUMN_TYPE"] == "tinyint(1)":
             self.data["type_is_bool"] = True
 
     def __read_string_metadata(self, packet, column_schema):
@@ -61,14 +66,17 @@ class Column(object):
             self.data["size"] = metadata & 0x00ff
             self.__read_enum_metadata(column_schema)
         else:
-            self.data["max_length"] = (((metadata >> 4) & 0x300) ^ 0x300) + (metadata & 0x00ff)
+            self.data["max_length"] = (((metadata >> 4) & 0x300) ^ 0x300) \
+                + (metadata & 0x00ff)
 
     def __read_enum_metadata(self, column_schema):
         enums = column_schema["COLUMN_TYPE"]
         if self.type == FIELD_TYPE.ENUM:
-            self.data["enum_values"] = enums.replace('enum(', '').replace(')', '').replace('\'', '').split(',')
+            self.data["enum_values"] = enums.replace('enum(', '')\
+                .replace(')', '').replace('\'', '').split(',')
         else:
-            self.data["set_values"] = enums.replace('set(', '').replace(')', '').replace('\'', '').split(',')
+            self.data["set_values"] = enums.replace('set(', '')\
+                .replace(')', '').replace('\'', '').split(',')
 
     def __eq__(self, other):
         return self.data == other.data
