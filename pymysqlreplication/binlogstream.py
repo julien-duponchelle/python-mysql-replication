@@ -9,7 +9,7 @@ from pymysql.util import int2byte
 
 from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
-
+from .event import NotImplementedEvent
 
 class BinLogStreamReader(object):
     """Connect to replication stream and read event
@@ -17,7 +17,7 @@ class BinLogStreamReader(object):
 
     def __init__(self, connection_settings={}, resume_stream=False,
                  blocking=False, only_events=None, server_id=255,
-                 log_file=None, log_pos=None):
+                 log_file=None, log_pos=None, filter_non_implemented_events=True):
         """
         Attributes:
             resume_stream: Start for event from position or the latest event of
@@ -35,6 +35,7 @@ class BinLogStreamReader(object):
         self.__resume_stream = resume_stream
         self.__blocking = blocking
         self.__only_events = only_events
+        self.__filter_non_implemented_events = filter_non_implemented_events
         self.__server_id = server_id
 
         #Store table meta information
@@ -132,6 +133,9 @@ class BinLogStreamReader(object):
             return binlog_event.event
 
     def __filter_event(self, event):
+        if self.__filter_non_implemented_events and isinstance(event, NotImplementedEvent):
+            return True
+
         if self.__only_events is not None:
             for allowed_event in self.__only_events:
                 if isinstance(event, allowed_event):
