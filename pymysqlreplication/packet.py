@@ -42,6 +42,12 @@ class BinLogPacketWrapper(object):
         constants.WRITE_ROWS_EVENT_V2: row_event.WriteRowsEvent,
         constants.DELETE_ROWS_EVENT_V2: row_event.DeleteRowsEvent,
         constants.TABLE_MAP_EVENT: row_event.TableMapEvent,
+        #5.6 GTID enabled replication events
+        constants.INTVAR_EVENT: event.NotImplementedEvent,
+        constants.GTID_LOG_EVENT: event.NotImplementedEvent,
+        constants.ANONYMOUS_GTID_LOG_EVENT: event.NotImplementedEvent,
+        constants.PREVIOUS_GTIDS_LOG_EVENT: event.NotImplementedEvent
+
     }
 
     def __init__(self, from_packet, table_map, ctl_connection):
