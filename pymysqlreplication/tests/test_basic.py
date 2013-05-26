@@ -60,9 +60,6 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
 
-        while (type(event) == NotImplementedEvent):
-            event = self.stream.fetchone()
-
         self.assertIsInstance(event, QueryEvent)
         self.assertEqual(event.query, query)
 
