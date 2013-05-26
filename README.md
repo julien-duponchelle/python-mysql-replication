@@ -45,6 +45,15 @@ The project is test with:
 
 It's not tested in real production situation.
 
+TESTING
+=======
+
+Make sure you have the following configuration set in your mysql config file (usually my.cnf on development env):
+
+log-bin=mysql-bin
+server-id=1
+binlog_do_db=pymysqlreplication_test
+
 Limitations
 =============
 
