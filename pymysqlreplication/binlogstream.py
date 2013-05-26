@@ -124,7 +124,7 @@ class BinLogStreamReader(object):
             if binlog_event.event_type == ROTATE_EVENT:
                 self.log_pos = binlog_event.event.position
                 self.log_file = binlog_event.event.next_binlog
-            else:
+            elif binlog_event.log_pos:
                 self.log_pos = binlog_event.log_pos
 
             if self.__filter_event(binlog_event.event):
