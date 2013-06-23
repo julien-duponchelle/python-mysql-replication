@@ -8,21 +8,15 @@ SITE
       dmg (>= 0.0.0)
       runit (>= 0.0.0)
       yum (>= 0.0.0)
-    openssl (1.0.0)
+    mysql (3.0.2)
+      build-essential (> 1.1.0)
+      openssl (>= 0.0.0)
+    openssl (1.0.2)
     python (1.0.8)
       build-essential (>= 0.0.0)
       yum (>= 0.0.0)
     runit (0.15.0)
     yum (1.0.0)
-
-GIT
-  remote: https://github.com/noplay/mysql.git
-  ref: master
-  sha: 5cc96c6eba711c01924f73d5ce1316859521ca1b
-  specs:
-    mysql (1.3.0)
-      build-essential (>= 0.0.0)
-      openssl (>= 0.0.0)
 
 DEPENDENCIES
   git (>= 0)
