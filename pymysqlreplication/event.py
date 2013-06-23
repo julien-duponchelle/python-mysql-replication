@@ -25,6 +25,7 @@ class BinLogEvent(object):
         print("=== %s ===" % (self.__class__.__name__))
         print("Date: %s" % (datetime.fromtimestamp(self.timestamp)
                             .isoformat()))
+        print("Log position: %d" % self.packet.log_pos)
         print("Event size: %d" % (self.event_size))
         print("Read bytes: %d" % (self.packet.read_bytes))
         self._dump()
