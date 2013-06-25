@@ -26,6 +26,23 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, QueryEvent)
         self.assertEqual(event.query, query)
 
+    def test_read_query_event_with_unicode(self):
+        query = u"CREATE TABLE `testÈ` (id INT NOT NULL AUTO_INCREMENT, dataÈ VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+
+        #RotateEvent
+        event = self.stream.fetchone()
+        self.assertEqual(event.position, 4)
+        self.assertEqual(event.next_binlog, "mysql-bin.000001")
+
+        #FormatDescription
+        self.stream.fetchone()
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, QueryEvent)
+        self.assertEqual(event.query, query)
+
+
     def test_reading_rotate_event(self):
         query = "CREATE TABLE test_2 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
