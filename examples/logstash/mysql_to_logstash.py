@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Output logstash events to the console
+# Output logstash events to the console from MySQL replication stream
 #
 # You can pipe it to logstash like this:
 # python examples/logstash/mysql_to_logstash.py | java -jar logstash-1.1.13-flatjar.jar  agent -f examples/logstash/logstash-simple.conf
