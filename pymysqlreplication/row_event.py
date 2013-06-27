@@ -477,8 +477,7 @@ class TableMapEvent(BinLogEvent):
         if self.table_id in table_map:
             self.column_schemas = table_map[self.table_id].column_schemas
         else:
-            self.column_schemas = self.__get_table_information(self.schema,
-                                                               self.table)
+            self.column_schemas = self._ctl_connection._get_table_information(self.schema, self.table)
 
         # Read columns meta data
         column_types = list(self.packet.read(self.column_count))
@@ -494,19 +493,6 @@ class TableMapEvent(BinLogEvent):
 
         # TODO: get this informations instead of trashing data
         # n              NULL-bitmask, length: (column-length * 8) / 7
-
-    def __get_table_information(self, schema, table):
-        cur = self._ctl_connection.cursor()
-        cur.execute("""
-            SELECT
-                COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME,
-                COLUMN_COMMENT, COLUMN_TYPE
-            FROM
-                columns
-            WHERE
-                table_schema = %s AND table_name = %s
-            """, (schema, table))
-        return cur.fetchall()
 
     def get_table(self):
         return self.table_obj

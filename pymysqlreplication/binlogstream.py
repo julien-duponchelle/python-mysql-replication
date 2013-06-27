@@ -57,6 +57,7 @@ class BinLogStreamReader(object):
         self._ctl_connection_settings["cursorclass"] = \
             pymysql.cursors.DictCursor
         self._ctl_connection = pymysql.connect(**self._ctl_connection_settings)
+        self._ctl_connection._get_table_information = self.__get_table_information
         self.__connected_ctl = True
 
     def __connect_to_stream(self):
@@ -117,8 +118,7 @@ class BinLogStreamReader(object):
             if not pkt.is_ok_packet():
                 continue
 
-            binlog_event = BinLogPacketWrapper(pkt, self.table_map,
-                                               self._ctl_connection)
+            binlog_event = BinLogPacketWrapper(pkt, self.table_map, self._ctl_connection)
 
             if binlog_event.event_type == TABLE_MAP_EVENT:
                 self.table_map[binlog_event.event.table_id] = \
@@ -145,6 +145,33 @@ class BinLogStreamReader(object):
                     return False
             return True
         return False
+
+    def __get_table_information(self, schema, table):
+        for i in range(1, 3):
+            try:
+                if not self.__connected_ctl:
+                    self.__connect_to_ctl()
+
+                cur = self._ctl_connection.cursor()
+                cur.execute("""
+                    SELECT
+                        COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME,
+                        COLUMN_COMMENT, COLUMN_TYPE
+                    FROM
+                        columns
+                    WHERE
+                        table_schema = %s AND table_name = %s
+                    """, (schema, table))
+
+                return cur.fetchall()
+            except pymysql.OperationalError as error:
+                code, message = error.args
+                # 2013: Connection Lost
+                if code == 2013:
+                    self.__connected_ctl = False
+                    continue
+                else:
+                    raise error
 
     def __iter__(self):
         return iter(self.fetchone, None)
