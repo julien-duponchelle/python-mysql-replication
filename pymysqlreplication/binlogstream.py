@@ -111,6 +111,9 @@ class BinLogStreamReader(object):
                     self.__connected_stream = False
                     continue
 
+            if pkt.is_eof_packet():
+                return None
+
             if not pkt.is_ok_packet():
                 continue
 
