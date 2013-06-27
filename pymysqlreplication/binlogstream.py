@@ -111,10 +111,10 @@ class BinLogStreamReader(object):
                     self.__connected_stream = False
                     continue
 
-            if not pkt.is_ok_packet():
-                if not self.__blocking:
-                    return None
+            if pkt.is_eof_packet():
+                return None
 
+            if not pkt.is_ok_packet():
                 continue
 
             binlog_event = BinLogPacketWrapper(pkt, self.table_map,
