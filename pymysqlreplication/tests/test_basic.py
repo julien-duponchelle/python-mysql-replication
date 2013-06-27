@@ -237,12 +237,13 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertIsInstance(self.stream.fetchone(), XidEvent)
 
-        self.assertIsNone(self.stream.fetchone())
 
     def test_log_pos_handles_disconnects(self):
+        self.stream.close()
         self.stream = BinLogStreamReader(
             connection_settings=self.database,
-            resume_stream=True
+            resume_stream=False,
+            only_events = [FormatDescriptionEvent, QueryEvent, TableMapEvent, WriteRowsEvent, XidEvent]
         )
 
         query = "CREATE TABLE test (id INT  PRIMARY KEY AUTO_INCREMENT, data VARCHAR (50) NOT NULL)"
@@ -251,24 +252,17 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.execute(query)
         self.execute("COMMIT")
 
-        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
-
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
         self.assertGreater(self.stream.log_pos, 0)
-
         self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
         self.assertIsInstance(self.stream.fetchone(), QueryEvent)
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
         self.assertIsInstance(self.stream.fetchone(), WriteRowsEvent)
+
         self.assertIsInstance(self.stream.fetchone(), XidEvent)
 
-        self.assertIsNone(self.stream.fetchone())
-        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
-
-        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
         self.assertGreater(self.stream.log_pos, 0)
-
-        #self.assertFalse(self.stream._BinLogStreamReader__connected_stream)
 
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
