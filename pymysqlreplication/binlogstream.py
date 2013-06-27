@@ -112,6 +112,9 @@ class BinLogStreamReader(object):
                     continue
 
             if not pkt.is_ok_packet():
+                if not self.__blocking:
+                    return None
+
                 continue
 
             binlog_event = BinLogPacketWrapper(pkt, self.table_map,
