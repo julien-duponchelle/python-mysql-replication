@@ -62,14 +62,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (\
             test DECIMAL(20,10) \
         )"
-        insert_query = "INSERT INTO test VALUES(9000000001.123456)"
-        event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], Decimal("9000000001.123456"))
-
-    def test_decimal_long_values_1(self):
-        create_query = "CREATE TABLE test (\
-            test DECIMAL(20,10) \
-        )"
         insert_query = "INSERT INTO test VALUES(9000000123.123456)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], Decimal("9000000123.123456"))
