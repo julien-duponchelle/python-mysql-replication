@@ -20,6 +20,7 @@ class BinLogEvent(object):
         # The event have been fully processed, if processed is false
         # the event will be skipped
         self._processed = True
+        self.complete = True
 
     def _read_table_id(self):
         # Table ID is 6 byte
