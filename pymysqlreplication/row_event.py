@@ -34,7 +34,10 @@ class RowsEvent(BinLogEvent):
         self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns = self.table_map[self.table_id].columns
 
-        #Aditionnal informations
+        if len(self.columns) == 0:  # could not read the table metadata, probably already dropped
+            self.complete = False
+
+        #Aditionnal information
         self.schema = self.table_map[self.table_id].schema
         self.table = self.table_map[self.table_id].table
 
@@ -355,6 +358,10 @@ class RowsEvent(BinLogEvent):
 
     def _fetch_rows(self):
         self.__rows = []
+
+        if not self.complete:
+            return
+
         while self.packet.read_bytes + 1 < self.event_size:
             self.__rows.append(self._fetch_one_row())
 
@@ -493,14 +500,15 @@ class TableMapEvent(BinLogEvent):
         else:
             self.column_schemas = self._ctl_connection._get_table_information(self.schema, self.table)
 
-        # Read columns meta data
-        column_types = list(self.packet.read(self.column_count))
-        self.packet.read_length_coded_binary()
-        for i in range(0, len(column_types)):
-            column_type = column_types[i]
-            column_schema = self.column_schemas[i]
-            col = Column(byte2int(column_type), column_schema, from_packet)
-            self.columns.append(col)
+        if len(self.column_schemas) != 0:
+            # Read columns meta data
+            column_types = list(self.packet.read(self.column_count))
+            self.packet.read_length_coded_binary()
+            for i in range(0, len(column_types)):
+                column_type = column_types[i]
+                column_schema = self.column_schemas[i]
+                col = Column(byte2int(column_type), column_schema, from_packet)
+                self.columns.append(col)
 
         self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
                                self.table, self.columns)

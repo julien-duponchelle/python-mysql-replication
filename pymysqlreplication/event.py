@@ -14,6 +14,7 @@ class BinLogEvent(object):
         self.timestamp = self.packet.timestamp
         self.event_size = event_size
         self._ctl_connection = ctl_connection
+        self.complete = True
 
     def _read_table_id(self):
         # Table ID is 6 byte

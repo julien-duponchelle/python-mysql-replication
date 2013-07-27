@@ -11,6 +11,7 @@ from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
 from .event import NotImplementedEvent
 
+
 class BinLogStreamReader(object):
     """Connect to replication stream and read event
     """
