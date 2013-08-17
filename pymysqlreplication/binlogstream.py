@@ -82,6 +82,8 @@ class BinLogStreamReader(object):
         # log_file (string.EOF) -- filename of the binlog on the master
         self._stream_connection = pymysql.connect(**self.__connection_settings)
 
+        self.__use_checksum = self.__checksum_enabled()
+
         #If cheksum is enabled we need to inform the server about the that we support it
         if self.__use_checksum:
             cur = self._stream_connection.cursor()
