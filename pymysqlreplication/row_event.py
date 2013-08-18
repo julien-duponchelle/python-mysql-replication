@@ -320,18 +320,18 @@ class RowsEvent(BinLogEvent):
 
         for i in range(0, uncomp_integral):
             value = struct.unpack('>i', self.packet.read(4))[0] ^ mask
-            res += str(value)
+            res += '%09d' % value
 
         res += "."
 
         for i in range(0, uncomp_fractional):
             value = struct.unpack('>i', self.packet.read(4))[0] ^ mask
-            res += str(value)
+            res += '%09d' % value
 
         size = compressed_bytes[comp_fractional]
         if size > 0:
             value = self.packet.read_int_be_by_size(size) ^ mask
-            res += str(value)
+            res += '%0*d' % (comp_fractional, value)
 
         return decimal.Decimal(res)
 
