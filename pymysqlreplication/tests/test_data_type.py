@@ -222,12 +222,13 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], -9223372036854775808)
 
     def test_int24(self):
-        create_query = "CREATE TABLE test (id MEDIUMINT UNSIGNED NOT NULL, test MEDIUMINT, test2 MEDIUMINT)"
-        insert_query = "INSERT INTO test VALUES(16777215, 8388607, -8388608)"
+        create_query = "CREATE TABLE test (id MEDIUMINT UNSIGNED NOT NULL, test MEDIUMINT, test2 MEDIUMINT, test3 MEDIUMINT)"
+        insert_query = "INSERT INTO test VALUES(16777215, 8388607, -8388608, 8)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["id"], 16777215)
         self.assertEqual(event.rows[0]["values"]["test"], 8388607)
         self.assertEqual(event.rows[0]["values"]["test2"], -8388608)
+        self.assertEqual(event.rows[0]["values"]["test3"], 8)
 
     def test_date(self):
         create_query = "CREATE TABLE test (test DATE);"

@@ -206,10 +206,10 @@ class BinLogPacketWrapper(object):
 
     def read_int24(self):
         a, b, c = struct.unpack("BBB", self.read(3))
-        if a & 128:
-            return a + (b << 8) + (c << 16)
+        if c & 128 == 0:
+            return a | (b << 8) | (c << 16)
         else:
-            return (a + (b << 8) + (c << 16)) * -1
+            return (a | (b << 8) | (c << 16)) * -1
 
     def read_int24_be(self):
         a, b, c = struct.unpack('BBB', self.read(3))
