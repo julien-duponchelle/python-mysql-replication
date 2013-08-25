@@ -206,17 +206,17 @@ class BinLogPacketWrapper(object):
 
     def read_int24(self):
         a, b, c = struct.unpack("BBB", self.read(3))
-        if c & 128 == 0:
-            return a | (b << 8) | (c << 16)
-        else:
-            return (a | (b << 8) | (c << 16)) * -1
+        res = a | (b << 8) | (c << 16)
+        if res >= 0x800000:
+            res -= 0x1000000
+        return res
 
     def read_int24_be(self):
         a, b, c = struct.unpack('BBB', self.read(3))
-        if a & 128 == 0:
-            return (a << 16) | (b << 8) | c
-        else:
-            return (-1 << 24) | (a << 16) | (b << 8) | c
+        res = (a << 16) | (b << 8) | c
+        if res >= 0x800000:
+            res -= 0x1000000
+        return res
 
     def read_uint8(self):
         return struct.unpack('<B', self.read(1))[0]
