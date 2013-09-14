@@ -31,8 +31,6 @@ class BinLogPacketWrapper(object):
         constants.ROTATE_EVENT: event.RotateEvent,
         constants.FORMAT_DESCRIPTION_EVENT: event.FormatDescriptionEvent,
         constants.XID_EVENT: event.XidEvent,
-        constants.INTVAR_EVENT: event.NotImplementedEvent,
-        constants.GTID_LOG_EVENT: event.NotImplementedEvent,
         constants.STOP_EVENT: event.NotImplementedEvent,
         # row_event
         constants.UPDATE_ROWS_EVENT_V1: row_event.UpdateRowsEvent,
@@ -50,7 +48,7 @@ class BinLogPacketWrapper(object):
 
     }
 
-    def __init__(self, from_packet, table_map, ctl_connection, use_checksum):
+    def __init__(self, from_packet, table_map, metadata_adapter, use_checksum):
         if not from_packet.is_ok_packet():
             raise ValueError(
                 "Cannot create %s object from invalid packet type" %
@@ -64,7 +62,7 @@ class BinLogPacketWrapper(object):
         # Ok Value
         self.packet = from_packet
         self.packet.advance(1)
-        self.charset = ctl_connection.charset
+        self.charset = metadata_adapter.get_charset()
 
         # Header
         self.timestamp = struct.unpack('<I', self.packet.read(4))[0]
@@ -81,7 +79,6 @@ class BinLogPacketWrapper(object):
         else:
             event_size_without_header = self.event_size - 19
 
-
         try:
             event_class = self.__event_map[self.event_type]
         except KeyError:
@@ -90,7 +87,7 @@ class BinLogPacketWrapper(object):
                 (hex(self.event_type), self.event_type))
 
         self.event = event_class(self, event_size_without_header, table_map,
-                                 ctl_connection)
+                                 metadata_adapter)
 
     def read(self, size):
         size = int(size)

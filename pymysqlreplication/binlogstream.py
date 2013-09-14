@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 
-import pymysql
-import pymysql.cursors
 import struct
+import copy
 
+import pymysql
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP
 from pymysql.util import int2byte
 
 from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
 from .event import NotImplementedEvent
+from pymysqlreplication.metadataadapter import MetadataAdapter
+
 
 class BinLogStreamReader(object):
     """Connect to replication stream and read event
@@ -37,7 +39,7 @@ class BinLogStreamReader(object):
         self.__only_events = only_events
         self.__filter_non_implemented_events = filter_non_implemented_events
         self.__server_id = server_id
-        self.__use_checksum = False
+        self.use_checksum = False
 
         #Store table meta information
         self.table_map = {}
@@ -53,16 +55,15 @@ class BinLogStreamReader(object):
             self.__connected_ctl = False
 
     def __connect_to_ctl(self):
-        self._ctl_connection_settings = dict(self.__connection_settings)
+        self._ctl_connection_settings = copy.deepcopy(self.__connection_settings)
         self._ctl_connection_settings["db"] = "information_schema"
         self._ctl_connection_settings["cursorclass"] = \
             pymysql.cursors.DictCursor
         self._ctl_connection = pymysql.connect(**self._ctl_connection_settings)
-        self._ctl_connection._get_table_information = self.__get_table_information
         self.__connected_ctl = True
 
     def __checksum_enabled(self):
-        '''Return True if binlog-checksum = CRC32. Only for MySQL > 5.6 '''
+        """Return True if binlog-checksum = CRC32. Only for MySQL > 5.6 """
         cur = self._stream_connection.cursor()
         cur.execute("SHOW GLOBAL VARIABLES LIKE 'BINLOG_CHECKSUM'")
         result = cur.fetchone()
@@ -82,10 +83,10 @@ class BinLogStreamReader(object):
         # log_file (string.EOF) -- filename of the binlog on the master
         self._stream_connection = pymysql.connect(**self.__connection_settings)
 
-        self.__use_checksum = self.__checksum_enabled()
+        self.use_checksum = self.__checksum_enabled()
 
         #If cheksum is enabled we need to inform the server about the that we support it
-        if self.__use_checksum:
+        if self.use_checksum:
             cur = self._stream_connection.cursor()
             cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")
             cur.close()
@@ -99,7 +100,7 @@ class BinLogStreamReader(object):
             cur.close()
 
         prelude = struct.pack('<i', len(self.log_file) + 11) \
-            + int2byte(COM_BINLOG_DUMP)
+                  + int2byte(COM_BINLOG_DUMP)
 
         if self.__resume_stream:
             prelude += struct.pack('<I', self.log_pos)
@@ -118,32 +119,40 @@ class BinLogStreamReader(object):
         self._stream_connection.wfile.flush()
         self.__connected_stream = True
 
+    def fetch_packet(self):
+        if not self.__connected_stream:
+            self.__connect_to_stream()
+
+        if not self.__connected_ctl:
+            self.__connect_to_ctl()
+
+        try:
+            pkt = self._stream_connection.read_packet()
+        except pymysql.OperationalError as error:
+            code, message = error.args
+            # 2013: Connection Lost
+            if code == 2013:
+                self.__connected_stream = False
+                return None
+
+        return pkt
+
+    def wrap_packet(self, pkt):
+        return BinLogPacketWrapper(pkt, self.table_map,
+                                   MetadataAdapter(self.__connection_settings),
+                                   self.use_checksum)
+
     def fetchone(self):
         while True:
-            if not self.__connected_stream:
-                self.__connect_to_stream()
-
-            if not self.__connected_ctl:
-                self.__connect_to_ctl()
-
-            try:
-                pkt = self._stream_connection.read_packet()
-            except pymysql.OperationalError as error:
-                code, message = error.args
-                # 2013: Connection Lost
-                if code == 2013:
-                    self.__connected_stream = False
-                    continue
-
+            pkt = self.fetch_packet()
             if pkt.is_eof_packet():
                 return None
 
             if not pkt.is_ok_packet():
                 continue
 
-            binlog_event = BinLogPacketWrapper(pkt, self.table_map,
-                                               self._ctl_connection,
-                                               self.__use_checksum)
+            binlog_event = self.wrap_packet(pkt)
+
             if binlog_event.event_type == TABLE_MAP_EVENT:
                 self.table_map[binlog_event.event.table_id] = \
                     binlog_event.event.get_table()
@@ -169,33 +178,6 @@ class BinLogStreamReader(object):
                     return False
             return True
         return False
-
-    def __get_table_information(self, schema, table):
-        for i in range(1, 3):
-            try:
-                if not self.__connected_ctl:
-                    self.__connect_to_ctl()
-
-                cur = self._ctl_connection.cursor()
-                cur.execute("""
-                    SELECT
-                        COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME,
-                        COLUMN_COMMENT, COLUMN_TYPE
-                    FROM
-                        columns
-                    WHERE
-                        table_schema = %s AND table_name = %s
-                    """, (schema, table))
-
-                return cur.fetchall()
-            except pymysql.OperationalError as error:
-                code, message = error.args
-                # 2013: Connection Lost
-                if code == 2013:
-                    self.__connected_ctl = False
-                    continue
-                else:
-                    raise error
 
     def __iter__(self):
         return iter(self.fetchone, None)

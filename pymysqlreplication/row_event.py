@@ -14,9 +14,9 @@ from .table import Table
 
 
 class RowsEvent(BinLogEvent):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, metadata_adapter):
         super(RowsEvent, self).__init__(from_packet, event_size, table_map,
-                                        ctl_connection)
+                                        metadata_adapter)
         self.__rows = None
 
         #Header
@@ -368,9 +368,9 @@ class RowsEvent(BinLogEvent):
 class DeleteRowsEvent(RowsEvent):
     """This event is trigger when a row in the database is removed"""
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, metadata_adapter):
         super(DeleteRowsEvent, self).__init__(from_packet, event_size,
-                                              table_map, ctl_connection)
+                                              table_map, metadata_adapter)
         self.columns_present_bitmap = self.packet.read(
             (self.number_of_columns + 7) / 8)
 
@@ -393,9 +393,9 @@ class DeleteRowsEvent(RowsEvent):
 class WriteRowsEvent(RowsEvent):
     """This event is triggered when a row in database is added"""
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, metadata_adapter):
         super(WriteRowsEvent, self).__init__(from_packet, event_size,
-                                             table_map, ctl_connection)
+                                             table_map, metadata_adapter)
         self.columns_present_bitmap = self.packet.read(
             (self.number_of_columns + 7) / 8)
 
@@ -418,9 +418,9 @@ class WriteRowsEvent(RowsEvent):
 class UpdateRowsEvent(RowsEvent):
     """This event is triggered when a row in the database is changed"""
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, metadata_adapter):
         super(UpdateRowsEvent, self).__init__(from_packet, event_size,
-                                              table_map, ctl_connection)
+                                              table_map, metadata_adapter)
         #Body
         self.columns_present_bitmap = self.packet.read(
             (self.number_of_columns + 7) / 8)
@@ -455,9 +455,9 @@ class TableMapEvent(BinLogEvent):
     A end user of the lib should have no usage of this
     """
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, metadata_adapter):
         super(TableMapEvent, self).__init__(from_packet, event_size,
-                                            table_map, ctl_connection)
+                                            table_map, metadata_adapter)
 
         # Post-Header
         self.table_id = self._read_table_id()
@@ -477,7 +477,7 @@ class TableMapEvent(BinLogEvent):
         if self.table_id in table_map:
             self.column_schemas = table_map[self.table_id].column_schemas
         else:
-            self.column_schemas = self._ctl_connection._get_table_information(self.schema, self.table)
+            self.column_schemas = self.metadata_adapter.get_table_information(self.schema, self.table)
 
         # Read columns meta data
         column_types = list(self.packet.read(self.column_count))

@@ -7,13 +7,13 @@ from pymysql.util import byte2int, int2byte
 
 
 class BinLogEvent(object):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, metadata_adapter):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
         self.timestamp = self.packet.timestamp
         self.event_size = event_size
-        self._ctl_connection = ctl_connection
+        self.metadata_adapter = metadata_adapter
 
     def _read_table_id(self):
         # Table ID is 6 byte
@@ -22,12 +22,12 @@ class BinLogEvent(object):
         return struct.unpack('<Q', table_id)[0]
 
     def dump(self):
-        print("=== %s ===" % (self.__class__.__name__))
+        print("=== %s ===" % self.__class__.__name__)
         print("Date: %s" % (datetime.fromtimestamp(self.timestamp)
                             .isoformat()))
         print("Log position: %d" % self.packet.log_pos)
-        print("Event size: %d" % (self.event_size))
-        print("Read bytes: %d" % (self.packet.read_bytes))
+        print("Event size: %d" % self.event_size)
+        print("Read bytes: %d" % self.packet.read_bytes)
         self._dump()
         print()
 
@@ -43,9 +43,9 @@ class RotateEvent(BinLogEvent):
         position: Position inside next binlog
         next_binlog: Name of next binlog file
     """
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, metadata_adapter):
         super(RotateEvent, self).__init__(from_packet, event_size, table_map,
-                                          ctl_connection)
+                                          metadata_adapter)
         self.position = struct.unpack('<Q', self.packet.read(8))[0]
         self.next_binlog = self.packet.read(event_size - 8).decode()
 
@@ -67,22 +67,22 @@ class XidEvent(BinLogEvent):
         xid: Transaction ID for 2PC
     """
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, metadata_adapter):
         super(XidEvent, self).__init__(from_packet, event_size, table_map,
-                                       ctl_connection)
+                                       metadata_adapter)
         self.xid = struct.unpack('<Q', self.packet.read(8))[0]
 
     def _dump(self):
         super(XidEvent, self)._dump()
-        print("Transaction ID: %d" % (self.xid))
+        print("Transaction ID: %d" % self.xid)
 
 
 class QueryEvent(BinLogEvent):
-    '''This evenement is trigger when a query is run of the database.
-    Only replicated queries are logged.'''
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    """This event is triggered when a query is run on the database.
+    Only replicated queries are logged."""
+    def __init__(self, from_packet, event_size, table_map, metadata_adapter):
         super(QueryEvent, self).__init__(from_packet, event_size, table_map,
-                                         ctl_connection)
+                                         metadata_adapter)
 
         # Post-header
         self.slave_proxy_id = self.packet.read_uint32()
@@ -102,13 +102,13 @@ class QueryEvent(BinLogEvent):
 
     def _dump(self):
         super(QueryEvent, self)._dump()
-        print("Schema: %s" % (self.schema))
-        print("Execution time: %d" % (self.execution_time))
-        print("Query: %s" % (self.query))
+        print("Schema: %s" % self.schema)
+        print("Execution time: %d" % self.execution_time)
+        print("Query: %s" % self.query)
 
 
 class NotImplementedEvent(BinLogEvent):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, metadata_adapter):
         super(NotImplementedEvent, self).__init__(
-            from_packet, event_size, table_map, ctl_connection)
+            from_packet, event_size, table_map, metadata_adapter)
         self.packet.advance(event_size)
