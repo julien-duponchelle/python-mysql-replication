@@ -114,8 +114,11 @@ class BinLogStreamReader(object):
         prelude += struct.pack('<I', self.__server_id)
         prelude += self.log_file.encode()
 
-        self._stream_connection.wfile.write(prelude)
-        self._stream_connection.wfile.flush()
+        if pymysql.VERSION < (0, 6, None):
+            self._stream_connection.wfile.write(prelude)
+            self._stream_connection.wfile.flush()
+        else:
+            self._stream_connection._write_bytes(prelude)
         self.__connected_stream = True
 
     def fetchone(self):
@@ -127,7 +130,10 @@ class BinLogStreamReader(object):
                 self.__connect_to_ctl()
 
             try:
-                pkt = self._stream_connection.read_packet()
+                if pymysql.VERSION < (0, 6, None):
+                    pkt = self._stream_connection.read_packet()
+                else:
+                    pkt = self._stream_connection._read_packet()
             except pymysql.OperationalError as error:
                 code, message = error.args
                 # 2013: Connection Lost
