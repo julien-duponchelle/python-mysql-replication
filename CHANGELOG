@@ -1,2 +1,15 @@
 0.1 01/05/2013
 * Initial Release with MySQL 5.5 and MySQL 5.6 support
+
+0.2 13/10/2013
+* Make it work under pymysql 0.6
+* Ignore position of some events
+* Fix FormatDescriptionEvent has zero log_pos
+* Support checksum for mysql 5.6
+* Add feature to start stream from position
+* Change names of events to V2
+* Added NotImplementedEvent for a few events that we currently don't need
+* Support null events and a slight change of names
+* Support MySQL Broken Dates :(
+* Introduce data objects for Table / Column
+* Add support for TINYINT(1) to bool() Mapping
