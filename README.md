@@ -273,6 +273,7 @@ Contributors
 * Dvir Volk for bug fix https://github.com/dvirsky
 * Lior Sion code cleanup and improvements https://github.com/liorsion
 * Lx Yu code improvements https://github.com/lxyu
+* Young King for pymysql 0.6 support https://github.com/youngking
 
 Licence
 =======
