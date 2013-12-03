@@ -81,14 +81,8 @@ class BinLogPacketWrapper(object):
         else:
             event_size_without_header = self.event_size - 19
 
-
-        try:
-            event_class = self.__event_map[self.event_type]
-        except KeyError:
-            raise NotImplementedError(
-                "Unknown MySQL bin log event type: %s (%s)" %
-                (hex(self.event_type), self.event_type))
-
+        event_class = self.__event_map.get(self.event_type,
+            event.NotImplementedEvent)
         self.event = event_class(self, event_size_without_header, table_map,
                                  ctl_connection)
 
