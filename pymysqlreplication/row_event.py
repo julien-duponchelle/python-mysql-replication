@@ -366,7 +366,10 @@ class RowsEvent(BinLogEvent):
 
 
 class DeleteRowsEvent(RowsEvent):
-    """This event is trigger when a row in the database is removed"""
+    """This event is trigger when a row in the database is removed
+
+    For each row you have a hash with a single key: values which contain the data of the removed line.
+    """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
         super(DeleteRowsEvent, self).__init__(from_packet, event_size,
@@ -391,7 +394,10 @@ class DeleteRowsEvent(RowsEvent):
 
 
 class WriteRowsEvent(RowsEvent):
-    """This event is triggered when a row in database is added"""
+    """This event is triggered when a row in database is added
+
+    For each row you have a hash with a single key: values which contain the data of the new line.
+    """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
         super(WriteRowsEvent, self).__init__(from_packet, event_size,
@@ -416,7 +422,15 @@ class WriteRowsEvent(RowsEvent):
 
 
 class UpdateRowsEvent(RowsEvent):
-    """This event is triggered when a row in the database is changed"""
+    """This event is triggered when a row in the database is changed
+
+    For each row you got a hash with two keys:
+        * before_values
+        * after_values
+
+    Depending of your MySQL configuration the hash can contains the full row or only the changes:
+    http://dev.mysql.com/doc/refman/5.6/en/replication-options-binary-log.html#sysvar_binlog_row_image
+    """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection):
         super(UpdateRowsEvent, self).__init__(from_packet, event_size,
