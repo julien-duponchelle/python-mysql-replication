@@ -9,23 +9,11 @@ from pymysql.util import int2byte
 
 from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
+from .constants.FLAG import FLAG_STMT_END_F, FLAG_NO_FOREIGN_KEY_CHECKS_F, FLAG_RELAXED_UNIQUE_CHECKS_F, FLAG_COMPLETE_ROWS_F
 from .event import NotImplementedEvent
 
 MYSQL_EXPECTED_ERROR_CODES = [2013, 2006] #2013 Connection Lost
                                           #2006 MySQL server has gone away
-# have to be in constants.FlagsEvent.py
-#------------------------------------------
-# Last event of a statement */
-FLAG_STMT_END_F = 1 << 0
-# Value of the OPTION_NO_FOREIGN_KEY_CHECKS flag in thd->options */
-FLAG_NO_FOREIGN_KEY_CHECKS_F = 1 << 1
-# Value of the OPTION_RELAXED_UNIQUE_CHECKS flag in thd->options */
-FLAG_RELAXED_UNIQUE_CHECKS_F = 1 << 2
-#
-#        Indicates that rows in this event are complete, that is contain
-#        values for all columns of the table.
-#
-FLAG_COMPLETE_ROWS_F = 1 << 3
 
 class BinLogStreamReader(object):
     """Connect to replication stream and read event
@@ -251,7 +239,6 @@ class BinLogStreamReader(object):
 
     def __manage_table_map(self,  new_table_id):
         """
-        # added by YD - 2013/12/12
         Looking for a duplicate entry in self.table_map (same schema.table with old table_id)
         from the new_table_id
         """
