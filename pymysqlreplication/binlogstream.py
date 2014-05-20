@@ -11,6 +11,10 @@ from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
 from .event import NotImplementedEvent
 
+
+MYSQL_EXPECTED_ERROR_CODES = [2013, 2006] #2013 Connection Lost
+                                          #2006 MySQL server has gone away
+
 class BinLogStreamReader(object):
     """Connect to replication stream and read event
     """
@@ -136,8 +140,7 @@ class BinLogStreamReader(object):
                     pkt = self._stream_connection._read_packet()
             except pymysql.OperationalError as error:
                 code, message = error.args
-                # 2013: Connection Lost
-                if code == 2013:
+                if code in MYSQL_EXPECTED_ERROR_CODES:
                     self.__connected_stream = False
                     continue
 
@@ -196,8 +199,7 @@ class BinLogStreamReader(object):
                 return cur.fetchall()
             except pymysql.OperationalError as error:
                 code, message = error.args
-                # 2013: Connection Lost
-                if code == 2013:
+                if code in MYSQL_EXPECTED_ERROR_CODES:
                     self.__connected_ctl = False
                     continue
                 else:
