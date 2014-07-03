@@ -62,9 +62,6 @@ class RowsEvent(BinLogEvent):
                     values[name] = struct.unpack("<B", self.packet.read(1))[0]
                 else:
                     values[name] = struct.unpack("<b", self.packet.read(1))[0]
-
-                if column.type_is_bool:
-                    values[name] = bool(values[name])
             elif column.type == FIELD_TYPE.SHORT:
                 if unsigned:
                     values[name] = struct.unpack("<H", self.packet.read(2))[0]
