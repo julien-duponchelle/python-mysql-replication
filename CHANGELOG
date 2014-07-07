@@ -13,3 +13,8 @@
 * Support MySQL Broken Dates :(
 * Introduce data objects for Table / Column
 * Add support for TINYINT(1) to bool() Mapping
+
+0.3 07/07/2014
+* use NotImplementedEvent instead of raising an Exception
+* Python 3 fix
+* Add 2006 to Mysql expected error codes

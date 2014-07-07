@@ -25,7 +25,7 @@ class TestCommand(Command):
         unittest.main(tests, argv=sys.argv[:1])
 
 
-version = "0.2.0"
+version = "0.3.0"
 
 setup(
     name="mysql-replication",
