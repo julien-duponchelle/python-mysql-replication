@@ -21,7 +21,7 @@ class RowsEvent(BinLogEvent):
 
         #Header
         self.table_id = self._read_table_id()
-        self.primary_keys = table_map[self.table_id].data["primary_keys"]
+        self.primary_key = table_map[self.table_id].data["primary_key"]
         self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
         #Event V2
