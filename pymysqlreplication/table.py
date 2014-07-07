@@ -8,7 +8,9 @@ class Table(object):
             "table_id": table_id,
             "schema": schema,
             "table": table,
-            "columns": columns
+            "columns": columns,
+            "primary_keys": [c.data["name"] for c in columns
+                             if c.data["is_primary"]]
         }
 
     def __getattr__(self, item):

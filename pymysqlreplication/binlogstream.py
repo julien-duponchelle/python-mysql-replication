@@ -189,7 +189,7 @@ class BinLogStreamReader(object):
                 cur.execute("""
                     SELECT
                         COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME,
-                        COLUMN_COMMENT, COLUMN_TYPE
+                        COLUMN_COMMENT, COLUMN_TYPE, COLUMN_KEY
                     FROM
                         columns
                     WHERE
