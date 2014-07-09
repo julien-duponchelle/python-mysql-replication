@@ -24,6 +24,7 @@ class Column(object):
         self.data["comment"] = column_schema["COLUMN_COMMENT"]
         self.data["unsigned"] = False
         self.data["type_is_bool"] = False
+        self.data["is_primary"] = column_schema["COLUMN_KEY"] == "PRI"
 
         if column_schema["COLUMN_TYPE"].find("unsigned") != -1:
             self.data["unsigned"] = True
