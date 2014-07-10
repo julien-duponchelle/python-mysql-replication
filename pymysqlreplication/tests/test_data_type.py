@@ -21,18 +21,15 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.execute(insert_query)
         self.execute("COMMIT")
 
-        #RotateEvent
-        self.stream.fetchone()
-        #FormatDescription
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
         #QueryEvent for the Create Table
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
 
         #QueryEvent for the BEGIN
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
 
-        event = self.stream.fetchone()
-        self.assertIsInstance(event, TableMapEvent)
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
