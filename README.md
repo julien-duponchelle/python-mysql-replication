@@ -263,17 +263,26 @@ Similar projects
 
 Special thanks
 ================
-* MySQL binlog from Jeremy Cole was a great souce of knowledge about MySQL replication protocol https://github.com/jeremycole/mysql_binlog
+* MySQL binlog from Jeremy Cole was a great source of knowledge about MySQL replication protocol https://github.com/jeremycole/mysql_binlog
 * Samuel Charron for his help https://github.com/scharron
 
 Contributors
 ==============
 
-* bjoernhaeuser for his bugs fixing and improvements https://github.com/bjoernhaeuser
+Major contributor:
+* bjoernhaeuser for his bugs fixing, improvements and community support https://github.com/bjoernhaeuser
+
+Other contributors:
 * Dvir Volk for bug fix https://github.com/dvirsky
 * Lior Sion code cleanup and improvements https://github.com/liorsion
-* Lx Yu code improvements https://github.com/lxyu
+* Lx Yu code improvements, primary keys detections https://github.com/lxyu
 * Young King for pymysql 0.6 support https://github.com/youngking
+* David Reid checksum checking fix https://github.com/dreid
+* Alex Gaynor fix smallint24 https://github.com/alex
+* lifei NotImplementedEvent https://github.com/lifei
+* Maralla Python 3.4 fix https://github.com/maralla
+* Daniel Gavrila more MySQL error codes https://github.com/danielduduta
+* Bernardo Sulzbach code cleanup https://github.com/mafagafo
 
 Licence
 =======
