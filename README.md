@@ -40,8 +40,8 @@ replication log.
 
 The project is test with:
 * MySQL 5.5 and 5.6
-* Python 2.7
-* Python 3.2
+* Python 2.7 (2.6 is not supported)
+* Python 3.3 and 3.4 (3.2 is not supported)
 
 It's not tested in real production situation.
 
@@ -248,13 +248,15 @@ Make sure you have the following configuration set in your mysql config file (us
 
     log-bin=mysql-bin
     server-id=1
-    binlog_do_db=pymysqlreplication_test
     binlog-format    = row #Very important if you want to receive write, update and delete row events
 
 
 To run tests:
 
     python setup.py test
+
+Each pull request is tested on Travis CI:
+https://travis-ci.org/noplay/python-mysql-replication
 
 Similar projects
 ==================
