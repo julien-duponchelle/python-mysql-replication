@@ -1,0 +1,18 @@
+language: python
+python:
+  - "3.4"
+install:
+    - "pip install ."
+    - "pip install nose"
+before_script:
+  - "sudo touch /etc/mysql/conf.d/replication.cnf"
+  - "sudo chmod 777 /etc/mysql/conf.d/replication.cnf"
+  - "echo '[mysqld]' > /etc/mysql/conf.d/replication.cnf"
+  - "echo 'log-bin=mysql-bin' >> /etc/mysql/conf.d/replication.cnf"
+  - "echo 'server-id=1' >> /etc/mysql/conf.d/replication.cnf"
+  - "echo 'binlog-format = row'  >> /etc/mysql/conf.d/replication.cnf"
+  - "sudo chmod 700 /etc/mysql/conf.d/replication.cnf"    
+  - "sudo service mysql restart"
+  - "mysql -e 'CREATE DATABASE pymysqlreplication_test;'"    
+script:
+  - "nosetests"

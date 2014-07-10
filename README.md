@@ -248,7 +248,6 @@ Make sure you have the following configuration set in your mysql config file (us
 
     log-bin=mysql-bin
     server-id=1
-    binlog_do_db=pymysqlreplication_test
     binlog-format    = row #Very important if you want to receive write, update and delete row events
 
 
