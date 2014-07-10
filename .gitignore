@@ -34,3 +34,6 @@ _build
 
 #Text Editor Backupfile 
 *~
+
+#PyCharm
+.idea
