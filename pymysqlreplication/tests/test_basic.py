@@ -14,13 +14,12 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
-        #RotateEvent
         event = self.stream.fetchone()
         self.assertEqual(event.position, 4)
         self.assertEqual(event.next_binlog, "mysql-bin.000001")
+        self.assertIsInstance(event, RotateEvent)
 
-        #FormatDescription
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, QueryEvent)
@@ -30,13 +29,12 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         query = u"CREATE TABLE `testÈ` (id INT NOT NULL AUTO_INCREMENT, dataÈ VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
-        #RotateEvent
         event = self.stream.fetchone()
         self.assertEqual(event.position, 4)
         self.assertEqual(event.next_binlog, "mysql-bin.000001")
+        self.assertIsInstance(event, RotateEvent)
 
-        #FormatDescription
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, QueryEvent)
@@ -47,15 +45,15 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         query = "CREATE TABLE test_2 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
-        # Rotate event
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
         self.stream.close()
 
         query = "CREATE TABLE test_3 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
         # Rotate event
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+
 
     def test_connection_stream_lost_event(self):
         self.stream.close()
@@ -69,11 +67,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.execute(query2)
         self.execute("COMMIT")
 
-        #RotateEvent
-        self.stream.fetchone()
-
-        #FormatDescription
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
 
         event = self.stream.fetchone()
 
@@ -103,18 +98,14 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.execute(query)
         self.execute("COMMIT")
 
-        #RotateEvent
-        self.stream.fetchone()
-        #FormatDescription
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
         #QueryEvent for the Create Table
-        self.stream.fetchone()
-
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
         #QueryEvent for the BEGIN
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
 
-        event = self.stream.fetchone()
-        self.assertIsInstance(event, TableMapEvent)
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
@@ -140,16 +131,13 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.execute(query)
         self.execute("COMMIT")
 
-        #RotateEvent
-        self.stream.fetchone()
-        #FormatDescription
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
 
         #QueryEvent for the BEGIN
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
 
-        event = self.stream.fetchone()
-        self.assertIsInstance(event, TableMapEvent)
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
@@ -172,16 +160,13 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.execute(query)
         self.execute("COMMIT")
 
-        #RotateEvent
-        self.stream.fetchone()
-        #FormatDescription
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
 
         #QueryEvent for the BEGIN
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
 
-        event = self.stream.fetchone()
-        self.assertIsInstance(event, TableMapEvent)
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
@@ -220,21 +205,13 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             log_pos=log_pos
         )
 
-        # RotateEvent
-        self.stream.fetchone()
-        # FormatDescription
-        self.stream.fetchone()
-        # XidEvent
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        self.assertIsInstance(self.stream.fetchone(), XidEvent)
         # QueryEvent for the BEGIN
-        self.stream.fetchone()
-
-        event = self.stream.fetchone()
-        self.assertIsInstance(event, TableMapEvent)
-
-        event = self.stream.fetchone()
-        self.assertIsInstance(event, UpdateRowsEvent)
-
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
+        self.assertIsInstance(self.stream.fetchone(), UpdateRowsEvent)
         self.assertIsInstance(self.stream.fetchone(), XidEvent)
 
 
@@ -276,16 +253,12 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.execute(query)
         self.execute("COMMIT")
 
-        #RotateEvent
-        self.stream.fetchone()
-        #FormatDescription
-        self.stream.fetchone()
-
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
         #QueryEvent for the BEGIN
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
 
-        event = self.stream.fetchone()
-        self.assertIsInstance(event, TableMapEvent)
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
@@ -314,16 +287,12 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.execute(query)
         self.execute("COMMIT")
 
-        #RotateEvent
-        self.stream.fetchone()
-        #FormatDescription
-        self.stream.fetchone()
-
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
         #QueryEvent for the BEGIN
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
 
-        event = self.stream.fetchone()
-        self.assertIsInstance(event, TableMapEvent)
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
@@ -356,16 +325,13 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.execute(query)
         self.execute("COMMIT")
 
-        #RotateEvent
-        self.stream.fetchone()
-        #FormatDescription
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
 
         #QueryEvent for the BEGIN
-        self.stream.fetchone()
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
 
-        event = self.stream.fetchone()
-        self.assertIsInstance(event, TableMapEvent)
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
         if self.isMySQL56AndMore():
