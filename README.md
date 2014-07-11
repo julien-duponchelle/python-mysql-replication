@@ -52,11 +52,13 @@ GEOMETRY field is not decoded you will get the raw data.
 
 Only [binlog_row_image=full](http://dev.mysql.com/doc/refman/5.6/en/replication-options-binary-log.html#sysvar_binlog_row_image) is supported (it's the default value).
 
-Project using this library
+Projects using this library
 ===========================
 
-* Mysql River Plugin for ElasticSearch: https://github.com/scharron/elasticsearch-river-mysql
-
+* MySQL River Plugin for ElasticSearch: https://github.com/scharron/elasticsearch-river-mysql
+* Ditto: MySQL to MemSQL replicator https://github.com/memsql/ditto
+* ElasticMage: Full Magento integration with ElasticSearch https://github.com/ElasticMage/elasticmage
+* Cache buster: an automatic cache invalidation system https://github.com/rackerlabs/cache-busters
 
 MySQL server settings
 =========================
