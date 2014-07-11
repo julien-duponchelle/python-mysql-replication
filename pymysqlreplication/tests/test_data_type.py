@@ -135,16 +135,16 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         insert_query = "INSERT INTO test VALUES(1, TRUE)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["id"], 1)
-        self.assertEqual(type(event.rows[0]["values"]["test"]), type(True))
-        self.assertEqual(event.rows[0]["values"]["test"], True)
+        self.assertEqual(type(event.rows[0]["values"]["test"]), type(1))
+        self.assertEqual(event.rows[0]["values"]["test"], 1)
 
     def test_tiny_maps_to_boolean_false(self):
         create_query = "CREATE TABLE test (id TINYINT UNSIGNED NOT NULL, test BOOLEAN)"
         insert_query = "INSERT INTO test VALUES(1, FALSE)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["id"], 1)
-        self.assertEqual(type(event.rows[0]["values"]["test"]), type(True))
-        self.assertEqual(event.rows[0]["values"]["test"], False)
+        self.assertEqual(type(event.rows[0]["values"]["test"]), type(0))
+        self.assertEqual(event.rows[0]["values"]["test"], 0)
 
     def test_tiny_maps_to_none(self):
         create_query = "CREATE TABLE test (id TINYINT UNSIGNED NOT NULL, test BOOLEAN)"
