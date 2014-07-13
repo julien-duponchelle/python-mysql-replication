@@ -19,7 +19,7 @@ Contents:
     licence
 
 Contributing
-==============
+============
 You can report issues and contribute to the project on:
 https://github.com/noplay/python-mysql-replication
 
