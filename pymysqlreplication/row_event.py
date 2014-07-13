@@ -35,7 +35,7 @@ class RowsEvent(BinLogEvent):
         self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns = self.table_map[self.table_id].columns
 
-        #Aditionnal informations
+        # Additional information
         self.schema = self.table_map[self.table_id].schema
         self.table = self.table_map[self.table_id].table
 
@@ -141,7 +141,7 @@ class RowsEvent(BinLogEvent):
         return values
 
     def __add_fsp_to_time(self, time, column):
-        """Read and add the fractionnal part of time
+        """Read and add the fractional part of time
         For more details about new date format:
         http://dev.mysql.com/doc/internals/en/date-and-time-data-type-representation.html
         """
@@ -161,10 +161,10 @@ class RowsEvent(BinLogEvent):
         return time
 
     def __read_string(self, size, column):
-        str = self.packet.read_length_coded_pascal_string(size)
+        string = self.packet.read_length_coded_pascal_string(size)
         if column.character_set_name is not None:
-            str = str.decode(column.character_set_name)
-        return str
+            string = string.decode(column.character_set_name)
+        return string
 
     def __read_bit(self, column):
         """Read MySQL BIT type"""
@@ -503,7 +503,7 @@ class TableMapEvent(BinLogEvent):
         self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
                                self.table, self.columns)
 
-        # TODO: get this informations instead of trashing data
+        # TODO: get this information instead of trashing data
         # n              NULL-bitmask, length: (column-length * 8) / 7
 
     def get_table(self):
