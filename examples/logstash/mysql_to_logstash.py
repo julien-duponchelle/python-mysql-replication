@@ -8,7 +8,6 @@
 # python examples/logstash/mysql_to_logstash.py | java -jar logstash-1.1.13-flatjar.jar  agent -f examples/logstash/logstash-simple.conf
 
 import json
-import time
 import sys
 
 from pymysqlreplication import BinLogStreamReader
@@ -33,9 +32,7 @@ def main():
 
     for binlogevent in stream:
         for row in binlogevent.rows:
-            event = {}
-            event["schema"] = binlogevent.schema
-            event["table"] = binlogevent.table
+            event = {"schema": binlogevent.schema, "table": binlogevent.table}
 
             if isinstance(binlogevent, DeleteRowsEvent):
                 event["action"] = "delete"

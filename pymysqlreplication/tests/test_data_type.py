@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import copy
-import datetime
 import platform
 import unittest
 
 from decimal import Decimal
 
 from pymysqlreplication.tests import base
-from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 
@@ -402,26 +400,26 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.connect_conn_control(db)
 
         if platform.python_version_tuple()[0] == "2":
-            str = unichr(233)
+            string = unichr(233)
         else:
-            str = "\u00e9"
+            string = "\u00e9"
 
         create_query = "CREATE TABLE test (test CHAR(12)) CHARACTER SET latin1 COLLATE latin1_bin;"
-        insert_query = b"INSERT INTO test VALUES('" + str.encode('latin-1') + b"');"
+        insert_query = b"INSERT INTO test VALUES('" + string.encode('latin-1') + b"');"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], str)
+        self.assertEqual(event.rows[0]["values"]["test"], string)
 
     def test_encoding_utf8(self):
         if platform.python_version_tuple()[0] == "2":
-            str = unichr(0x20ac)
+            string = unichr(0x20ac)
         else:
-            str = "\u20ac"
+            string = "\u20ac"
 
         create_query = "CREATE TABLE test (test CHAR(12)) CHARACTER SET utf8 COLLATE utf8_bin;"
-        insert_query = b"INSERT INTO test VALUES('" + str.encode('utf-8') + b"')"
+        insert_query = b"INSERT INTO test VALUES('" + string.encode('utf-8') + b"')"
 
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertMultiLineEqual(event.rows[0]["values"]["test"], str)
+        self.assertMultiLineEqual(event.rows[0]["values"]["test"], string)
 
 
 if __name__ == "__main__":

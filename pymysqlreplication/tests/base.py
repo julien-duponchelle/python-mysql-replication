@@ -7,7 +7,7 @@ from pymysqlreplication import BinLogStreamReader
 
 
 class PyMySQLReplicationTestCase(unittest.TestCase):
-    """Test the module. Be carefull it will reset your MySQL server"""
+    """Test the module. Be careful it will reset your MySQL server"""
     database = {
         "host": "localhost",
         "user": "root",

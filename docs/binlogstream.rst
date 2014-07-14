@@ -1,6 +1,6 @@
-###################
+##################
 BinLogStreamReader
-###################
+##################
 
 
 .. automodule:: pymysqlreplication.binlogstream
