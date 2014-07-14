@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import sys
 import pymysql
 import pymysql.cursors
 import struct
@@ -32,7 +33,12 @@ class BinLogStreamReader(object):
             log_pos: Set replication start log pos
         """
         self.__connection_settings = connection_settings
-        self.__connection_settings["charset"] = "utf8"
+        # python UCS-4 use 'utf8mb4' charset
+        _sys_maxunicode = sys.maxunicode
+        if _sys_maxunicode == 65535:
+            self.__connection_settings["charset"] = "utf8"
+        elif _sys_maxunicode == 1114111:
+            self.__connection_settings["charset"] = "utf8mb4"
 
         self.__connected_stream = False
         self.__connected_ctl = False
