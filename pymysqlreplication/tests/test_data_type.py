@@ -9,6 +9,7 @@ from decimal import Decimal
 from pymysqlreplication.tests import base
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
+from pymysqlreplication.event import *
 
 __all__ = ["TestDataType"]
 
