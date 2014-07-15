@@ -4,20 +4,22 @@ import pymysql
 import unittest
 import copy
 from pymysqlreplication import BinLogStreamReader
+import os
 
 
 class PyMySQLReplicationTestCase(unittest.TestCase):
-    """Test the module. Be careful it will reset your MySQL server"""
-    database = {
-        "host": "localhost",
-        "user": "root",
-        "passwd": "",
-        "use_unicode": True,
-        "charset": "utf8",
-        "db": "pymysqlreplication_test"
-    }
-
     def setUp(self):
+        self.database = {
+            "host": "localhost",
+            "user": "root",
+            "passwd": "",
+            "use_unicode": True,
+            "charset": "utf8",
+            "db": "pymysqlreplication_test"
+        }
+        if os.getenv("TRAVIS") is not None:
+            self.database["user"] = "travis"
+
         self.conn_control = None
         db = copy.copy(self.database)
         db["db"] = None

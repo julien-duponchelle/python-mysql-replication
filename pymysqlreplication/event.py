@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import struct
-from datetime import datetime
+import datetime
 
 from pymysql.util import byte2int, int2byte
 
@@ -23,7 +23,7 @@ class BinLogEvent(object):
 
     def dump(self):
         print("=== %s ===" % (self.__class__.__name__))
-        print("Date: %s" % (datetime.fromtimestamp(self.timestamp)
+        print("Date: %s" % (datetime.datetime.fromtimestamp(self.timestamp)
                             .isoformat()))
         print("Log position: %d" % self.packet.log_pos)
         print("Event size: %d" % (self.event_size))
