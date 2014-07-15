@@ -18,6 +18,8 @@ you want to discuss about it before coding.
 Tests
 ======
 
+When it's possible we have an unit test.
+
 *pymysqlreplication/tests/* contains the test suite. The test suite
 use the standard *unittest* Python module.
 
@@ -38,6 +40,9 @@ To run tests:
 
     python setup.py test
 
+
+Each pull request is tested on Travis CI:
+https://travis-ci.org/noplay/python-mysql-replication
 
 Build the documentation
 ========================

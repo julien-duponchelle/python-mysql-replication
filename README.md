@@ -17,6 +17,10 @@ Documentation
 
 A work in progress documentation is available here: https://python-mysql-replication.readthedocs.org/en/latest/
 
+Instruction about building documentation is available here:
+https://python-mysql-replication.readthedocs.org/en/latest/developement.html
+
+
 Installation
 =============
 
@@ -48,9 +52,7 @@ It's not tested in real production situation.
 Limitations
 =============
 
-GEOMETRY field is not decoded you will get the raw data.
-
-Only [binlog_row_image=full](http://dev.mysql.com/doc/refman/5.6/en/replication-options-binary-log.html#sysvar_binlog_row_image) is supported (it's the default value).
+https://python-mysql-replication.readthedocs.org/en/latest/limitations.html
 
 Projects using this library
 ===========================
@@ -244,21 +246,14 @@ Output will be:
 
 Tests
 ========
-<b>Be carefull</b> tests will reset the binary log of your MySQL server.
+When it's possible we have an unit test.
 
-Make sure you have the following configuration set in your mysql config file (usually my.cnf on development env):
+More information is available here:
+https://python-mysql-replication.readthedocs.org/en/latest/developement.html
 
-    log-bin=mysql-bin
-    server-id=1
-    binlog-format    = row #Very important if you want to receive write, update and delete row events
-
-
-To run tests:
-
-    python setup.py test
-
-Each pull request is tested on Travis CI:
-https://travis-ci.org/noplay/python-mysql-replication
+Changelog
+==========
+https://python-mysql-replication.readthedocs.org/en/latest/changelog.html
 
 Similar projects
 ==================

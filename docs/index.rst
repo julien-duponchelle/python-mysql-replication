@@ -26,6 +26,7 @@ Contents
 
     installation
     changelog
+    limitations
     binlogstream
     events
     examples
