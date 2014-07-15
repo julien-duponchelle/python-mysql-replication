@@ -288,7 +288,7 @@ Other contributors:
 
 Licence
 =======
-Copyright 2012 Julien Duponchelle
+Copyright 2012-2014 Julien Duponchelle
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

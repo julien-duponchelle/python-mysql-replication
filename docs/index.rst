@@ -5,23 +5,33 @@
 
 Welcome to Python MySQL Replication's documentation!
 ====================================================
-Pure Python Implementation of MySQL replication protocol build on top of PyMYSQL 
 
-Contents:
+Pure Python Implementation of MySQL replication protocol build on top of PyMYSQL. This allow you to receive event like insert, update, delete with their datas and raw SQL queries.
+
+Use cases
+===========
+
+* MySQL to NoSQL database replication
+* MySQL to search engine replication
+* Invalidate cache when something change in database
+* Audit
+* Real time analytics
+
+
+Contents
+=========
 
 .. toctree::
     :maxdepth: 2
 
+    installation
+    changelog
     binlogstream
     events
     examples
     support
+    developement
     licence
-
-Contributing
-============
-You can report issues and contribute to the project on:
-https://github.com/noplay/python-mysql-replication
 
 Indices and tables
 ==================
