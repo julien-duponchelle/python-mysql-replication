@@ -176,9 +176,10 @@ class BinLogStreamReader(object):
             elif binlog_event.log_pos:
                 self.log_pos = binlog_event.log_pos
 
+            self.__manage_if_last_event_of_statement(binlog_event)
+
             if self.__filter_event(binlog_event.event):
                 continue
-
             return binlog_event.event
 
     def __filter_event(self, event):
@@ -218,7 +219,7 @@ class BinLogStreamReader(object):
                 else:
                     raise error
 
-    def __manage_if_last_event_of_statement(self,  event):
+    def __manage_if_last_event_of_statement(self, last_event_statement):
         """
         looking for flags to FLAG_STMT_END_F
         if event is the last event of a statement
