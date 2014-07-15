@@ -15,6 +15,7 @@ from .event import NotImplementedEvent
 MYSQL_EXPECTED_ERROR_CODES = [2013, 2006] #2013 Connection Lost
                                           #2006 MySQL server has gone away
 
+
 class BinLogStreamReader(object):
     """Connect to replication stream and read event
     """
@@ -171,6 +172,7 @@ class BinLogStreamReader(object):
                 # again for each logfile which is potentially wasted effort but we can't really do much better
                 # without being broken in restart case
                 self.table_map = {}
+                self.dict_table_id = {}
             elif binlog_event.log_pos:
                 self.log_pos = binlog_event.log_pos
 
