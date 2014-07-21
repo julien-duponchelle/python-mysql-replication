@@ -494,7 +494,7 @@ class TableMapEvent(BinLogEvent):
         # Read columns meta data
         column_types = list(self.packet.read(self.column_count))
         self.packet.read_length_coded_binary()
-        for i in range(0, len(column_types)):
+        for i in range(0, min(len(column_types), len(self.column_schemas))):
             column_type = column_types[i]
             column_schema = self.column_schemas[i]
             col = Column(byte2int(column_type), column_schema, from_packet)
