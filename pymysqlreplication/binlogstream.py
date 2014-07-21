@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import random
+import struct
+
 import pymysql
 import pymysql.cursors
-import struct
 
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP
 from pymysql.util import int2byte
@@ -20,7 +22,7 @@ class BinLogStreamReader(object):
     """
 
     def __init__(self, connection_settings={}, resume_stream=False,
-                 blocking=False, only_events=None, server_id=255,
+                 blocking=False, only_events=None, server_id=None,
                  log_file=None, log_pos=None, filter_non_implemented_events=True):
         """
         Attributes:
@@ -40,7 +42,7 @@ class BinLogStreamReader(object):
         self.__blocking = blocking
         self.__only_events = only_events
         self.__filter_non_implemented_events = filter_non_implemented_events
-        self.__server_id = server_id
+        self.__server_id = server_id or random.randint(1000000000, 4294967295)
         self.__use_checksum = False
 
         #Store table meta information
