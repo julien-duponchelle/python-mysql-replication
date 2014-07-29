@@ -125,10 +125,10 @@ class RowsEvent(BinLogEvent):
                 # We read set columns as a bitmap telling us which options
                 # are enabled
                 bit_mask = self.packet.read_uint_by_size(column.size)
-                values[name] = {
+                values[name] = set(
                     val for idx, val in enumerate(column.set_values)
                     if bit_mask & 2 ** idx
-                } or None
+                ) or None
 
             elif column.type == FIELD_TYPE.BIT:
                 values[name] = self.__read_bit(column)

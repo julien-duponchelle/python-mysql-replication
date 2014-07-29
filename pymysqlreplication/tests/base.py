@@ -5,9 +5,16 @@ import unittest
 import copy
 from pymysqlreplication import BinLogStreamReader
 import os
+import sys
 
+(major, minor, _, _, _) = sys.version_info
+if (major, minor) < (2, 7):
+    import unittest2
+    base = unittest2.TestCase
+else:
+    base = unittest.TestCase
 
-class PyMySQLReplicationTestCase(unittest.TestCase):
+class PyMySQLReplicationTestCase(base):
     def setUp(self):
         self.database = {
             "host": "localhost",
