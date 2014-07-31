@@ -32,7 +32,6 @@ class TestCommand(Command):
 
 version = "0.3.0"
 
-
 setup(
     name="mysql-replication",
     version=version,
