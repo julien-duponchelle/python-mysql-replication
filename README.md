@@ -285,6 +285,7 @@ Other contributors:
 * Maralla Python 3.4 fix https://github.com/maralla
 * Daniel Gavrila more MySQL error codes https://github.com/danielduduta
 * Bernardo Sulzbach code cleanup https://github.com/mafagafo
+* Darioush Jalali Python 2.6 backport https://github.com/darioush
 
 Licence
 =======
