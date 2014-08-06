@@ -55,7 +55,7 @@ def main():
             if not binlogevent.schema == "employees":
                 continue
 
-            vals = {str(k): str(v) for k, v in row["values"].iteritems()}
+            vals = dict((str(k), str(v)) for k, v in row["values"].iteritems())
             rethinkdb.table(binlogevent.table).insert(vals).run()
 
     stream.close()
