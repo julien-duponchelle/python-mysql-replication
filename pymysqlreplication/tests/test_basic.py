@@ -346,6 +346,24 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[1]["values"]["id"], 2)
         self.assertEqual(event.rows[1]["values"]["data"], "World")
 
+    def test_row_event_on_dropped_table(self):
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        query = "INSERT INTO test (data) VALUES('Hello')"
+        self.execute(query)
+        query = "DROP TABLE test"
+        self.execute(query)
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        #QueryEvent for the CREATE TABLE
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        #QueryEvenr for BEGIN
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        # This will fail because the TableMap event will try to get the schema from a table
+        # that is no longer there
+        self.stream.fetchone()
 
 if __name__ == "__main__":
     import unittest
