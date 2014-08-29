@@ -10,7 +10,14 @@ from pymysql.util import int2byte
 from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
 from .event import NotImplementedEvent
+from .gtid import GtidSet
 
+try:
+    from pymysql.constants.COMMAND import COM_BINLOG_DUMP_GTID
+except ImportError:
+    # Handle old pymysql versions
+    # See: https://github.com/PyMySQL/PyMySQL/pull/261
+    COM_BINLOG_DUMP_GTID = 0x1e
 
 MYSQL_EXPECTED_ERROR_CODES = [2013, 2006] #2013 Connection Lost
                                           #2006 MySQL server has gone away
@@ -22,7 +29,7 @@ class BinLogStreamReader(object):
     def __init__(self, connection_settings={}, resume_stream=False,
                  blocking=False, only_events=None, server_id=255,
                  log_file=None, log_pos=None, filter_non_implemented_events=True,
-                 ignored_events=[]):
+                 ignored_events=[], auto_position=None):
         """
         Attributes:
             resume_stream: Start for event from position or the latest event of
@@ -51,6 +58,7 @@ class BinLogStreamReader(object):
         self.table_map = {}
         self.log_pos = log_pos
         self.log_file = log_file
+        self.auto_position = auto_position
 
     def close(self):
         if self.__connected_stream:
@@ -98,29 +106,93 @@ class BinLogStreamReader(object):
             cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")
             cur.close()
 
-        # only when log_file and log_pos both provided, the position info is
-        # valid, if not, get the current position from master
-        if self.log_file is None or self.log_pos is None:
-            cur = self._stream_connection.cursor()
-            cur.execute("SHOW MASTER STATUS")
-            self.log_file, self.log_pos = cur.fetchone()[:2]
-            cur.close()
+        if not self.auto_position:
+            # only when log_file and log_pos both provided, the position info is
+            # valid, if not, get the current position from master
+            if self.log_file is None or self.log_pos is None:
+                cur = self._stream_connection.cursor()
+                cur.execute("SHOW MASTER STATUS")
+                self.log_file, self.log_pos = cur.fetchone()[:2]
+                cur.close()
 
-        prelude = struct.pack('<i', len(self.log_file) + 11) \
-            + int2byte(COM_BINLOG_DUMP)
+            prelude = struct.pack('<i', len(self.log_file) + 11) \
+                + int2byte(COM_BINLOG_DUMP)
 
-        if self.__resume_stream:
-            prelude += struct.pack('<I', self.log_pos)
+            if self.__resume_stream:
+                prelude += struct.pack('<I', self.log_pos)
+            else:
+                prelude += struct.pack('<I', 4)
+
+            if self.__blocking:
+                prelude += struct.pack('<h', 0)
+            else:
+                prelude += struct.pack('<h', 1)
+
+            prelude += struct.pack('<I', self.__server_id)
+            prelude += self.log_file.encode()
         else:
-            prelude += struct.pack('<I', 4)
+            # Format for mysql packet master_auto_position
+            #
+            # All fields are little endian
+            # All fields are unsigned
 
-        if self.__blocking:
-            prelude += struct.pack('<h', 0)
-        else:
-            prelude += struct.pack('<h', 1)
+            # Packet length   uint   4bytes
+            # Packet type     byte   1byte   == 0x1e
+            # Binlog flags    ushort 2bytes  == 0 (for retrocompatibilty)
+            # Server id       uint   4bytes
+            # binlognamesize  uint   4bytes
+            # binlogname      str    Nbytes  N = binlognamesize
+            #                                Zeroified
+            # binlog position uint   4bytes  == 4
+            # payload_size    uint   4bytes
+            ## What come next, is the payload, where the slave gtid_executed
+            ## is sent to the master
+            # n_sid           ulong  8bytes  == which size is the gtid_set
+            # | sid           uuid   16bytes UUID as a binary
+            # | n_intervals   ulong  8bytes  == how many intervals are sent for this gtid
+            # | | start       ulong  8bytes  Start position of this interval
+            # | | stop        ulong  8bytes  Stop position of this interval
 
-        prelude += struct.pack('<I', self.__server_id)
-        prelude += self.log_file.encode()
+            # A gtid set looks like:
+            #   19d69c1e-ae97-4b8c-a1ef-9e12ba966457:1-3:8-10,
+            #   1c2aad49-ae92-409a-b4df-d05a03e4702e:42-47:80-100:130-140
+            # 
+            # In this particular gtid set, 19d69c1e-ae97-4b8c-a1ef-9e12ba966457:1-3:8-10
+            # is the first member of the set, it is called a gtid.
+            # In this gtid, 19d69c1e-ae97-4b8c-a1ef-9e12ba966457 is the sid
+            # and have two intervals, 1-3 and 8-10, 1 is the start position of the first interval
+            # 3 is the stop position of the first interval.
+
+            gtid_set = GtidSet(self.auto_position)
+            encoded_data_size = gtid_set.encoded_length
+
+            header_size = (2 + # binlog_flags
+                           4 + # server_id
+                           4 + # binlog_name_info_size
+                           4 + # empty binlog name
+                           8 + # binlog_pos_info_size
+                           4) # encoded_data_size
+
+            prelude = b'' + struct.pack('<i', header_size + encoded_data_size) \
+                + int2byte(COM_BINLOG_DUMP_GTID)
+
+
+            # binlog_flags = 0 (2 bytes)
+            prelude += struct.pack('<H', 0)
+            # server_id (4 bytes)
+            prelude += struct.pack('<I', self.__server_id)
+            # binlog_name_info_size (4 bytes)
+            prelude += struct.pack('<I', 3)
+            # empty_binlog_name (4 bytes)
+            prelude += b'\0\0\0'
+            # binlog_pos_info (8 bytes)
+            prelude += struct.pack('<Q', 4)
+
+            # encoded_data_size (4 bytes)
+            prelude += struct.pack('<I', gtid_set.encoded_length)
+            # encoded_data
+            prelude += gtid_set.encoded()
+
 
         if pymysql.__version__ < "0.6":
             self._stream_connection.wfile.write(prelude)
