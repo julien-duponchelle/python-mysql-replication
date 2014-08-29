@@ -36,6 +36,32 @@ class BinLogEvent(object):
         pass
 
 
+class GtidEvent(BinLogEvent):
+    """GTID change in binlog event
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+        super(GtidEvent, self).__init__(from_packet, event_size, table_map,
+                                          ctl_connection)
+
+        self.commit_flag = byte2int(self.packet.read(1)) == 1
+        self.sid = self.packet.read(16)
+        self.gno = struct.unpack('<Q', self.packet.read(8))[0]
+
+    @property
+    def gtid(self):
+        """GTID = source_id:transaction_id
+        Eg: 3E11FA47-71CA-11E1-9E33-C80AA9429562:23
+        See: http://dev.mysql.com/doc/refman/5.6/en/replication-gtids-concepts.html"""
+        gtid = "%s%s%s%s-%s%s-%s%s-%s%s-%s%s%s%s%s%s" %\
+               tuple("{:02x}".format(ord(c)) for c in self.sid)
+        gtid += ":%d" % self.gno
+        return gtid
+
+    def _dump(self):
+        print("Commit: %s" % self.commit_flag)
+        print("GTID_NEXT: %s" % self.gtid)
+
+
 class RotateEvent(BinLogEvent):
     """Change MySQL bin log file
 
