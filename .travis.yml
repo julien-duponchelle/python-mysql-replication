@@ -7,15 +7,48 @@ python:
 install:
     - "pip install ."
     - "pip install nose"
+cache: apt
 before_script:
-  - "sudo touch /etc/mysql/conf.d/replication.cnf"
-  - "sudo chmod 777 /etc/mysql/conf.d/replication.cnf"
-  - "echo '[mysqld]' > /etc/mysql/conf.d/replication.cnf"
-  - "echo 'log-bin=mysql-bin' >> /etc/mysql/conf.d/replication.cnf"
-  - "echo 'server-id=1' >> /etc/mysql/conf.d/replication.cnf"
-  - "echo 'binlog-format = row'  >> /etc/mysql/conf.d/replication.cnf"
-  - "sudo chmod 700 /etc/mysql/conf.d/replication.cnf"    
-  - "sudo service mysql restart"
-  - "mysql -e 'CREATE DATABASE pymysqlreplication_test;'"    
+  # Remove old mysql version
+  - "sudo apt-get remove mysql-common mysql-server-5.5 mysql-server-core-5.5 mysql-client-5.5 mysql-client-core-5.5"
+  - "sudo apt-get autoremove"
+
+  # Install new mysql version
+  - "echo deb http://repo.mysql.com/apt/ubuntu/ precise mysql-5.6 | sudo tee /etc/apt/sources.list.d/mysql.list"
+  - "sudo apt-key add .mysql/dev.mysql.com.gpg.key"
+  - "sudo apt-get update"
+  - "sudo env DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::='--force-confold' -q -y mysql-server"
+
+  # Cleanup old mysql datas
+  - "sudo rm -rf /var/ramfs/mysql/"
+  - "sudo mkdir /var/ramfs/mysql/"
+  - "sudo chown mysql: /var/ramfs/mysql/"
+
+  # Config
+  - "sudo sed -i'' 's/table_cache/table_open_cache/' /etc/mysql/my.cnf"
+  - "sudo sed -i'' 's/log_slow_queries/slow_query_log/' /etc/mysql/my.cnf"
+
+  - "echo '[mysqld]'            | sudo tee /etc/mysql/conf.d/replication.cnf"
+  - "echo 'log-bin=mysql-bin'   | sudo tee -a /etc/mysql/conf.d/replication.cnf"
+  - "echo 'server-id=1'         | sudo tee -a /etc/mysql/conf.d/replication.cnf"
+  - "echo 'binlog-format = row' | sudo tee -a /etc/mysql/conf.d/replication.cnf"
+  - "echo '[mysqld]'                       | sudo tee /etc/mysql/conf.d/gtid.cnf"
+  - "echo 'gtid_mode=ON'                   | sudo tee -a /etc/mysql/conf.d/gtid.cnf"
+  - "echo 'enforce_gtid_consistency'       | sudo tee -a /etc/mysql/conf.d/gtid.cnf"
+  - "echo 'binlog_format=ROW'              | sudo tee -a /etc/mysql/conf.d/gtid.cnf"
+  - "echo 'log_slave_updates'              | sudo tee -a /etc/mysql/conf.d/gtid.cnf"
+
+  # Install new datas
+  - "sudo mysql_install_db --defaults-file=/etc/mysql/my.cnf --basedir=/usr --datadir=/var/ramfs/mysql"
+
+  # Start mysql (avoid errors to have logs)
+  - "sudo /etc/init.d/mysql start || true"
+  - "sudo tail -1000 /var/log/syslog"
+
+  - "mysql --version"
+  - "mysql -e 'SELECT VERSION();'"
+  - "mysql -u root -e \"GRANT ALL PRIVILEGES ON *.* TO ''@'localhost';\""
+
+  - "mysql -e 'CREATE DATABASE pymysqlreplication_test;'"
 script:
   - "nosetests"
