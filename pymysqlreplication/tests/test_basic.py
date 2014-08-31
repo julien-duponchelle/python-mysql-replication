@@ -10,6 +10,9 @@ __all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader"]
 
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
+    def ignoredEvents(self):
+        return [GtidEvent]
+
     def test_read_query_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
@@ -58,7 +61,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def test_connection_stream_lost_event(self):
         self.stream.close()
         self.stream = BinLogStreamReader(connection_settings=self.database,
-                                         blocking=True)
+                                         blocking=True,
+                                         ignored_events=self.ignoredEvents())
 
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
@@ -202,7 +206,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             connection_settings=self.database,
             resume_stream=True,
             log_file=log_file,
-            log_pos=log_pos
+            log_pos=log_pos,
+            ignored_events=self.ignoredEvents()
         )
 
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
@@ -243,6 +248,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
+    def ignoredEvents(self):
+        return [GtidEvent]
+
     def test_insert_multiple_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)

@@ -15,6 +15,9 @@ else:
     base = unittest.TestCase
 
 class PyMySQLReplicationTestCase(base):
+    def ignoredEvents(self):
+        return []
+
     def setUp(self):
         self.database = {
             "host": "localhost",
@@ -71,4 +74,5 @@ class PyMySQLReplicationTestCase(base):
         self.execute("RESET MASTER")
         if self.stream is not None:
             self.stream.close()
-        self.stream = BinLogStreamReader(connection_settings=self.database)
+        self.stream = BinLogStreamReader(connection_settings=self.database,
+                                         ignored_events=self.ignoredEvents())

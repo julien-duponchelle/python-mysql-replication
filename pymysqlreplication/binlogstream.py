@@ -21,15 +21,18 @@ class BinLogStreamReader(object):
 
     def __init__(self, connection_settings={}, resume_stream=False,
                  blocking=False, only_events=None, server_id=255,
-                 log_file=None, log_pos=None, filter_non_implemented_events=True):
+                 log_file=None, log_pos=None, filter_non_implemented_events=True,
+                 ignored_events=[]):
         """
         Attributes:
             resume_stream: Start for event from position or the latest event of
                            binlog or from older available event
             blocking: Read on stream is blocking
             only_events: Array of allowed events
+            ignored_events: Array of ignoreded events
             log_file: Set replication start log file
             log_pos: Set replication start log pos
+            auto_position: Use master_auto_position gtid to set position
         """
         self.__connection_settings = connection_settings
         self.__connection_settings["charset"] = "utf8"
@@ -39,6 +42,7 @@ class BinLogStreamReader(object):
         self.__resume_stream = resume_stream
         self.__blocking = blocking
         self.__only_events = only_events
+        self.__ignored_events = ignored_events
         self.__filter_non_implemented_events = filter_non_implemented_events
         self.__server_id = server_id
         self.__use_checksum = False
@@ -181,6 +185,10 @@ class BinLogStreamReader(object):
     def __filter_event(self, event):
         if self.__filter_non_implemented_events and isinstance(event, NotImplementedEvent):
             return True
+
+        for ignored_event in self.__ignored_events:
+            if isinstance(event, ignored_event):
+                return True
 
         if self.__only_events is not None:
             for allowed_event in self.__only_events:

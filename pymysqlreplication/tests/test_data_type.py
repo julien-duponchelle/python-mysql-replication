@@ -15,6 +15,9 @@ __all__ = ["TestDataType"]
 
 
 class TestDataType(base.PyMySQLReplicationTestCase):
+    def ignoredEvents(self):
+        return [GtidEvent]
+
     def create_and_insert_value(self, create_query, insert_query):
         self.execute(create_query)
         self.execute(insert_query)

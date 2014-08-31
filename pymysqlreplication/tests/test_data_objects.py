@@ -2,6 +2,7 @@ import unittest
 
 from pymysqlreplication.column import Column
 from pymysqlreplication.table import Table
+from pymysqlreplication.event import GtidEvent
 
 from pymysqlreplication.tests import base
 
@@ -9,6 +10,9 @@ __all__ = ["TestDataObjects"]
 
 
 class TestDataObjects(base.PyMySQLReplicationTestCase):
+    def ignoredEvents(self):
+        return [GtidEvent]
+
     def test_column_is_primary(self):
         col = Column(1,
                      {"COLUMN_NAME": "test",
