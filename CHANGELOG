@@ -20,6 +20,8 @@
 * Add 2006 to Mysql expected error codes
 
 0.4 01/09/2014
-* Add primary column informations
-* Python 2.6 support
-* Parse gtid events
+* Add primary column informations (thanks to Lx Lu)
+* Python 2.6 support (thanks to Darioush Jalalinasab)
+* Parse gtid events (thanks to Arthur Gautier)
+* Code cleanup (thanks to Bernardo Sulzbach)
+* Travis support
