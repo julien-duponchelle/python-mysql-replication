@@ -18,3 +18,8 @@
 * use NotImplementedEvent instead of raising an Exception
 * Python 3 fix
 * Add 2006 to Mysql expected error codes
+
+0.4 01/09/2014
+* Add primary column informations
+* Python 2.6 support
+* Parse gtid events
