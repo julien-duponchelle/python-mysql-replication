@@ -5,7 +5,7 @@ except ImportError:
 
 import sys
 
-install_requires=["pymysql"]
+install_requires=['pymysql', 'six']
 # add unittest2 to install_requires for python < 2.7
 (major, minor, _, _, _) = sys.version_info
 if (major, minor) < (2, 7):

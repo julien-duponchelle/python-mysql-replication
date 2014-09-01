@@ -286,7 +286,7 @@ Other contributors:
 * Daniel Gavrila more MySQL error codes https://github.com/danielduduta
 * Bernardo Sulzbach code cleanup https://github.com/mafagafo
 * Darioush Jalali Python 2.6 backport https://github.com/darioush
-* Arthur Gautier gtid https://github.com/baloose
+* Arthur Gautier gtid https://github.com/baloo
 
 Licence
 =======

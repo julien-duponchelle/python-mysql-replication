@@ -61,6 +61,9 @@ class GtidEvent(BinLogEvent):
         print("Commit: %s" % self.commit_flag)
         print("GTID_NEXT: %s" % self.gtid)
 
+    def __repr__(self):
+        return '<GtidEvent "%s">' % self.gtid
+
 
 class RotateEvent(BinLogEvent):
     """Change MySQL bin log file

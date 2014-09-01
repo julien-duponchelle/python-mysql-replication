@@ -15,6 +15,9 @@ __all__ = ["TestDataType"]
 
 
 class TestDataType(base.PyMySQLReplicationTestCase):
+    def ignoredEvents(self):
+        return [GtidEvent]
+
     def create_and_insert_value(self, create_query, insert_query):
         self.execute(create_query)
         self.execute(insert_query)
@@ -248,7 +251,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], datetime.time(12, 33, 18))
 
     def test_zero_time(self):
-        create_query = "CREATE TABLE test (id INTEGER, test TIME NOT NULL);"
+        create_query = "CREATE TABLE test (id INTEGER, test TIME NOT NULL DEFAULT 0);"
         insert_query = "INSERT INTO test (id) VALUES(1)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], datetime.time(0,0))
@@ -260,7 +263,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7))
 
     def test_zero_datetime(self):
-        create_query = "CREATE TABLE test (id INTEGER, test DATETIME NOT NULL);"
+        create_query = "CREATE TABLE test (id INTEGER, test DATETIME NOT NULL DEFAULT 0);"
         insert_query = "INSERT INTO test (id) VALUES(1)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], None)
