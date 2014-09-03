@@ -267,7 +267,8 @@ class BinLogStreamReader(object):
             for allowed_event in self.__only_events:
                 if isinstance(event, allowed_event):
                     return False
-            return True
+            else:
+                return True
 
         return False
 
