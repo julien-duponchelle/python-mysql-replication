@@ -29,7 +29,7 @@ class BinLogStreamReader(object):
     def __init__(self, connection_settings={}, resume_stream=False,
                  blocking=False, only_events=None, server_id=255,
                  log_file=None, log_pos=None, filter_non_implemented_events=True,
-                 ignored_events=[], auto_position=None):
+                 ignored_events=None, auto_position=None):
         """
         Attributes:
             resume_stream: Start for event from position or the latest event of
@@ -258,15 +258,18 @@ class BinLogStreamReader(object):
         if self.__filter_non_implemented_events and isinstance(event, NotImplementedEvent):
             return True
 
-        for ignored_event in self.__ignored_events:
-            if isinstance(event, ignored_event):
-                return True
+        if self.__ignored_events is not None:
+            for ignored_event in self.__ignored_events:
+                if isinstance(event, ignored_event):
+                    return True
 
         if self.__only_events is not None:
             for allowed_event in self.__only_events:
                 if isinstance(event, allowed_event):
                     return False
-            return True
+            else:
+                return True
+
         return False
 
     def __get_table_information(self, schema, table):
