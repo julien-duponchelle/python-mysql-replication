@@ -60,9 +60,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
     def test_connection_stream_lost_event(self):
         self.stream.close()
-        self.stream = BinLogStreamReader(connection_settings=self.database,
-                                         blocking=True,
-                                         ignored_events=self.ignoredEvents())
+        self.stream = BinLogStreamReader(
+            self.database, server_id=1024, blocking=True,
+            ignored_events=self.ignoredEvents())
 
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
@@ -86,8 +86,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
     def test_filtering_events(self):
         self.stream.close()
-        self.stream = BinLogStreamReader(connection_settings=self.database,
-                                         only_events=[QueryEvent])
+        self.stream = BinLogStreamReader(
+            self.database, server_id=1024, only_events=[QueryEvent])
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
@@ -203,7 +203,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         if self.stream is not None:
             self.stream.close()
         self.stream = BinLogStreamReader(
-            connection_settings=self.database,
+            self.database,
+            server_id=1024,
             resume_stream=True,
             log_file=log_file,
             log_pos=log_pos,
@@ -223,7 +224,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def test_log_pos_handles_disconnects(self):
         self.stream.close()
         self.stream = BinLogStreamReader(
-            connection_settings=self.database,
+            self.database,
+            server_id=1024,
             resume_stream=False,
             only_events = [FormatDescriptionEvent, QueryEvent, TableMapEvent, WriteRowsEvent, XidEvent]
         )
@@ -363,9 +365,8 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
         gtid = self.execute(query).fetchone()[0]
 
         self.stream.close()
-        self.stream = BinLogStreamReader(connection_settings=self.database,
-                                         blocking=True,
-                                         auto_position=gtid)
+        self.stream = BinLogStreamReader(
+            self.database, server_id=1024, blocking=True, auto_position=gtid)
 
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
@@ -420,9 +421,8 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
         gtid = self.execute(query).fetchone()[0]
 
         self.stream.close()
-        self.stream = BinLogStreamReader(connection_settings=self.database,
-                                         blocking=True,
-                                         auto_position=gtid)
+        self.stream = BinLogStreamReader(
+            self.database, server_id=1024, blocking=True, auto_position=gtid)
 
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
