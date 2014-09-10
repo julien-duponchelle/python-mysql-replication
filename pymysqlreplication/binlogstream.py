@@ -26,9 +26,9 @@ class BinLogStreamReader(object):
     """Connect to replication stream and read event
     """
 
-    def __init__(self, connection_settings={}, resume_stream=False,
-                 blocking=False, only_events=None, server_id=255,
-                 log_file=None, log_pos=None, filter_non_implemented_events=True,
+    def __init__(self, connection_settings, server_id, resume_stream=False,
+                 blocking=False, only_events=None, log_file=None, log_pos=None,
+                 filter_non_implemented_events=True,
                  ignored_events=None, auto_position=None):
         """
         Attributes:
