@@ -92,7 +92,7 @@ class Column(object):
         return self.data
 
     def __getattr__(self, item):
-        if item in self.data:
+        try:
             return self.data[item]
-        else:
+        except KeyError:
             raise AttributeError("{0} not found".format(item))

@@ -22,9 +22,9 @@ class Table(object):
         }
 
     def __getattr__(self, item):
-        if item in self.data:
+        try:
             return self.data[item]
-        else:
+        except KeyError:
             raise AttributeError
 
     def __eq__(self, other):
