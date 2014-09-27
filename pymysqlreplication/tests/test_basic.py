@@ -13,6 +13,12 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def ignoredEvents(self):
         return [GtidEvent]
 
+    def test_allowed_event_list(self):
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 10)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 9)
+        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 9)
+        self.assertEqual(len(self.stream._allowed_event_list([RotateEvent], None, False)), 1)
+
     def test_read_query_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
