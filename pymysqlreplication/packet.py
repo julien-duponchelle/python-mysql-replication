@@ -49,11 +49,6 @@ class BinLogPacketWrapper(object):
     }
 
     def __init__(self, from_packet, table_map, ctl_connection, use_checksum, allowed_events = None):
-        if not from_packet.is_ok_packet():
-            raise ValueError(
-                "Cannot create %s object from invalid packet type" %
-                self.__class__.__name__)
-
         # -1 because we ignore the ok byte
         self.read_bytes = 0
         # Used when we want to override a value in the data buffer
