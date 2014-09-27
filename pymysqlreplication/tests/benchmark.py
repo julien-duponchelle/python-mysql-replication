@@ -58,5 +58,6 @@ if os.fork() != 0:
     while True:
         execute(conn, "UPDATE test SET i = i + 1;")
 else:
-    cProfile.run('consume_events()')
+    consume_events()
+    #cProfile.run('consume_events()')
 

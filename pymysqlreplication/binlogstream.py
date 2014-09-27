@@ -227,7 +227,8 @@ class BinLogStreamReader(object):
 
             binlog_event = BinLogPacketWrapper(pkt, self.table_map,
                                                self._ctl_connection,
-                                               self.__use_checksum)
+                                               self.__use_checksum,
+                                               self.__only_events)
             if binlog_event.event_type == TABLE_MAP_EVENT:
                 self.table_map[binlog_event.event.table_id] = \
                     binlog_event.event.get_table()
@@ -250,7 +251,7 @@ class BinLogStreamReader(object):
 
             # event is none if we have filter it on packet level
             # we filter also not allowed events
-            if binlog_event.event is None or not (binlog_event.event.__class__ in self.__only_events):
+            if binlog_event.event is None or (binlog_event.event.__class__ not in self.__only_events):
                 continue
 
             return binlog_event.event

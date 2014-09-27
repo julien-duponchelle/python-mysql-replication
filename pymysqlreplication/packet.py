@@ -48,7 +48,7 @@ class BinLogPacketWrapper(object):
 
     }
 
-    def __init__(self, from_packet, table_map, ctl_connection, use_checksum):
+    def __init__(self, from_packet, table_map, ctl_connection, use_checksum, allowed_events = None):
         if not from_packet.is_ok_packet():
             raise ValueError(
                 "Cannot create %s object from invalid packet type" %
@@ -79,8 +79,14 @@ class BinLogPacketWrapper(object):
         else:
             event_size_without_header = self.event_size - 19
 
-        event_class = self.__event_map.get(self.event_type,
-            event.NotImplementedEvent)
+        self.event = None
+        event_class = self.__event_map.get(self.event_type, event.NotImplementedEvent)
+
+        # We can't filter on packet level TABLE_MAP and rotate event because we need
+        # them for handling other operations
+        if not self.event_type in (constants.TABLE_MAP_EVENT, constants.ROTATE_EVENT):
+            if event_class not in allowed_events:
+                return
         self.event = event_class(self, event_size_without_header, table_map,
                                  ctl_connection)
 
