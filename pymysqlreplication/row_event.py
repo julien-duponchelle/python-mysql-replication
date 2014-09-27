@@ -19,6 +19,7 @@ class RowsEvent(BinLogEvent):
                                         ctl_connection, **kwargs)
         self.__rows = None
         self.__only_tables = kwargs["only_tables"]
+        self.__only_schemas = kwargs["only_schemas"]
 
         #Header
         self.table_id = self._read_table_id()
@@ -29,6 +30,9 @@ class RowsEvent(BinLogEvent):
         self.table = self.table_map[self.table_id].table
 
         if self.__only_tables is not None and self.table not in self.__only_tables:
+            self._processed = False
+            return
+        if self.__only_schemas is not None and self.schema not in self.__only_schemas:
             self._processed = False
             return
 

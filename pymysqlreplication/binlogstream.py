@@ -31,7 +31,7 @@ class BinLogStreamReader(object):
                  blocking=False, only_events=None, log_file=None, log_pos=None,
                  filter_non_implemented_events=True,
                  ignored_events=None, auto_position=None,
-                 only_tables = None):
+                 only_tables = None, only_schemas = None):
         """
         Attributes:
             resume_stream: Start for event from position or the latest event of
@@ -43,6 +43,7 @@ class BinLogStreamReader(object):
             log_pos: Set replication start log pos
             auto_position: Use master_auto_position gtid to set position
             only_tables: An array with the tables you want to watch
+            only_schemas: An array with the schemas you want to watch
         """
         self.__connection_settings = connection_settings
         self.__connection_settings["charset"] = "utf8"
@@ -53,6 +54,7 @@ class BinLogStreamReader(object):
         self.__blocking = blocking
 
         self.__only_tables = only_tables
+        self.__only_schemas = only_schemas
         self.__allowed_events = self._allowed_event_list(only_events, ignored_events, filter_non_implemented_events)
 
         # We can't filter on packet level TABLE_MAP and rotate event because we need
@@ -238,7 +240,8 @@ class BinLogStreamReader(object):
                                                self._ctl_connection,
                                                self.__use_checksum,
                                                allowed_events = self.__allowed_events_in_packet,
-                                               only_tables = self.__only_tables)
+                                               only_tables = self.__only_tables,
+                                               only_schemas = self.__only_schemas)
             if binlog_event.event_type == TABLE_MAP_EVENT:
                 self.table_map[binlog_event.event.table_id] = \
                     binlog_event.event.get_table()
