@@ -37,3 +37,6 @@ _build
 
 #PyCharm
 .idea
+
+#Nose
+.noseids
