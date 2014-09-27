@@ -496,7 +496,7 @@ class TableMapEvent(BinLogEvent):
         for i in range(0, len(column_types)):
             column_type = column_types[i]
             column_schema = self.column_schemas[i]
-            col = Column(column_type, column_schema, from_packet)
+            col = Column(byte2int(column_type), column_schema, from_packet)
             self.columns.append(col)
 
         self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
