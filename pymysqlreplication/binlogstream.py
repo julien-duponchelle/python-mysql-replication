@@ -9,8 +9,9 @@ from pymysql.util import int2byte
 
 from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
-from .event import NotImplementedEvent
 from .gtid import GtidSet
+from .event import QueryEvent, RotateEvent, FormatDescriptionEvent, XidEvent, GtidEvent, NotImplementedEvent
+from .row_event import UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent
 
 try:
     from pymysql.constants.COMMAND import COM_BINLOG_DUMP_GTID
@@ -48,9 +49,12 @@ class BinLogStreamReader(object):
         self.__connected_ctl = False
         self.__resume_stream = resume_stream
         self.__blocking = blocking
-        self.__only_events = only_events
-        self.__ignored_events = ignored_events
-        self.__filter_non_implemented_events = filter_non_implemented_events
+        self.__allowed_events = self._allowed_event_list(only_events, ignored_events, filter_non_implemented_events)
+
+        # We can't filter on packet level TABLE_MAP and rotate event because we need
+        # them for handling other operations
+        self.__allowed_events_in_packet = frozenset([TableMapEvent, RotateEvent]).union(self.__allowed_events)
+
         self.__server_id = server_id
         self.__use_checksum = False
 
@@ -156,7 +160,7 @@ class BinLogStreamReader(object):
             # A gtid set looks like:
             #   19d69c1e-ae97-4b8c-a1ef-9e12ba966457:1-3:8-10,
             #   1c2aad49-ae92-409a-b4df-d05a03e4702e:42-47:80-100:130-140
-            # 
+            #
             # In this particular gtid set, 19d69c1e-ae97-4b8c-a1ef-9e12ba966457:1-3:8-10
             # is the first member of the set, it is called a gtid.
             # In this gtid, 19d69c1e-ae97-4b8c-a1ef-9e12ba966457 is the sid
@@ -228,7 +232,8 @@ class BinLogStreamReader(object):
 
             binlog_event = BinLogPacketWrapper(pkt, self.table_map,
                                                self._ctl_connection,
-                                               self.__use_checksum)
+                                               self.__use_checksum,
+                                               self.__allowed_events_in_packet)
             if binlog_event.event_type == TABLE_MAP_EVENT:
                 self.table_map[binlog_event.event.table_id] = \
                     binlog_event.event.get_table()
@@ -242,35 +247,44 @@ class BinLogStreamReader(object):
                 # wrong table schema.
                 # The fix is to rely on the fact that MySQL will also rotate to a new binlog file every time it
                 # restarts. That means every rotation we see *could* be a sign of restart and so potentially
-                # invalidates all our cached table id to schema mappings. This means we have to load them all 
+                # invalidates all our cached table id to schema mappings. This means we have to load them all
                 # again for each logfile which is potentially wasted effort but we can't really do much better
                 # without being broken in restart case
                 self.table_map = {}
             elif binlog_event.log_pos:
                 self.log_pos = binlog_event.log_pos
 
-            if self.__filter_event(binlog_event.event):
+            # event is none if we have filter it on packet level
+            # we filter also not allowed events
+            if binlog_event.event is None or (binlog_event.event.__class__ not in self.__allowed_events):
                 continue
 
             return binlog_event.event
 
-    def __filter_event(self, event):
-        if self.__filter_non_implemented_events and isinstance(event, NotImplementedEvent):
-            return True
-
-        if self.__ignored_events is not None:
-            for ignored_event in self.__ignored_events:
-                if isinstance(event, ignored_event):
-                    return True
-
-        if self.__only_events is not None:
-            for allowed_event in self.__only_events:
-                if isinstance(event, allowed_event):
-                    return False
-            else:
-                return True
-
-        return False
+    def _allowed_event_list(self, only_events, ignored_events, filter_non_implemented_events):
+        if only_events is not None:
+            events = set(only_events)
+        else:
+            events = set((
+                QueryEvent,
+                RotateEvent,
+                FormatDescriptionEvent,
+                XidEvent,
+                GtidEvent,
+                UpdateRowsEvent,
+                WriteRowsEvent,
+                DeleteRowsEvent,
+                TableMapEvent,
+                NotImplementedEvent))
+        if ignored_events is not None:
+            for e in ignored_events:
+                events.remove(e)
+        if filter_non_implemented_events:
+            try:
+                events.remove(NotImplementedEvent)
+            except KeyError:
+                pass
+        return frozenset(events)
 
     def __get_table_information(self, schema, table):
         for i in range(1, 3):
