@@ -49,7 +49,12 @@ class BinLogStreamReader(object):
         self.__connected_ctl = False
         self.__resume_stream = resume_stream
         self.__blocking = blocking
-        self.__only_events = self._allowed_event_list(only_events, ignored_events, filter_non_implemented_events)
+        self.__allowed_events = self._allowed_event_list(only_events, ignored_events, filter_non_implemented_events)
+
+        # We can't filter on packet level TABLE_MAP and rotate event because we need
+        # them for handling other operations
+        self.__allowed_events_in_packet = frozenset([TableMapEvent, RotateEvent]).union(self.__allowed_events)
+
         self.__server_id = server_id
         self.__use_checksum = False
 
@@ -228,7 +233,7 @@ class BinLogStreamReader(object):
             binlog_event = BinLogPacketWrapper(pkt, self.table_map,
                                                self._ctl_connection,
                                                self.__use_checksum,
-                                               self.__only_events)
+                                               self.__allowed_events_in_packet)
             if binlog_event.event_type == TABLE_MAP_EVENT:
                 self.table_map[binlog_event.event.table_id] = \
                     binlog_event.event.get_table()
@@ -251,7 +256,7 @@ class BinLogStreamReader(object):
 
             # event is none if we have filter it on packet level
             # we filter also not allowed events
-            if binlog_event.event is None or (binlog_event.event.__class__ not in self.__only_events):
+            if binlog_event.event is None or (binlog_event.event.__class__ not in self.__allowed_events):
                 continue
 
             return binlog_event.event

@@ -82,11 +82,8 @@ class BinLogPacketWrapper(object):
         self.event = None
         event_class = self.__event_map.get(self.event_type, event.NotImplementedEvent)
 
-        # We can't filter on packet level TABLE_MAP and rotate event because we need
-        # them for handling other operations
-        if not self.event_type in (constants.TABLE_MAP_EVENT, constants.ROTATE_EVENT):
-            if event_class not in allowed_events:
-                return
+        if event_class not in allowed_events:
+            return
         self.event = event_class(self, event_size_without_header, table_map,
                                  ctl_connection)
 
