@@ -32,6 +32,9 @@ Make sure you have the following configuration set in your mysql config file (us
     log-bin=mysql-bin
     server-id=1
     binlog-format    = row #Very important if you want to receive write, update and delete row events
+    gtid_mode=ON
+    log-slave_updates=true
+    enforce_gtid_consistency
 
 
 To run tests:
