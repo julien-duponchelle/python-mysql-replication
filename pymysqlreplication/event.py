@@ -3,7 +3,7 @@
 import struct
 import datetime
 
-from pymysql.util import byte2int, int2byte
+from .util import byte2int, int2byte
 
 
 class BinLogEvent(object):

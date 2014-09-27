@@ -2,9 +2,9 @@
 
 import struct
 
-from pymysql.util import byte2int
 
 from pymysqlreplication import constants, event, row_event
+from .util import byte2int
 
 # Constants from PyMYSQL source code
 NULL_COLUMN = 251

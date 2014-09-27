@@ -4,8 +4,7 @@ import struct
 import decimal
 import datetime
 
-from pymysql.util import byte2int
-
+from .util import byte2int
 from .event import BinLogEvent
 from .constants import FIELD_TYPE
 from .constants import BINLOG
@@ -497,7 +496,7 @@ class TableMapEvent(BinLogEvent):
         for i in range(0, len(column_types)):
             column_type = column_types[i]
             column_schema = self.column_schemas[i]
-            col = Column(byte2int(column_type), column_schema, from_packet)
+            col = Column(column_type, column_schema, from_packet)
             self.columns.append(col)
 
         self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
