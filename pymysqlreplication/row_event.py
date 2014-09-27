@@ -14,14 +14,23 @@ from .table import Table
 
 
 class RowsEvent(BinLogEvent):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(RowsEvent, self).__init__(from_packet, event_size, table_map,
-                                        ctl_connection)
+                                        ctl_connection, **kwargs)
         self.__rows = None
+        self.__only_tables = kwargs["only_tables"]
 
         #Header
         self.table_id = self._read_table_id()
         self.primary_key = table_map[self.table_id].data["primary_key"]
+
+        # Additional information
+        self.schema = self.table_map[self.table_id].schema
+        self.table = self.table_map[self.table_id].table
+
+        if self.__only_tables is not None and self.table not in self.__only_tables:
+            self._processed = False
+            return
 
         #Event V2
         if self.event_type == BINLOG.WRITE_ROWS_EVENT_V2 or \
@@ -35,10 +44,6 @@ class RowsEvent(BinLogEvent):
         #Body
         self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns = self.table_map[self.table_id].columns
-
-        # Additional information
-        self.schema = self.table_map[self.table_id].schema
-        self.table = self.table_map[self.table_id].table
 
     def __is_null(self, null_bitmap, position):
         bit = null_bitmap[int(position / 8)]
@@ -370,11 +375,12 @@ class DeleteRowsEvent(RowsEvent):
     For each row you have a hash with a single key: values which contain the data of the removed line.
     """
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(DeleteRowsEvent, self).__init__(from_packet, event_size,
-                                              table_map, ctl_connection)
-        self.columns_present_bitmap = self.packet.read(
-            (self.number_of_columns + 7) / 8)
+                                              table_map, ctl_connection, **kwargs)
+        if self._processed:
+            self.columns_present_bitmap = self.packet.read(
+                (self.number_of_columns + 7) / 8)
 
     def _fetch_one_row(self):
         row = {}
@@ -398,11 +404,12 @@ class WriteRowsEvent(RowsEvent):
     For each row you have a hash with a single key: values which contain the data of the new line.
     """
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(WriteRowsEvent, self).__init__(from_packet, event_size,
-                                             table_map, ctl_connection)
-        self.columns_present_bitmap = self.packet.read(
-            (self.number_of_columns + 7) / 8)
+                                             table_map, ctl_connection, **kwargs)
+        if self._processed:
+            self.columns_present_bitmap = self.packet.read(
+                (self.number_of_columns + 7) / 8)
 
     def _fetch_one_row(self):
         row = {}
@@ -431,14 +438,15 @@ class UpdateRowsEvent(RowsEvent):
     http://dev.mysql.com/doc/refman/5.6/en/replication-options-binary-log.html#sysvar_binlog_row_image
     """
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(UpdateRowsEvent, self).__init__(from_packet, event_size,
-                                              table_map, ctl_connection)
-        #Body
-        self.columns_present_bitmap = self.packet.read(
-            (self.number_of_columns + 7) / 8)
-        self.columns_present_bitmap2 = self.packet.read(
-            (self.number_of_columns + 7) / 8)
+                                              table_map, ctl_connection, **kwargs)
+        if self._processed:
+            #Body
+            self.columns_present_bitmap = self.packet.read(
+                (self.number_of_columns + 7) / 8)
+            self.columns_present_bitmap2 = self.packet.read(
+                (self.number_of_columns + 7) / 8)
 
     def _fetch_one_row(self):
         row = {}
@@ -468,9 +476,9 @@ class TableMapEvent(BinLogEvent):
     A end user of the lib should have no usage of this
     """
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(TableMapEvent, self).__init__(from_packet, event_size,
-                                            table_map, ctl_connection)
+                                            table_map, ctl_connection, **kwargs)
 
         # Post-Header
         self.table_id = self._read_table_id()
