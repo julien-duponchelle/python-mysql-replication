@@ -10,8 +10,8 @@ from pymysql.util import int2byte
 from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
 from .gtid import GtidSet
-import event
-import row_event
+from .event import QueryEvent, RotateEvent, FormatDescriptionEvent, XidEvent, GtidEvent, NotImplementedEvent
+from .row_event import UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent
 
 try:
     from pymysql.constants.COMMAND import COM_BINLOG_DUMP_GTID
@@ -261,23 +261,22 @@ class BinLogStreamReader(object):
             events = set(only_events)
         else:
             events = set((
-                event.QueryEvent,
-                event.RotateEvent,
-                event.FormatDescriptionEvent,
-                event.XidEvent,
-                event.GtidEvent,
-                # row_event
-                row_event.UpdateRowsEvent,
-                row_event.WriteRowsEvent,
-                row_event.DeleteRowsEvent,
-                row_event.TableMapEvent,
-                event.NotImplementedEvent))
+                QueryEvent,
+                RotateEvent,
+                FormatDescriptionEvent,
+                XidEvent,
+                GtidEvent,
+                UpdateRowsEvent,
+                WriteRowsEvent,
+                DeleteRowsEvent,
+                TableMapEvent,
+                NotImplementedEvent))
         if ignored_events is not None:
             for e in ignored_events:
                 events.remove(e)
         if filter_non_implemented_events:
             try:
-                events.remove(event.NotImplementedEvent)
+                events.remove(NotImplementedEvent)
             except KeyError:
                 pass
         return frozenset(events)
