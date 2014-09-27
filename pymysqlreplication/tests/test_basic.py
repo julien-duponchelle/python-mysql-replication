@@ -84,7 +84,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             event = self.stream.fetchone()
             self.assertIsNotNone(event)
 
-    def test_filtering_events(self):
+    def test_filtering_only_events(self):
         self.stream.close()
         self.stream = BinLogStreamReader(
             self.database, server_id=1024, only_events=[QueryEvent])
@@ -94,6 +94,16 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         self.assertIsInstance(event, QueryEvent)
         self.assertEqual(event.query, query)
+
+    def test_filtering_ignore_events(self):
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database, server_id=1024, ignored_events=[QueryEvent])
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, RotateEvent)
 
     def test_write_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
