@@ -24,7 +24,8 @@ def consume_events():
                                 server_id=3,
                                 resume_stream=False,
                                 blocking=True,
-                                only_events = [UpdateRowsEvent])
+                                only_events = [UpdateRowsEvent],
+                                only_tables = ['test'] )
     start = time.clock()
     i = 0.0
     for binlogevent in stream:
@@ -50,6 +51,8 @@ execute(conn, "CREATE DATABASE pymysqlreplication_test")
 conn = pymysql.connect(**database)
 execute(conn, "CREATE TABLE test (i INT) ENGINE = MEMORY")
 execute(conn, "INSERT INTO test VALUES(1)")
+execute(conn, "CREATE TABLE test2 (i INT) ENGINE = MEMORY")
+execute(conn, "INSERT INTO test2 VALUES(1)")
 execute(conn, "RESET MASTER")
 
 
@@ -57,6 +60,7 @@ if os.fork() != 0:
     print("Start insert data")
     while True:
         execute(conn, "UPDATE test SET i = i + 1;")
+        execute(conn, "UPDATE test2 SET i = i + 1;")
 else:
     consume_events()
     #cProfile.run('consume_events()')
