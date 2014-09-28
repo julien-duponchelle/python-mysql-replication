@@ -22,15 +22,16 @@ class RowsEvent(BinLogEvent):
         #Header
         self.table_id = self._read_table_id()
         self.primary_key = table_map[self.table_id].data["primary_key"]
-        self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
         #Event V2
         if self.event_type == BINLOG.WRITE_ROWS_EVENT_V2 or \
                 self.event_type == BINLOG.DELETE_ROWS_EVENT_V2 or \
                 self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2:
-                self.extra_data_length = struct.unpack('<H',
-                                                       self.packet.read(2))[0]
+                self.flags, self.extra_data_length = struct.unpack('<HH', self.packet.read(4))
                 self.extra_data = self.packet.read(self.extra_data_length / 8)
+        else:
+            self.flags = struct.unpack('<H', self.packet.read(2))[0]
+
         #Body
         self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns = self.table_map[self.table_id].columns

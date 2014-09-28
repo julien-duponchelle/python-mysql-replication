@@ -49,29 +49,30 @@ class BinLogPacketWrapper(object):
     }
 
     def __init__(self, from_packet, table_map, ctl_connection, use_checksum, allowed_events = None):
-        if not from_packet.is_ok_packet():
-            raise ValueError(
-                "Cannot create %s object from invalid packet type" %
-                self.__class__.__name__)
-
         # -1 because we ignore the ok byte
         self.read_bytes = 0
         # Used when we want to override a value in the data buffer
         self.__data_buffer = b''
 
-        # Ok Value
         self.packet = from_packet
-        self.packet.advance(1)
         self.charset = ctl_connection.charset
 
+        # OK value
+        # timestamp
+        # event_type
+        # server_id
+        # log_pos
+        # flags
+        unpack = struct.unpack('<cIcIIIH', self.packet.read(20))
+
         # Header
-        self.timestamp = struct.unpack('<I', self.packet.read(4))[0]
-        self.event_type = byte2int(self.packet.read(1))
-        self.server_id = struct.unpack('<I', self.packet.read(4))[0]
-        self.event_size = struct.unpack('<I', self.packet.read(4))[0]
+        self.timestamp = unpack[1]
+        self.event_type = byte2int(unpack[2])
+        self.server_id = unpack[3]
+        self.event_size = unpack[4]
         # position of the next event
-        self.log_pos = struct.unpack('<I', self.packet.read(4))[0]
-        self.flags = struct.unpack('<H', self.packet.read(2))[0]
+        self.log_pos = unpack[5]
+        self.flags = unpack[6]
 
         # MySQL 5.6 and more if binlog-checksum = CRC32
         if use_checksum:
