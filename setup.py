@@ -38,8 +38,7 @@ setup(
     url="https://github.com/noplay/python-mysql-replication",
     author="Julien Duponchelle",
     author_email="julien@duponchelle.info",
-    description=("Pure Python Implementation of MySQL replication protocol"
-                 "build on top of PyMYSQL."),
+    description=("Pure Python Implementation of MySQL replication protocol build on top of PyMYSQL."),
     license="Apache 2",
     packages=["pymysqlreplication",
               "pymysqlreplication.constants",
