@@ -64,6 +64,8 @@ Projects using this library
 * Ditto: MySQL to MemSQL replicator https://github.com/memsql/ditto
 * ElasticMage: Full Magento integration with ElasticSearch https://github.com/ElasticMage/elasticmage
 * Cache buster: an automatic cache invalidation system https://github.com/rackerlabs/cache-busters
+* Zabbix collector for OpenTSDB https://github.com/OpenTSDB/tcollector/blob/master/collectors/0/zabbix_bridge.py
+* Meepo: Event sourcing and event broadcasting for datebases. https://github.com/eleme/meepo
 
 MySQL server settings
 =========================
