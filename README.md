@@ -49,6 +49,7 @@ The project is test with:
 * MySQL 5.5 and 5.6
 * Python >= 2.6.7
 * Python 3.3 and 3.4 (3.2 is not supported)
+* PyPy (really faster than the standard Python interpreter)
 
 It's not tested in real production situation.
 
