@@ -23,11 +23,15 @@ class RowsEvent(BinLogEvent):
 
         #Header
         self.table_id = self._read_table_id()
-        self.primary_key = table_map[self.table_id].data["primary_key"]
 
         # Additional information
-        self.schema = self.table_map[self.table_id].schema
-        self.table = self.table_map[self.table_id].table
+        try:
+            self.primary_key = table_map[self.table_id].data["primary_key"]
+            self.schema = self.table_map[self.table_id].schema
+            self.table = self.table_map[self.table_id].table
+        except KeyError: #If we have filter the corresponding TableMap Event
+            self._processed = False
+            return
 
         if self.__only_tables is not None and self.table not in self.__only_tables:
             self._processed = False
@@ -35,6 +39,7 @@ class RowsEvent(BinLogEvent):
         if self.__only_schemas is not None and self.schema not in self.__only_schemas:
             self._processed = False
             return
+
 
         #Event V2
         if self.event_type == BINLOG.WRITE_ROWS_EVENT_V2 or \
@@ -483,6 +488,8 @@ class TableMapEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(TableMapEvent, self).__init__(from_packet, event_size,
                                             table_map, ctl_connection, **kwargs)
+        self.__only_tables = kwargs["only_tables"]
+        self.__only_schemas = kwargs["only_schemas"]
 
         # Post-Header
         self.table_id = self._read_table_id()
@@ -494,6 +501,14 @@ class TableMapEvent(BinLogEvent):
         self.packet.advance(1)
         self.table_length = byte2int(self.packet.read(1))
         self.table = self.packet.read(self.table_length).decode()
+
+        if self.__only_tables is not None and self.table not in self.__only_tables:
+            self._processed = False
+            return
+        if self.__only_schemas is not None and self.schema not in self.__only_schemas:
+            self._processed = False
+            return
+
         self.packet.advance(1)
         self.column_count = self.packet.read_length_coded_binary()
 
