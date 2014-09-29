@@ -239,9 +239,9 @@ class BinLogStreamReader(object):
             binlog_event = BinLogPacketWrapper(pkt, self.table_map,
                                                self._ctl_connection,
                                                self.__use_checksum,
-                                               allowed_events = self.__allowed_events_in_packet,
-                                               only_tables = self.__only_tables,
-                                               only_schemas = self.__only_schemas)
+                                               self.__allowed_events_in_packet,
+                                               self.__only_tables,
+                                               self.__only_schemas)
 
             if binlog_event.event_type == TABLE_MAP_EVENT and binlog_event.event is not None:
                 self.table_map[binlog_event.event.table_id] = \
