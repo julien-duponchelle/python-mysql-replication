@@ -493,6 +493,11 @@ class TableMapEvent(BinLogEvent):
 
         # Post-Header
         self.table_id = self._read_table_id()
+
+        if self.table_id in table_map:
+            self._processed = False
+            return
+
         self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
         # Payload
