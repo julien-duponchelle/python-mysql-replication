@@ -291,6 +291,8 @@ Other contributors:
 * Darioush Jalali Python 2.6 backport https://github.com/darioush
 * Arthur Gautier gtid https://github.com/baloo
 
+Thanks to GetResponse for their support
+
 Licence
 =======
 Copyright 2012-2014 Julien Duponchelle
