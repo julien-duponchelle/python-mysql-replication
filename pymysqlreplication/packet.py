@@ -49,9 +49,9 @@ class BinLogPacketWrapper(object):
     }
 
     def __init__(self, from_packet, table_map, ctl_connection, use_checksum,
-                 allowed_events = None,
-                 only_tables = None,
-                 only_schemas = None):
+                 allowed_events,
+                 only_tables,
+                 only_schemas):
         # -1 because we ignore the ok byte
         self.read_bytes = 0
         # Used when we want to override a value in the data buffer
