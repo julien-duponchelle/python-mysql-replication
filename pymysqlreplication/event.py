@@ -9,7 +9,8 @@ from pymysql.util import byte2int, int2byte
 class BinLogEvent(object):
     def __init__(self, from_packet, event_size, table_map, ctl_connection,
                  only_tables = None,
-                 only_schemas = None):
+                 only_schemas = None,
+                 freeze_schema = False):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type

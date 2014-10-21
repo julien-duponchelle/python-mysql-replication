@@ -51,7 +51,8 @@ class BinLogPacketWrapper(object):
     def __init__(self, from_packet, table_map, ctl_connection, use_checksum,
                  allowed_events,
                  only_tables,
-                 only_schemas):
+                 only_schemas,
+                 freeze_schema):
         # -1 because we ignore the ok byte
         self.read_bytes = 0
         # Used when we want to override a value in the data buffer
@@ -91,7 +92,8 @@ class BinLogPacketWrapper(object):
         self.event = event_class(self, event_size_without_header, table_map,
                                  ctl_connection,
                                  only_tables = only_tables,
-                                 only_schemas = only_schemas)
+                                 only_schemas = only_schemas,
+                                 freeze_schema = freeze_schema)
         if self.event._processed == False:
             self.event = None
 
