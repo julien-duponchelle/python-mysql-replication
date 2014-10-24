@@ -3,7 +3,6 @@
 import pymysql
 import pymysql.cursors
 import struct
-import weakref
 
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP
 from pymysql.util import int2byte
@@ -66,6 +65,9 @@ class BinLogStreamReader(object):
             self._stream_connection.close()
             self.__connected_stream = False
         if self.__connected_ctl:
+            # break reference cycle between stream reader and underlying
+            # mysql connection object
+            self._ctl_connection._get_table_information = None
             self._ctl_connection.close()
             self.__connected_ctl = False
 
@@ -75,7 +77,7 @@ class BinLogStreamReader(object):
         self._ctl_connection_settings["cursorclass"] = \
             pymysql.cursors.DictCursor
         self._ctl_connection = pymysql.connect(**self._ctl_connection_settings)
-        self._ctl_connection._get_table_information = weakref.proxy(self.__get_table_information)
+        self._ctl_connection._get_table_information = self.__get_table_information
         self.__connected_ctl = True
 
     def __checksum_enabled(self):
