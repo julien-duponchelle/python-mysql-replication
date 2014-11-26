@@ -59,7 +59,7 @@ class GtidEvent(BinLogEvent):
         Eg: 3E11FA47-71CA-11E1-9E33-C80AA9429562:23
         See: http://dev.mysql.com/doc/refman/5.6/en/replication-gtids-concepts.html"""
         gtid = "%s%s%s%s-%s%s-%s%s-%s%s-%s%s%s%s%s%s" %\
-               tuple("{:02x}".format(ord(c)) for c in self.sid)
+               tuple("{0:02x}".format(ord(c)) for c in self.sid)
         gtid += ":%d" % self.gno
         return gtid
 
