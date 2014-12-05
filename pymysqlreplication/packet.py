@@ -42,17 +42,14 @@ class BinLogPacketWrapper(object):
         constants.WRITE_ROWS_EVENT_V2: row_event.WriteRowsEvent,
         constants.DELETE_ROWS_EVENT_V2: row_event.DeleteRowsEvent,
         constants.TABLE_MAP_EVENT: row_event.TableMapEvent,
-        #5.6 GTID enabled replication events
+        # 5.6 GTID enabled replication events
         constants.ANONYMOUS_GTID_LOG_EVENT: event.NotImplementedEvent,
         constants.PREVIOUS_GTIDS_LOG_EVENT: event.NotImplementedEvent
 
     }
 
     def __init__(self, from_packet, table_map, ctl_connection, use_checksum,
-                 allowed_events,
-                 only_tables,
-                 only_schemas,
-                 freeze_schema):
+                 allowed_events, only_tables, only_schemas, freeze_schema):
         # -1 because we ignore the ok byte
         self.read_bytes = 0
         # Used when we want to override a value in the data buffer
