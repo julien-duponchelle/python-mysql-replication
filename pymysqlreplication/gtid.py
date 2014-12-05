@@ -3,7 +3,7 @@
 import re
 import struct
 import binascii
-import six
+
 
 class Gtid(object):
     @staticmethod
@@ -78,6 +78,7 @@ class Gtid(object):
                 buffer += struct.pack('<Q', interval + 1)
 
         return buffer
+
 
 class GtidSet(object):
     def __init__(self, gtid_set):
