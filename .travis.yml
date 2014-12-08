@@ -11,8 +11,12 @@ install:
 cache: apt
 before_script:
   # Remove old mysql version
+  - "sudo /etc/init.d/mysql stop || true"   
   - "sudo apt-get remove mysql-common mysql-server-5.5 mysql-server-core-5.5 mysql-client-5.5 mysql-client-core-5.5"
   - "sudo apt-get autoremove"
+  # Config
+  - "sudo sed -i'' 's/table_cache/table_open_cache/' /etc/mysql/my.cnf"
+  - "sudo sed -i'' 's/log_slow_queries/slow_query_log/' /etc/mysql/my.cnf"
 
   # Install new mysql version
   - "echo deb http://repo.mysql.com/apt/ubuntu/ precise mysql-5.6 | sudo tee /etc/apt/sources.list.d/mysql.list"
@@ -26,21 +30,22 @@ before_script:
   - "sudo chown mysql: /var/ramfs/mysql/"
 
   # Config
-  - "sudo sed -i'' 's/table_cache/table_open_cache/' /etc/mysql/my.cnf"
-  - "sudo sed -i'' 's/log_slow_queries/slow_query_log/' /etc/mysql/my.cnf"
-
   - "echo '[mysqld]'            | sudo tee /etc/mysql/conf.d/replication.cnf"
   - "echo 'log-bin=mysql-bin'   | sudo tee -a /etc/mysql/conf.d/replication.cnf"
   - "echo 'server-id=1'         | sudo tee -a /etc/mysql/conf.d/replication.cnf"
   - "echo 'binlog-format = row' | sudo tee -a /etc/mysql/conf.d/replication.cnf"
+ 
+  - "sudo /etc/init.d/mysql stop || true" 
+
+  # Install new datas
+  - "sudo mysql_install_db --defaults-file=/etc/mysql/my.cnf --basedir=/usr --datadir=/var/ramfs/mysql --verbose"
+
+  # Enable GTID
   - "echo '[mysqld]'                       | sudo tee /etc/mysql/conf.d/gtid.cnf"
   - "echo 'gtid_mode=ON'                   | sudo tee -a /etc/mysql/conf.d/gtid.cnf"
   - "echo 'enforce_gtid_consistency'       | sudo tee -a /etc/mysql/conf.d/gtid.cnf"
   - "echo 'binlog_format=ROW'              | sudo tee -a /etc/mysql/conf.d/gtid.cnf"
   - "echo 'log_slave_updates'              | sudo tee -a /etc/mysql/conf.d/gtid.cnf"
-
-  # Install new datas
-  - "sudo mysql_install_db --defaults-file=/etc/mysql/my.cnf --basedir=/usr --datadir=/var/ramfs/mysql"
 
   # Start mysql (avoid errors to have logs)
   - "sudo /etc/init.d/mysql start || true"
