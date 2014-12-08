@@ -29,9 +29,6 @@ pip-log.txt
 #Doc
 _build
 
-#Vagrant
-.vagrant
-
 #Text Editor Backupfile 
 *~
 
