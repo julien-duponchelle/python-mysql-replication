@@ -69,6 +69,7 @@ class BinLogStreamReader(object):
 
         #Store table meta information
         self.table_map = {}
+        self.reverse_table_map = {} 
         self.log_pos = log_pos
         self.log_file = log_file
         self.auto_position = auto_position
@@ -248,8 +249,14 @@ class BinLogStreamReader(object):
                                                self.__freeze_schema)
 
             if binlog_event.event_type == TABLE_MAP_EVENT and binlog_event.event is not None:
-                self.table_map[binlog_event.event.table_id] = \
-                    binlog_event.event.get_table()
+                # keeping only filtering schema.table from only_tables and only_schemas params
+                # so in 
+                if binlog_event.event and binlog_event.event._processed:
+                    self.table_map[binlog_event.event.table_id] = binlog_event.event.get_table()
+                    
+                    # During the work, it is not a 1 to 1 relationship between ID and schema.table. 
+                    # There are more than ID possibles .... and so table_map can grows up even you filtering a few tables  
+                    self._manage_table_map(binlog_event.event)
 
             if binlog_event.event_type == ROTATE_EVENT:
                 self.log_pos = binlog_event.event.position
@@ -264,6 +271,7 @@ class BinLogStreamReader(object):
                 # again for each logfile which is potentially wasted effort but we can't really do much better
                 # without being broken in restart case
                 self.table_map = {}
+                self.reverse_table_map = {} 
             elif binlog_event.log_pos:
                 self.log_pos = binlog_event.log_pos
 
@@ -327,3 +335,30 @@ class BinLogStreamReader(object):
 
     def __iter__(self):
         return iter(self.fetchone, None)
+        
+    def _manage_table_map(self,  event):
+        """
+        Looking for a duplicate entry in self.table_map (same schema.table with old table_id) 
+        from the new_table_id
+        """
+        # make key
+        key = "%s.%s" % (self.table_map[event.table_id].schema,self.table_map[event.table_id].table)
+        
+        # key exists ?
+        if key in self.reverse_table_map:
+            
+            # get an old entry which is not table_id 
+            old_table_id = self.reverse_table_map[key] 
+            if old_table_id != event.table_id: 
+                
+                # del the oldest ID
+                if old_table_id in self.table_map:
+                    del self.table_map[old_table_id]
+                    # print "\t\t *==>> Del entry %d from table_map for %s table" % (old_table_id, key)
+                
+                # keep the new one
+                self.reverse_table_map[key] = event.table_id
+        else:
+            # keep the entry
+            self.reverse_table_map[key] = event.table_id
+            
