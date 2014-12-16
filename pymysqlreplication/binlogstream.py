@@ -7,11 +7,10 @@ from pymysql.constants.COMMAND import COM_BINLOG_DUMP
 from pymysql.cursors import DictCursor
 from pymysql.util import int2byte
 
-from blinker import signal
-
-from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
 from .gtid import GtidSet
+from .packet import BinLogPacketWrapper
+from .signals import signal
 from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
     XidEvent, GtidEvent, NotImplementedEvent)
