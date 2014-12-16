@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 try:
     from setuptools import setup, Command
 except ImportError:
@@ -5,11 +8,13 @@ except ImportError:
 
 import sys
 
-install_requires=['pymysql', 'six']
+install_requires = ['pymysql']
+
 # add unittest2 to install_requires for python < 2.7
-(major, minor, _, _, _) = sys.version_info
+major, minor, _, _, _ = sys.version_info
 if (major, minor) < (2, 7):
     install_requires.append("unittest2")
+
 
 class TestCommand(Command):
     user_options = []
@@ -38,7 +43,8 @@ setup(
     url="https://github.com/noplay/python-mysql-replication",
     author="Julien Duponchelle",
     author_email="julien@duponchelle.info",
-    description=("Pure Python Implementation of MySQL replication protocol build on top of PyMYSQL."),
+    description=("Pure Python Implementation of MySQL replication protocol "
+                 "build on top of PyMYSQL."),
     license="Apache 2",
     packages=["pymysqlreplication",
               "pymysqlreplication.constants",

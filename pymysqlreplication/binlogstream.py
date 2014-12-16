@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
 
 import pymysql
-import pymysql.cursors
 import struct
 
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP
+from pymysql.cursors import DictCursor
 from pymysql.util import int2byte
 
 from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
 from .gtid import GtidSet
-from .event import QueryEvent, RotateEvent, FormatDescriptionEvent, XidEvent, GtidEvent, NotImplementedEvent
-from .row_event import UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent
+from .event import (
+    QueryEvent, RotateEvent, FormatDescriptionEvent,
+    XidEvent, GtidEvent, NotImplementedEvent)
+from .row_event import (
+    UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
 
 try:
     from pymysql.constants.COMMAND import COM_BINLOG_DUMP_GTID
@@ -20,8 +23,10 @@ except ImportError:
     # See: https://github.com/PyMySQL/PyMySQL/pull/261
     COM_BINLOG_DUMP_GTID = 0x1e
 
-MYSQL_EXPECTED_ERROR_CODES = [2013, 2006] #2013 Connection Lost
-                                          #2006 MySQL server has gone away
+# 2013 Connection Lost
+# 2006 MySQL server has gone away
+MYSQL_EXPECTED_ERROR_CODES = [2013, 2006]
+
 
 class BinLogStreamReader(object):
     """Connect to replication stream and read event
@@ -31,21 +36,21 @@ class BinLogStreamReader(object):
                  blocking=False, only_events=None, log_file=None, log_pos=None,
                  filter_non_implemented_events=True,
                  ignored_events=None, auto_position=None,
-                 only_tables = None, only_schemas = None,
-                 freeze_schema = False):
+                 only_tables=None, only_schemas=None,
+                 freeze_schema=False):
         """
         Attributes:
             resume_stream: Start for event from position or the latest event of
                            binlog or from older available event
             blocking: Read on stream is blocking
             only_events: Array of allowed events
-            ignored_events: Array of ignoreded events
+            ignored_events: Array of ignored events
             log_file: Set replication start log file
             log_pos: Set replication start log pos
             auto_position: Use master_auto_position gtid to set position
             only_tables: An array with the tables you want to watch
             only_schemas: An array with the schemas you want to watch
-            freeze_schema: If true do not support ALTER TABLE. It's faster. (default False)
+            freeze_schema: If true do not support ALTER TABLE. It's faster.
         """
         self.__connection_settings = connection_settings
         self.__connection_settings["charset"] = "utf8"
@@ -58,16 +63,18 @@ class BinLogStreamReader(object):
         self.__only_tables = only_tables
         self.__only_schemas = only_schemas
         self.__freeze_schema = freeze_schema
-        self.__allowed_events = self._allowed_event_list(only_events, ignored_events, filter_non_implemented_events)
+        self.__allowed_events = self._allowed_event_list(
+            only_events, ignored_events, filter_non_implemented_events)
 
-        # We can't filter on packet level TABLE_MAP and rotate event because we need
-        # them for handling other operations
-        self.__allowed_events_in_packet = frozenset([TableMapEvent, RotateEvent]).union(self.__allowed_events)
+        # We can't filter on packet level TABLE_MAP and rotate event because
+        # we need them for handling other operations
+        self.__allowed_events_in_packet = frozenset(
+            [TableMapEvent, RotateEvent]).union(self.__allowed_events)
 
         self.__server_id = server_id
         self.__use_checksum = False
 
-        #Store table meta information
+        # Store table meta information
         self.table_map = {}
         self.log_pos = log_pos
         self.log_file = log_file
@@ -84,14 +91,13 @@ class BinLogStreamReader(object):
     def __connect_to_ctl(self):
         self._ctl_connection_settings = dict(self.__connection_settings)
         self._ctl_connection_settings["db"] = "information_schema"
-        self._ctl_connection_settings["cursorclass"] = \
-            pymysql.cursors.DictCursor
+        self._ctl_connection_settings["cursorclass"] = DictCursor
         self._ctl_connection = pymysql.connect(**self._ctl_connection_settings)
         self._ctl_connection._get_table_information = self.__get_table_information
         self.__connected_ctl = True
 
     def __checksum_enabled(self):
-        '''Return True if binlog-checksum = CRC32. Only for MySQL > 5.6 '''
+        """Return True if binlog-checksum = CRC32. Only for MySQL > 5.6"""
         cur = self._stream_connection.cursor()
         cur.execute("SHOW GLOBAL VARIABLES LIKE 'BINLOG_CHECKSUM'")
         result = cur.fetchone()
@@ -113,7 +119,8 @@ class BinLogStreamReader(object):
 
         self.__use_checksum = self.__checksum_enabled()
 
-        #If cheksum is enabled we need to inform the server about the that we support it
+        # If checksum is enabled we need to inform the server about the that
+        # we support it
         if self.__use_checksum:
             cur = self._stream_connection.cursor()
             cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")
@@ -158,8 +165,9 @@ class BinLogStreamReader(object):
             #                                Zeroified
             # binlog position uint   4bytes  == 4
             # payload_size    uint   4bytes
-            ## What come next, is the payload, where the slave gtid_executed
-            ## is sent to the master
+
+            # What come next, is the payload, where the slave gtid_executed
+            # is sent to the master
             # n_sid           ulong  8bytes  == which size is the gtid_set
             # | sid           uuid   16bytes UUID as a binary
             # | n_intervals   ulong  8bytes  == how many intervals are sent for this gtid
@@ -179,16 +187,15 @@ class BinLogStreamReader(object):
             gtid_set = GtidSet(self.auto_position)
             encoded_data_size = gtid_set.encoded_length
 
-            header_size = (2 + # binlog_flags
-                           4 + # server_id
-                           4 + # binlog_name_info_size
-                           4 + # empty binlog name
-                           8 + # binlog_pos_info_size
-                           4) # encoded_data_size
+            header_size = (2 +  # binlog_flags
+                           4 +  # server_id
+                           4 +  # binlog_name_info_size
+                           4 +  # empty binlog name
+                           8 +  # binlog_pos_info_size
+                           4)  # encoded_data_size
 
             prelude = b'' + struct.pack('<i', header_size + encoded_data_size) \
                 + int2byte(COM_BINLOG_DUMP_GTID)
-
 
             # binlog_flags = 0 (2 bytes)
             prelude += struct.pack('<H', 0)
@@ -205,7 +212,6 @@ class BinLogStreamReader(object):
             prelude += struct.pack('<I', gtid_set.encoded_length)
             # encoded_data
             prelude += gtid_set.encoded()
-
 
         if pymysql.__version__ < "0.6":
             self._stream_connection.wfile.write(prelude)
@@ -247,7 +253,8 @@ class BinLogStreamReader(object):
                                                self.__only_schemas,
                                                self.__freeze_schema)
 
-            if binlog_event.event_type == TABLE_MAP_EVENT and binlog_event.event is not None:
+            if binlog_event.event_type == TABLE_MAP_EVENT and \
+                    binlog_event.event is not None:
                 self.table_map[binlog_event.event.table_id] = \
                     binlog_event.event.get_table()
 
@@ -274,7 +281,8 @@ class BinLogStreamReader(object):
 
             return binlog_event.event
 
-    def _allowed_event_list(self, only_events, ignored_events, filter_non_implemented_events):
+    def _allowed_event_list(self, only_events, ignored_events,
+                            filter_non_implemented_events):
         if only_events is not None:
             events = set(only_events)
         else:
