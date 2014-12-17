@@ -4,7 +4,14 @@ import struct
 
 class Bitmap(object):
     """ Use for current-present-bitmap1/2 in RowsEvent, copy from MySQL mysys/my_bitmap.c
-    """
+    See http://dev.mysql.com/doc/internals/en/rows-event.html
+        
+        null bitmap length = (bits set in 'columns-present-bitmap1'+7)/8
+        null bitmap2 length = (bits set in 'columns-present-bitmap2'+7)/8
+
+    We can not calculate the length using column count directly in minimal or noblob binlog row image.  
+
+    """ 
 
     bits2Nbits = [
         0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
