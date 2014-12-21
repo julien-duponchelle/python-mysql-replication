@@ -47,7 +47,7 @@ class Bitmap(object):
         used = 1 + (self._nbits - 1) & 0x7
         mask = (~(1 << used) - 1) & 255
 
-        l = ((self._nbits + 7) / 8) & 3
+        l = int((self._nbits + 7) / 8) & 3
         if l == 1:
             self._lastWordMask = ~0 & 0xFFFFFFFF
             b = bytearray(struct.pack("<I", self._lastWordMask))
