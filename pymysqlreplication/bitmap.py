@@ -33,8 +33,8 @@ class Bitmap(object):
     ]
 
     def __init__(self, bitmap, nbits):
-        self._bitmap = bytearray(((nbits + 31) / 32) * 4)
-        self._nbits = nbits 
+        self._nbits = int(nbits)   
+        self._bitmap = bytearray(((self._nbits + 31) / 32) * 4)
         self._bitmap[0:len(bitmap)] = bitmap
         self._lastWordMask = 0
         self._createLastWordMask()
