@@ -79,4 +79,4 @@ class Bitmap(object):
         return res
 
     def is_set(self, bit):
-        return self._bitmap[bit / 8] & (1 << (bit & 7))
+        return self._bitmap[int(bit / 8)] & (1 << (bit & 7))
