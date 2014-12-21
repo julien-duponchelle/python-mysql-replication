@@ -47,6 +47,7 @@ class Bitmap(object):
         used = 1 + (self._nbits - 1) & 0x7
         mask = (~(1 << used) - 1) & 0xFF
 
+        b = bytearray(0)
         l = int((self._nbits + 7) / 8) & 0x3
         if l == 1:
             self._lastWordMask = ~0 & 0xFFFFFFFF
