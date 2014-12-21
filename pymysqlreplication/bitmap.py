@@ -45,9 +45,9 @@ class Bitmap(object):
 
     def _createLastWordMask(self):
         used = 1 + (self._nbits - 1) & 0x7
-        mask = (~(1 << used) - 1) & 255
+        mask = (~(1 << used) - 1) & 0xFF
 
-        l = int((self._nbits + 7) / 8) & 3
+        l = int((self._nbits + 7) / 8) & 0x3
         if l == 1:
             self._lastWordMask = ~0 & 0xFFFFFFFF
             b = bytearray(struct.pack("<I", self._lastWordMask))
@@ -71,7 +71,7 @@ class Bitmap(object):
 
     def bits_set(self):
         res = 0
-        for i in range(0, len(self._bitmap) / 4 - 1):
+        for i in range(0, int(len(self._bitmap) / 4) - 1):
             res += self._countBitsUint32(struct.unpack("<I", self._bitmap[i*4:i*4 + 4])[0])
 
         res += self._countBitsUint32(struct.unpack("<I", self._bitmap[-4:])[0] & ~self._lastWordMask)
