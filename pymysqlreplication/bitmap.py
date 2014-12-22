@@ -68,14 +68,14 @@ class Bitmap(object):
             b = bytearray(struct.pack("<I", self._lastWordMask))
             b[3] = mask
 
-        self._lastWordMask = struct.unpack("<I", b)[0]
+        self._lastWordMask = struct.unpack("<I", bytes(b))[0]
 
     def bits_set(self):
         res = 0
         for i in range(0, int(len(self._bitmap) / 4) - 1):
-            res += self._countBitsUint32(struct.unpack("<I", self._bitmap[i*4:i*4 + 4])[0])
+            res += self._countBitsUint32(struct.unpack("<I", bytes(self._bitmap[i*4:i*4 + 4]))[0])
 
-        res += self._countBitsUint32(struct.unpack("<I", self._bitmap[-4:])[0] & ~self._lastWordMask)
+        res += self._countBitsUint32(struct.unpack("<I", bytes(self._bitmap[-4:]))[0] & ~self._lastWordMask)
 
         return res
 
