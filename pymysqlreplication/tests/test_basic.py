@@ -234,8 +234,6 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
         #QueryEvent for the Create Table
         self.assertIsInstance(self.stream.fetchone(), QueryEvent)
-        #QueryEvent for the Set session binlog row image
-        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
         #QueryEvent for the BEGIN
         self.assertIsInstance(self.stream.fetchone(), QueryEvent)
 
@@ -311,7 +309,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
         self.assertIsInstance(event, UpdateRowsEvent)
         self.assertEqual(event.rows[0]["before_values"]["id"], 1)
-        self.assertEqual(event.rows[0]["before_values"]["data"], "Hello")
+        self.assertEqual(event.rows[0]["before_values"]["data"], None)
         self.assertEqual(event.rows[0]["after_values"]["id"], None)
         self.assertEqual(event.rows[0]["after_values"]["data"], "World")
 
