@@ -61,13 +61,15 @@ class RowsEvent(BinLogEvent):
             bit = ord(bit)
         return bit & (1 << (position % 8))
 
-    def _read_column_data(self, bitmap):
+    def _read_column_data(self,  cols_bitmap):
         """Use for WRITE, UPDATE and DELETE events.
         Return an array of column data
         """
         values = {}
 
-        null_bitmap = self.packet.read((bitmap.bits_set() + 7) / 8)
+        # null bitmap length = (bits set in 'columns-present-bitmap'+7)/8
+        # See http://dev.mysql.com/doc/internals/en/rows-event.html
+        null_bitmap = self.packet.read((cols_bitmap.bits_set() + 7) / 8)
 
         nullBitmapIndex = 0
         nb_columns = len(self.columns)
@@ -76,7 +78,7 @@ class RowsEvent(BinLogEvent):
             name = self.table_map[self.table_id].columns[i].name
             unsigned = self.table_map[self.table_id].columns[i].unsigned
 
-            if bitmap.is_set(i) == 0:
+            if cols_bitmap.is_set(i) == 0:
                 values[name] = None
                 continue
 
@@ -406,9 +408,8 @@ class DeleteRowsEvent(RowsEvent):
     def _fetch_one_row(self):
         row = {}
 
-        b = Bitmap(self.columns_present_bitmap, self.number_of_columns)
-        #null_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
-        row["values"] = self._read_column_data(b)
+        cols_bitmap = Bitmap(self.columns_present_bitmap, self.number_of_columns)
+        row["values"] = self._read_column_data(cols_bitmap)
         return row
 
     def _dump(self):
@@ -436,9 +437,8 @@ class WriteRowsEvent(RowsEvent):
     def _fetch_one_row(self):
         row = {}
 
-        b = Bitmap(self.columns_present_bitmap, self.number_of_columns)
-#        null_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
-        row["values"] = self._read_column_data(b)
+        cols_bitmap = Bitmap(self.columns_present_bitmap, self.number_of_columns)
+        row["values"] = self._read_column_data(cols_bitmap)
         return row
 
     def _dump(self):
@@ -474,13 +474,11 @@ class UpdateRowsEvent(RowsEvent):
     def _fetch_one_row(self):
         row = {}
 
-        b = Bitmap(self.columns_present_bitmap, self.number_of_columns)
-        #null_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
-        row["before_values"] = self._read_column_data(b)
+        cols_bitmap1 = Bitmap(self.columns_present_bitmap, self.number_of_columns)
+        row["before_values"] = self._read_column_data(cols_bitmap1)
 
-        b = Bitmap(self.columns_present_bitmap2, self.number_of_columns)
-        #null_bitmap = self.packet.read((self.number_of_columns + 7) / 8)
-        row["after_values"] = self._read_column_data(b)
+        cols_bitmap2 = Bitmap(self.columns_present_bitmap2, self.number_of_columns)
+        row["after_values"] = self._read_column_data(cols_bitmap2)
         return row
 
     def _dump(self):
