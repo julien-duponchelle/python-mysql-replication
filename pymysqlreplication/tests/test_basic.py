@@ -221,6 +221,100 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["after_values"]["id"], 1)
         self.assertEqual(event.rows[0]["after_values"]["data"], "World")
 
+    def test_minimal_image_write_row_event(self):
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        query = "SET SESSION binlog_row_image = 'minimal'"
+        self.execute(query)
+        query = "INSERT INTO test (data) VALUES('Hello World')"
+        self.execute(query)
+        self.execute("COMMIT")
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        #QueryEvent for the Create Table
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        #QueryEvent for the Set session binlog row image
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        #QueryEvent for the BEGIN
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
+
+        event = self.stream.fetchone()
+        if self.isMySQL56AndMore():
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
+        else:
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
+        self.assertIsInstance(event, WriteRowsEvent)
+        self.assertEqual(event.rows[0]["values"]["id"], 1)
+        self.assertEqual(event.rows[0]["values"]["data"], "Hello World")
+        self.assertEqual(event.schema, "pymysqlreplication_test")
+        self.assertEqual(event.table, "test")
+        self.assertEqual(event.columns[1].name, 'data')
+
+    def test_minimal_image_delete_row_event(self):
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        query = "INSERT INTO test (data) VALUES('Hello World')"
+        self.execute(query)
+        query = "SET SESSION binlog_row_image = 'minimal'"
+        self.execute(query)
+        self.resetBinLog()
+
+        query = "DELETE FROM test WHERE id = 1"
+        self.execute(query)
+        self.execute("COMMIT")
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+
+        #QueryEvent for the BEGIN
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
+
+        event = self.stream.fetchone()
+        if self.isMySQL56AndMore():
+            self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V2)
+        else:
+            self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V1)
+        self.assertIsInstance(event, DeleteRowsEvent)
+        self.assertEqual(event.rows[0]["values"]["id"], 1)
+        self.assertEqual(event.rows[0]["values"]["data"], None)
+
+    def test_minimal_image_update_row_event(self):
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        query = "INSERT INTO test (data) VALUES('Hello')"
+        self.execute(query)
+        query = "SET SESSION binlog_row_image = 'minimal'"
+        self.execute(query)
+        self.resetBinLog()
+
+        query = "UPDATE test SET data = 'World' WHERE id = 1"
+        self.execute(query)
+        self.execute("COMMIT")
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+
+        #QueryEvent for the BEGIN
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
+
+        event = self.stream.fetchone()
+        if self.isMySQL56AndMore():
+            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V2)
+        else:
+            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
+        self.assertIsInstance(event, UpdateRowsEvent)
+        self.assertEqual(event.rows[0]["before_values"]["id"], 1)
+        self.assertEqual(event.rows[0]["before_values"]["data"], "Hello")
+        self.assertEqual(event.rows[0]["after_values"]["id"], None)
+        self.assertEqual(event.rows[0]["after_values"]["data"], "World")
+
     def test_log_pos(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
