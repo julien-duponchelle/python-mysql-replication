@@ -85,6 +85,9 @@ class BinLogStreamReader(object):
             self._stream_connection.close()
             self.__connected_stream = False
         if self.__connected_ctl:
+            # break reference cycle between stream reader and underlying
+            # mysql connection object
+            self._ctl_connection._get_table_information = None
             self._ctl_connection.close()
             self.__connected_ctl = False
 
