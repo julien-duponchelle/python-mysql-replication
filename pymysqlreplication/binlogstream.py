@@ -7,9 +7,10 @@ from pymysql.constants.COMMAND import COM_BINLOG_DUMP
 from pymysql.cursors import DictCursor
 from pymysql.util import int2byte
 
-from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
 from .gtid import GtidSet
+from .packet import BinLogPacketWrapper
+from .signals import signal
 from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
     XidEvent, GtidEvent, NotImplementedEvent)
@@ -31,7 +32,6 @@ MYSQL_EXPECTED_ERROR_CODES = [2013, 2006]
 class BinLogStreamReader(object):
     """Connect to replication stream and read event
     """
-
     def __init__(self, connection_settings, server_id, resume_stream=False,
                  blocking=False, only_events=None, log_file=None, log_pos=None,
                  filter_non_implemented_events=True,
@@ -282,6 +282,7 @@ class BinLogStreamReader(object):
             if binlog_event.event is None or (binlog_event.event.__class__ not in self.__allowed_events):
                 continue
 
+            signal("binlog_event").send(binlog_event.event)
             return binlog_event.event
 
     def _allowed_event_list(self, only_events, ignored_events,
