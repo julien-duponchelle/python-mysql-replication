@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import sys
+
 import pymysql
 import struct
 
@@ -54,12 +54,8 @@ class BinLogStreamReader(object):
             freeze_schema: If true do not support ALTER TABLE. It's faster.
         """
         self.__connection_settings = connection_settings
-        # python UCS-4 use 'utf8mb4' charset
-        _sys_maxunicode = sys.maxunicode
-        if _sys_maxunicode == 65535:
+        if not connection_settings.get("charset"):
             self.__connection_settings["charset"] = "utf8"
-        elif _sys_maxunicode == 1114111:
-            self.__connection_settings["charset"] = "utf8mb4"
 
         self.__connected_stream = False
         self.__connected_ctl = False

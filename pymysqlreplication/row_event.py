@@ -191,15 +191,10 @@ class RowsEvent(BinLogEvent):
     def __read_string(self, size, column):
         string = self.packet.read_length_coded_pascal_string(size)
         if column.character_set_name is not None:
-            string = string.decode(column.character_set_name)
+            character_set_name = "utf8" if column.character_set_name == "utf8mb4" \
+                else column.character_set_name
+            string = string.decode(character_set_name)
         return string
-
-    def __read_string(self, size, column):
-        str = self.packet.read_length_coded_pascal_string(size)
-        if column.character_set_name is not None:
-            character_set_name = "utf8" if column.character_set_name == "utf8mb4" else column.character_set_name
-            str = str.decode(character_set_name)
-        return str
 
     def __read_bit(self, column):
         """Read MySQL BIT type"""
