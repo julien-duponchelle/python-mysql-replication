@@ -1,19 +1,25 @@
 # -*- coding: utf-8 -*-
 
 import struct
-from datetime import datetime
+import datetime
 
 from pymysql.util import byte2int, int2byte
 
 
 class BinLogEvent(object):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection,
+                 only_tables = None,
+                 only_schemas = None,
+                 freeze_schema = False):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
         self.timestamp = self.packet.timestamp
         self.event_size = event_size
         self._ctl_connection = ctl_connection
+        # The event have been fully processed, if processed is false
+        # the event will be skipped
+        self._processed = True
 
     def _read_table_id(self):
         # Table ID is 6 byte
@@ -23,7 +29,7 @@ class BinLogEvent(object):
 
     def dump(self):
         print("=== %s ===" % (self.__class__.__name__))
-        print("Date: %s" % (datetime.fromtimestamp(self.timestamp)
+        print("Date: %s" % (datetime.datetime.fromtimestamp(self.timestamp)
                             .isoformat()))
         print("Log position: %d" % self.packet.log_pos)
         print("Event size: %d" % (self.event_size))
@@ -36,6 +42,35 @@ class BinLogEvent(object):
         pass
 
 
+class GtidEvent(BinLogEvent):
+    """GTID change in binlog event
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(GtidEvent, self).__init__(from_packet, event_size, table_map,
+                                          ctl_connection, **kwargs)
+
+        self.commit_flag = byte2int(self.packet.read(1)) == 1
+        self.sid = self.packet.read(16)
+        self.gno = struct.unpack('<Q', self.packet.read(8))[0]
+
+    @property
+    def gtid(self):
+        """GTID = source_id:transaction_id
+        Eg: 3E11FA47-71CA-11E1-9E33-C80AA9429562:23
+        See: http://dev.mysql.com/doc/refman/5.6/en/replication-gtids-concepts.html"""
+        gtid = "%s%s%s%s-%s%s-%s%s-%s%s-%s%s%s%s%s%s" %\
+               tuple("{0:02x}".format(ord(c)) for c in self.sid)
+        gtid += ":%d" % self.gno
+        return gtid
+
+    def _dump(self):
+        print("Commit: %s" % self.commit_flag)
+        print("GTID_NEXT: %s" % self.gtid)
+
+    def __repr__(self):
+        return '<GtidEvent "%s">' % self.gtid
+
+
 class RotateEvent(BinLogEvent):
     """Change MySQL bin log file
 
@@ -43,9 +78,9 @@ class RotateEvent(BinLogEvent):
         position: Position inside next binlog
         next_binlog: Name of next binlog file
     """
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(RotateEvent, self).__init__(from_packet, event_size, table_map,
-                                          ctl_connection)
+                                          ctl_connection, **kwargs)
         self.position = struct.unpack('<Q', self.packet.read(8))[0]
         self.next_binlog = self.packet.read(event_size - 8).decode()
 
@@ -67,9 +102,9 @@ class XidEvent(BinLogEvent):
         xid: Transaction ID for 2PC
     """
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(XidEvent, self).__init__(from_packet, event_size, table_map,
-                                       ctl_connection)
+                                       ctl_connection, **kwargs)
         self.xid = struct.unpack('<Q', self.packet.read(8))[0]
 
     def _dump(self):
@@ -80,9 +115,9 @@ class XidEvent(BinLogEvent):
 class QueryEvent(BinLogEvent):
     '''This evenement is trigger when a query is run of the database.
     Only replicated queries are logged.'''
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(QueryEvent, self).__init__(from_packet, event_size, table_map,
-                                         ctl_connection)
+                                         ctl_connection, **kwargs)
 
         # Post-header
         self.slave_proxy_id = self.packet.read_uint32()
@@ -108,7 +143,7 @@ class QueryEvent(BinLogEvent):
 
 
 class NotImplementedEvent(BinLogEvent):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(NotImplementedEvent, self).__init__(
-            from_packet, event_size, table_map, ctl_connection)
+            from_packet, event_size, table_map, ctl_connection, **kwargs)
         self.packet.advance(event_size)

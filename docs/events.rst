@@ -1,6 +1,6 @@
-###################
+######
 Events
-###################
+######
 
 .. automodule:: pymysqlreplication.event
     :members:

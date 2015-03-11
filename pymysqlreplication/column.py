@@ -24,7 +24,10 @@ class Column(object):
         self.data["comment"] = column_schema["COLUMN_COMMENT"]
         self.data["unsigned"] = False
         self.data["type_is_bool"] = False
-        self.data["is_primary"] = column_schema["COLUMN_KEY"] == "PRI"
+        if column_schema["COLUMN_KEY"] == "PRI":
+            self.data["is_primary"] = True
+        else:
+            self.data["is_primary"] = False
 
         if column_schema["COLUMN_TYPE"].find("unsigned") != -1:
             self.data["unsigned"] = True
@@ -89,7 +92,7 @@ class Column(object):
         return self.data
 
     def __getattr__(self, item):
-        if item in self.data:
+        try:
             return self.data[item]
-        else:
+        except KeyError:
             raise AttributeError("{0} not found".format(item))

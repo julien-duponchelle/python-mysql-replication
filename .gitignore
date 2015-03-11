@@ -20,20 +20,25 @@ pip-log.txt
 .coverage
 .tox
 
-#Translations
+# Translations
 *.mo
 
 #Mr Developer
 .mr.developer.cfg
 
-#Doc
+# Doc
 _build
 
-#Vagrant
-.vagrant
-
-#Text Editor Backupfile 
+# Text Editor Backupfile
 *~
 
-#PyCharm
+# Intellij IDE
 .idea
+*.xml
+*.iml
+
+# Nose
+.noseids
+
+# Pyenv
+.python-version

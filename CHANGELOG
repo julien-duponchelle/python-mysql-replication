@@ -18,3 +18,18 @@
 * use NotImplementedEvent instead of raising an Exception
 * Python 3 fix
 * Add 2006 to Mysql expected error codes
+
+0.4 01/09/2014
+* Add primary column informations (thanks to Lx Lu)
+* Python 2.6 support (thanks to Darioush Jalalinasab)
+* Parse gtid events (thanks to Arthur Gautier)
+* Code cleanup (thanks to Bernardo Sulzbach)
+* Travis support
+
+0.4.1 01/09/2014
+* Fix missing commit for GTID in 0.4 release
+
+0.5 28/09/2014
+* Remove default server id
+* Performances improvements
+* Allow filter events by schema and tables

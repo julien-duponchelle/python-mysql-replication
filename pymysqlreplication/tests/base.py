@@ -4,20 +4,33 @@ import pymysql
 import unittest
 import copy
 from pymysqlreplication import BinLogStreamReader
+import os
+import sys
+
+(major, minor, _, _, _) = sys.version_info
+if (major, minor) < (2, 7):
+    import unittest2
+    base = unittest2.TestCase
+else:
+    base = unittest.TestCase
 
 
-class PyMySQLReplicationTestCase(unittest.TestCase):
-    """Test the module. Be carefull it will reset your MySQL server"""
-    database = {
-        "host": "localhost",
-        "user": "root",
-        "passwd": "",
-        "use_unicode": True,
-        "charset": "utf8",
-        "db": "pymysqlreplication_test"
-    }
+class PyMySQLReplicationTestCase(base):
+    def ignoredEvents(self):
+        return []
 
     def setUp(self):
+        self.database = {
+            "host": "localhost",
+            "user": "root",
+            "passwd": "",
+            "use_unicode": True,
+            "charset": "utf8",
+            "db": "pymysqlreplication_test"
+        }
+        if os.getenv("TRAVIS") is not None:
+            self.database["user"] = "travis"
+
         self.conn_control = None
         db = copy.copy(self.database)
         db["db"] = None
@@ -62,4 +75,5 @@ class PyMySQLReplicationTestCase(unittest.TestCase):
         self.execute("RESET MASTER")
         if self.stream is not None:
             self.stream.close()
-        self.stream = BinLogStreamReader(connection_settings=self.database)
+        self.stream = BinLogStreamReader(self.database, server_id=1024,
+                                         ignored_events=self.ignoredEvents())

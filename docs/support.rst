@@ -1,6 +1,6 @@
-########
+#######
 Support
-########
+#######
 
 You can get support and discuss about new features on:
 https://groups.google.com/d/forum/python-mysql-replication

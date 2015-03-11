@@ -1,6 +1,9 @@
 python-mysql-replication
 ========================
 
+<a href="https://travis-ci.org/noplay/python-mysql-replication"><img src="https://travis-ci.org/noplay/python-mysql-replication.svg?branch=master"></a>&nbsp;
+<a href="https://pypi.python.org/pypi/mysql-replication"><img src="http://img.shields.io/pypi/dm/mysql-replication.svg"></a>
+
 Pure Python Implementation of MySQL replication protocol build on top of PyMYSQL. This allow you to receive event like insert, update, delete with their datas and raw SQL queries.
 
 Use cases
@@ -16,6 +19,10 @@ Documentation
 ==============
 
 A work in progress documentation is available here: https://python-mysql-replication.readthedocs.org/en/latest/
+
+Instruction about building documentation is available here:
+https://python-mysql-replication.readthedocs.org/en/latest/developement.html
+
 
 Installation
 =============
@@ -40,17 +47,16 @@ replication log.
 
 The project is test with:
 * MySQL 5.5 and 5.6
-* Python 2.7
-* Python 3.2
+* Python >= 2.6.7
+* Python 3.3 and 3.4 (3.2 is not supported)
+* PyPy (really faster than the standard Python interpreter)
 
 It's not tested in real production situation.
 
 Limitations
 =============
 
-GEOMETRY field is not decoded you will get the raw data.
-
-Only [binlog_row_image=full](http://dev.mysql.com/doc/refman/5.6/en/replication-options-binary-log.html#sysvar_binlog_row_image) is supported (it's the default value).
+https://python-mysql-replication.readthedocs.org/en/latest/limitations.html
 
 Projects using this library
 ===========================
@@ -59,6 +65,8 @@ Projects using this library
 * Ditto: MySQL to MemSQL replicator https://github.com/memsql/ditto
 * ElasticMage: Full Magento integration with ElasticSearch https://github.com/ElasticMage/elasticmage
 * Cache buster: an automatic cache invalidation system https://github.com/rackerlabs/cache-busters
+* Zabbix collector for OpenTSDB https://github.com/OpenTSDB/tcollector/blob/master/collectors/0/zabbix_bridge.py
+* Meepo: Event sourcing and event broadcasting for datebases. https://github.com/eleme/meepo
 
 MySQL server settings
 =========================
@@ -244,19 +252,14 @@ Output will be:
 
 Tests
 ========
-<b>Be carefull</b> tests will reset the binary log of your MySQL server.
+When it's possible we have an unit test.
 
-Make sure you have the following configuration set in your mysql config file (usually my.cnf on development env):
+More information is available here:
+https://python-mysql-replication.readthedocs.org/en/latest/developement.html
 
-    log-bin=mysql-bin
-    server-id=1
-    binlog_do_db=pymysqlreplication_test
-    binlog-format    = row #Very important if you want to receive write, update and delete row events
-
-
-To run tests:
-
-    python setup.py test
+Changelog
+==========
+https://python-mysql-replication.readthedocs.org/en/latest/changelog.html
 
 Similar projects
 ==================
@@ -285,10 +288,14 @@ Other contributors:
 * Maralla Python 3.4 fix https://github.com/maralla
 * Daniel Gavrila more MySQL error codes https://github.com/danielduduta
 * Bernardo Sulzbach code cleanup https://github.com/mafagafo
+* Darioush Jalali Python 2.6 backport https://github.com/darioush
+* Arthur Gautier gtid https://github.com/baloo
+
+Thanks to GetResponse for their support
 
 Licence
 =======
-Copyright 2012 Julien Duponchelle
+Copyright 2012-2014 Julien Duponchelle
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

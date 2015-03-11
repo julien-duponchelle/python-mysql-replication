@@ -1,21 +1,23 @@
 # -*- coding: utf-8 -*-
 
 import copy
-import datetime
 import platform
 import unittest
 
 from decimal import Decimal
 
 from pymysqlreplication.tests import base
-from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
+from pymysqlreplication.event import *
 
 __all__ = ["TestDataType"]
 
 
 class TestDataType(base.PyMySQLReplicationTestCase):
+    def ignoredEvents(self):
+        return [GtidEvent]
+
     def create_and_insert_value(self, create_query, insert_query):
         self.execute(create_query)
         self.execute(insert_query)
@@ -132,16 +134,16 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         insert_query = "INSERT INTO test VALUES(1, TRUE)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["id"], 1)
-        self.assertEqual(type(event.rows[0]["values"]["test"]), type(True))
-        self.assertEqual(event.rows[0]["values"]["test"], True)
+        self.assertEqual(type(event.rows[0]["values"]["test"]), type(1))
+        self.assertEqual(event.rows[0]["values"]["test"], 1)
 
     def test_tiny_maps_to_boolean_false(self):
         create_query = "CREATE TABLE test (id TINYINT UNSIGNED NOT NULL, test BOOLEAN)"
         insert_query = "INSERT INTO test VALUES(1, FALSE)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["id"], 1)
-        self.assertEqual(type(event.rows[0]["values"]["test"]), type(True))
-        self.assertEqual(event.rows[0]["values"]["test"], False)
+        self.assertEqual(type(event.rows[0]["values"]["test"]), type(0))
+        self.assertEqual(event.rows[0]["values"]["test"], 0)
 
     def test_tiny_maps_to_none(self):
         create_query = "CREATE TABLE test (id TINYINT UNSIGNED NOT NULL, test BOOLEAN)"
@@ -249,7 +251,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], datetime.time(12, 33, 18))
 
     def test_zero_time(self):
-        create_query = "CREATE TABLE test (id INTEGER, test TIME NOT NULL);"
+        create_query = "CREATE TABLE test (id INTEGER, test TIME NOT NULL DEFAULT 0);"
         insert_query = "INSERT INTO test (id) VALUES(1)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], datetime.time(0,0))
@@ -261,7 +263,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7))
 
     def test_zero_datetime(self):
-        create_query = "CREATE TABLE test (id INTEGER, test DATETIME NOT NULL);"
+        create_query = "CREATE TABLE test (id INTEGER, test DATETIME NOT NULL DEFAULT 0);"
         insert_query = "INSERT INTO test (id) VALUES(1)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], None)
@@ -322,8 +324,8 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (test SET('a', 'ba', 'c'), test2 SET('a', 'ba', 'c')) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('ba,a,c', 'a,c')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], {'a', 'ba', 'c'})
-        self.assertEqual(event.rows[0]["values"]["test2"], { 'a', 'c'})
+        self.assertEqual(event.rows[0]["values"]["test"], set(('a', 'ba', 'c')))
+        self.assertEqual(event.rows[0]["values"]["test2"], set(('a', 'c')))
 
     def test_tiny_blob(self):
         create_query = "CREATE TABLE test (test TINYBLOB, test2 TINYTEXT) CHARACTER SET latin1 COLLATE latin1_bin;"
@@ -402,26 +404,26 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.connect_conn_control(db)
 
         if platform.python_version_tuple()[0] == "2":
-            str = unichr(233)
+            string = unichr(233)
         else:
-            str = "\u00e9"
+            string = "\u00e9"
 
         create_query = "CREATE TABLE test (test CHAR(12)) CHARACTER SET latin1 COLLATE latin1_bin;"
-        insert_query = b"INSERT INTO test VALUES('" + str.encode('latin-1') + b"');"
+        insert_query = b"INSERT INTO test VALUES('" + string.encode('latin-1') + b"');"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], str)
+        self.assertEqual(event.rows[0]["values"]["test"], string)
 
     def test_encoding_utf8(self):
         if platform.python_version_tuple()[0] == "2":
-            str = unichr(0x20ac)
+            string = unichr(0x20ac)
         else:
-            str = "\u20ac"
+            string = "\u20ac"
 
         create_query = "CREATE TABLE test (test CHAR(12)) CHARACTER SET utf8 COLLATE utf8_bin;"
-        insert_query = b"INSERT INTO test VALUES('" + str.encode('utf-8') + b"')"
+        insert_query = b"INSERT INTO test VALUES('" + string.encode('utf-8') + b"')"
 
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertMultiLineEqual(event.rows[0]["values"]["test"], str)
+        self.assertMultiLineEqual(event.rows[0]["values"]["test"], string)
 
 
 if __name__ == "__main__":

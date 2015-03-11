@@ -32,7 +32,7 @@ class BinLogPacketWrapper(object):
         constants.FORMAT_DESCRIPTION_EVENT: event.FormatDescriptionEvent,
         constants.XID_EVENT: event.XidEvent,
         constants.INTVAR_EVENT: event.NotImplementedEvent,
-        constants.GTID_LOG_EVENT: event.NotImplementedEvent,
+        constants.GTID_LOG_EVENT: event.GtidEvent,
         constants.STOP_EVENT: event.NotImplementedEvent,
         # row_event
         constants.UPDATE_ROWS_EVENT_V1: row_event.UpdateRowsEvent,
@@ -48,30 +48,35 @@ class BinLogPacketWrapper(object):
 
     }
 
-    def __init__(self, from_packet, table_map, ctl_connection, use_checksum):
-        if not from_packet.is_ok_packet():
-            raise ValueError(
-                "Cannot create %s object from invalid packet type" %
-                self.__class__.__name__)
-
+    def __init__(self, from_packet, table_map, ctl_connection, use_checksum,
+                 allowed_events,
+                 only_tables,
+                 only_schemas,
+                 freeze_schema):
         # -1 because we ignore the ok byte
         self.read_bytes = 0
         # Used when we want to override a value in the data buffer
         self.__data_buffer = b''
 
-        # Ok Value
         self.packet = from_packet
-        self.packet.advance(1)
         self.charset = ctl_connection.charset
 
+        # OK value
+        # timestamp
+        # event_type
+        # server_id
+        # log_pos
+        # flags
+        unpack = struct.unpack('<cIcIIIH', self.packet.read(20))
+
         # Header
-        self.timestamp = struct.unpack('<I', self.packet.read(4))[0]
-        self.event_type = byte2int(self.packet.read(1))
-        self.server_id = struct.unpack('<I', self.packet.read(4))[0]
-        self.event_size = struct.unpack('<I', self.packet.read(4))[0]
+        self.timestamp = unpack[1]
+        self.event_type = byte2int(unpack[2])
+        self.server_id = unpack[3]
+        self.event_size = unpack[4]
         # position of the next event
-        self.log_pos = struct.unpack('<I', self.packet.read(4))[0]
-        self.flags = struct.unpack('<H', self.packet.read(2))[0]
+        self.log_pos = unpack[5]
+        self.flags = unpack[6]
 
         # MySQL 5.6 and more if binlog-checksum = CRC32
         if use_checksum:
@@ -79,10 +84,18 @@ class BinLogPacketWrapper(object):
         else:
             event_size_without_header = self.event_size - 19
 
-        event_class = self.__event_map.get(self.event_type,
-            event.NotImplementedEvent)
+        self.event = None
+        event_class = self.__event_map.get(self.event_type, event.NotImplementedEvent)
+
+        if event_class not in allowed_events:
+            return
         self.event = event_class(self, event_size_without_header, table_map,
-                                 ctl_connection)
+                                 ctl_connection,
+                                 only_tables = only_tables,
+                                 only_schemas = only_schemas,
+                                 freeze_schema = freeze_schema)
+        if self.event._processed == False:
+            self.event = None
 
     def read(self, size):
         size = int(size)
