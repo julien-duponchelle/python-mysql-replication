@@ -141,8 +141,8 @@ class QueryEvent(BinLogEvent):
         print("Execution time: %d" % (self.execution_time))
         print("Query: %s" % (self.query))
 
-   @property
-   def query(self):
+    @property
+    def query(self):
 	retrun self.query
 
 
