@@ -143,7 +143,7 @@ class QueryEvent(BinLogEvent):
 
     @property
     def query(self):
-	retrun self.query
+	return self.query
 
 
 class NotImplementedEvent(BinLogEvent):
