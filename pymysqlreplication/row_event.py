@@ -384,11 +384,11 @@ class RowsEvent(BinLogEvent):
         while self.packet.read_bytes + 1 < self.event_size:
             self.__rows.append(self._fetch_one_row())
 
-    def __getattr__(self, name):
-        if name == "rows":
-            if self.__rows is None:
-                self._fetch_rows()
-            return self.__rows
+    @property
+    def rows(self):
+        if self.__rows is None:
+            self._fetch_rows()
+        return self.__rows
 
 
 class DeleteRowsEvent(RowsEvent):
