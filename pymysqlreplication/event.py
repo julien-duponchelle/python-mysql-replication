@@ -95,6 +95,10 @@ class FormatDescriptionEvent(BinLogEvent):
     pass
 
 
+class StopEvent(BinLogEvent):
+    pass
+
+
 class XidEvent(BinLogEvent):
     """A COMMIT event
 

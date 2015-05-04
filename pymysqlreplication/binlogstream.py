@@ -8,11 +8,11 @@ from pymysql.cursors import DictCursor
 from pymysql.util import int2byte
 
 from .packet import BinLogPacketWrapper
-from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
+from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT, STOP_EVENT
 from .gtid import GtidSet
 from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
-    XidEvent, GtidEvent, NotImplementedEvent)
+    XidEvent, GtidEvent, StopEvent, NotImplementedEvent)
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
 
@@ -292,6 +292,7 @@ class BinLogStreamReader(object):
             events = set((
                 QueryEvent,
                 RotateEvent,
+                StopEvent,
                 FormatDescriptionEvent,
                 XidEvent,
                 GtidEvent,
