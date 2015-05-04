@@ -33,7 +33,7 @@ class BinLogPacketWrapper(object):
         constants.XID_EVENT: event.XidEvent,
         constants.INTVAR_EVENT: event.NotImplementedEvent,
         constants.GTID_LOG_EVENT: event.GtidEvent,
-        constants.STOP_EVENT: event.NotImplementedEvent,
+        constants.STOP_EVENT: event.StopEvent,
         # row_event
         constants.UPDATE_ROWS_EVENT_V1: row_event.UpdateRowsEvent,
         constants.WRITE_ROWS_EVENT_V1: row_event.WriteRowsEvent,
