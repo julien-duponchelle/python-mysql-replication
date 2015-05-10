@@ -290,6 +290,11 @@ Other contributors:
 * Bernardo Sulzbach code cleanup https://github.com/mafagafo
 * Darioush Jalali Python 2.6 backport https://github.com/darioush
 * Arthur Gautier gtid https://github.com/baloo
+* Jasonz bug fixes https://github.com/jasonzzz
+* Bartek Ogryczak cleanup https://github.com/vartec
+* Wang, Xiaozhe cleanup https://github.com/chaoslawful
+* siddontang improvements https://github.com/siddontang
+* Cheng Chen Python 2.6 compatibility https://github.com/cccc1999
 
 Thanks to GetResponse for their support
 

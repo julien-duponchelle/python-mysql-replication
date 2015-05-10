@@ -33,3 +33,20 @@
 * Remove default server id
 * Performances improvements
 * Allow filter events by schema and tables
+
+0.6 10/05/2015
+* Prevent invalid table-map-entries to crash the whole app
+* Add support for Stop Event, update tests
+* Fix the order of binlog events, though we don't support them yet
+* Simplified RowsEvent.rows to be @property instead of __getattr__ hack
+* add binlog row minimal and noblob image support
+* remove six not being used.
+* misc code style improvements, mainly pep8
+* Update event.py to be compatible with python2.6.7
+* explicitly break reference cycle when closing binlogstreamreader
+* break reference loop using weakref to prevent memory-leaking
+* Freeze schema.
+* Freeze table schema
+* Avoid named parameters passed to packet because it's slower
+* Filter table and schema event
+* PyPy support
