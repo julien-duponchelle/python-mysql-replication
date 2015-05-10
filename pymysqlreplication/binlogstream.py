@@ -28,6 +28,7 @@ except ImportError:
 MYSQL_EXPECTED_ERROR_CODES = [2013, 2006]
 
 
+
 class BinLogStreamReader(object):
     """Connect to replication stream and read event
     """
