@@ -259,7 +259,7 @@ https://python-mysql-replication.readthedocs.org/en/latest/developement.html
 
 Changelog
 ==========
-https://python-mysql-replication.readthedocs.org/en/latest/changelog.html
+https://github.com/noplay/python-mysql-replication/blob/master/CHANGELOG
 
 Similar projects
 ==================
