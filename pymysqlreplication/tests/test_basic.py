@@ -14,9 +14,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         return [GtidEvent]
 
     def test_allowed_event_list(self):
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 11)
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 10)
-        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 10)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 13)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 12)
+        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 12)
         self.assertEqual(len(self.stream._allowed_event_list([RotateEvent], None, False)), 1)
 
     def test_read_query_event(self):
@@ -63,6 +63,32 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         # Rotate event
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
 
+    """ `test_load_query_event` needs statement-based binlog
+    def test_load_query_event(self):
+        # prepare csv
+        with open("/tmp/test_load_query.csv", "w") as fp:
+            fp.write("1,aaa\n2,bbb\n3,ccc\n4,ddd\n")
+
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        query = "LOAD DATA INFILE '/tmp/test_load_query.csv' INTO TABLE test \
+                FIELDS TERMINATED BY ',' \
+                ENCLOSED BY '\"' \
+                LINES TERMINATED BY '\r\n'"
+        self.execute(query)
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        # create table
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        # begin
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        self.assertIsInstance(self.stream.fetchone(), BeginLoadQueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), ExecuteLoadQueryEvent)
+
+        self.assertIsInstance(self.stream.fetchone(), XidEvent)
+    """
 
     def test_connection_stream_lost_event(self):
         self.stream.close()

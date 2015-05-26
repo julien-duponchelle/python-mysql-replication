@@ -147,6 +147,72 @@ class QueryEvent(BinLogEvent):
         print("Query: %s" % (self.query))
 
 
+class BeginLoadQueryEvent(BinLogEvent):
+    """
+
+    Attributes:
+        file_id
+        block-data
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(BeginLoadQueryEvent, self).__init__(from_packet, event_size, table_map,
+                                                     ctl_connection, **kwargs)
+
+        # Payload
+        self.file_id = self.packet.read_uint32()
+        self.block_data = self.packet.read(event_size - 4)
+
+    def _dump(self):
+        super(BeginLoadQueryEvent, self)._dump()
+        print("File id: %d" % (self.file_id))
+        print("Block data: %s" % (self.block_data))
+
+
+class ExecuteLoadQueryEvent(BinLogEvent):
+    """
+
+    Attributes:
+        slave_proxy_id
+        execution_time
+        schema_length
+        error_code
+        status_vars_length
+
+        file_id
+        start_pos
+        end_pos
+        dup_handling_flags
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(ExecuteLoadQueryEvent, self).__init__(from_packet, event_size, table_map,
+                                                        ctl_connection, **kwargs)
+
+        # Post-header
+        self.slave_proxy_id = self.packet.read_uint32()
+        self.execution_time = self.packet.read_uint32()
+        self.schema_length = self.packet.read_uint8()
+        self.error_code = self.packet.read_uint16()
+        self.status_vars_length = self.packet.read_uint16()
+
+        # Payload
+        self.file_id = self.packet.read_uint32()
+        self.start_pos = self.packet.read_uint32()
+        self.end_pos = self.packet.read_uint32()
+        self.dup_handling_flags = self.packet.read_uint8()
+
+    def _dump(self):
+        super(ExecuteLoadQueryEvent, self)._dump()
+        print("Slave proxy id: %d" % (self.slave_proxy_id))
+        print("Execution time: %d" % (self.execution_time))
+        print("Schema length: %d" % (self.schema_length))
+        print("Error code: %d" % (self.error_code))
+        print("Status vars length: %d" % (self.status_vars_length))
+        print("File id: %d" % (self.file_id))
+        print("Start pos: %d" % (self.start_pos))
+        print("End pos: %d" % (self.end_pos))
+        print("Dup handling flags: %d" % (self.dup_handling_flags))
+
+
 class NotImplementedEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(NotImplementedEvent, self).__init__(
