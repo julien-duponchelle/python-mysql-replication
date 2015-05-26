@@ -31,7 +31,7 @@ Installation
 pip install mysql-replication
 ```
 
-Mailling List
+Mailing List
 ==============
 
 You can get support and discuss about new features on:
@@ -252,7 +252,7 @@ Output will be:
 
 Tests
 ========
-When it's possible we have an unit test.
+When it's possible we have a unit test.
 
 More information is available here:
 https://python-mysql-replication.readthedocs.org/en/latest/developement.html
@@ -287,7 +287,7 @@ Other contributors:
 * lifei NotImplementedEvent https://github.com/lifei
 * Maralla Python 3.4 fix https://github.com/maralla
 * Daniel Gavrila more MySQL error codes https://github.com/danielduduta
-* Bernardo Sulzbach code cleanup https://github.com/mafagafo
+* Bernardo Sulzbach code cleanup https://github.com/mafagafogigante
 * Darioush Jalali Python 2.6 backport https://github.com/darioush
 * Arthur Gautier gtid https://github.com/baloo
 * Jasonz bug fixes https://github.com/jasonzzz
