@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import unittest
 
 from pymysqlreplication.tests import base
 from pymysqlreplication import BinLogStreamReader
@@ -542,6 +543,11 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
 
 class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super(TestGtidBinLogStreamReader, self).setUp()
+        if not self.supportsGTID:
+            raise unittest.SkipTest("database does not support GTID, skipping GTID tests")
+
     def test_read_query_event(self):
         query = "CREATE TABLE test (id INT NOT NULL, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
