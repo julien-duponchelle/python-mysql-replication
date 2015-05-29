@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import time
+
 from pymysqlreplication.tests import base
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.event import *
@@ -403,6 +405,26 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), XidEvent)
 
         self.assertGreater(self.stream.log_pos, 0)
+
+    def test_skip_to_timestamp(self):
+        self.stream.close()
+        query = "CREATE TABLE test_1 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        time.sleep(1)
+        query = "SELECT UNIX_TIMESTAMP();"
+        timestamp = self.execute(query).fetchone()[0]
+        query2 = "CREATE TABLE test_2 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query2)
+
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            skip_to_timestamp=timestamp,
+            ignored_events=self.ignoredEvents(),
+            )
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, QueryEvent)
+        self.assertEqual(event.query, query2)
 
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
