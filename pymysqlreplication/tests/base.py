@@ -55,6 +55,12 @@ class PyMySQLReplicationTestCase(base):
             return True
         return False
 
+    @property
+    def supportsGTID(self):
+        if not self.isMySQL56AndMore():
+            return False
+        return self.execute("SELECT @@global.gtid_mode ").fetchone()[0] == "ON"
+
     def connect_conn_control(self, db):
         if self.conn_control is not None:
             self.conn_control.close()
