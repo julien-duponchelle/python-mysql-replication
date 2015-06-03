@@ -40,7 +40,7 @@ class BinLogStreamReader(object):
                  filter_non_implemented_events=True,
                  ignored_events=None, auto_position=None,
                  only_tables=None, only_schemas=None,
-                 freeze_schema=False):
+                 freeze_schema=False, skip_to_timestamp=None):
         """
         Attributes:
             resume_stream: Start for event from position or the latest event of
@@ -54,6 +54,7 @@ class BinLogStreamReader(object):
             only_tables: An array with the tables you want to watch
             only_schemas: An array with the schemas you want to watch
             freeze_schema: If true do not support ALTER TABLE. It's faster.
+            skip_to_timestamp: Ignore all events until reaching specified timestamp.
         """
         self.__connection_settings = connection_settings
         self.__connection_settings["charset"] = "utf8"
@@ -82,6 +83,7 @@ class BinLogStreamReader(object):
         self.log_pos = log_pos
         self.log_file = log_file
         self.auto_position = auto_position
+        self.skip_to_timestamp = skip_to_timestamp
 
     def close(self):
         if self.__connected_stream:
@@ -258,6 +260,9 @@ class BinLogStreamReader(object):
                                                self.__only_tables,
                                                self.__only_schemas,
                                                self.__freeze_schema)
+
+            if self.skip_to_timestamp and binlog_event.timestamp < self.skip_to_timestamp:
+                continue
 
             if binlog_event.event_type == TABLE_MAP_EVENT and \
                     binlog_event.event is not None:
