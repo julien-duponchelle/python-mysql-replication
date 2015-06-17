@@ -547,7 +547,20 @@ class TableMapEvent(BinLogEvent):
             self.packet.read_length_coded_binary()
             for i in range(0, len(column_types)):
                 column_type = column_types[i]
-                column_schema = self.column_schemas[i]
+                try:
+                    column_schema = self.column_schemas[i]
+                except IndexError:
+                    # this a dirty hack to prevent row evens containing columns which have been dropped prior
+                    # to pymysqlreplication start, but replayed from binlog from blowing up the service.
+                    # TODO: this does not address the issue if the column other than the last one is dropped
+                    column_schema = {
+                        'COLUMN_NAME': '__dropped_col_{i}__'.format(i=i),
+                        'COLLATION_NAME': None,
+                        'CHARACTER_SET_NAME': None,
+                        'COLUMN_COMMENT': None,
+                        'COLUMN_TYPE': 'BLOB',  # we don't know what it is, so let's not do anything with it.
+                        'COLUMN_KEY': '',
+                    }
                 col = Column(byte2int(column_type), column_schema, from_packet)
                 self.columns.append(col)
 
