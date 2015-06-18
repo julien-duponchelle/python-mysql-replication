@@ -563,6 +563,28 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertEqual([], event.rows)
 
+    def test_drop_column(self):
+        self.stream.close()
+        self.execute("CREATE TABLE test_drop_column (id INTEGER(11), data VARCHAR(50))")
+        self.execute("INSERT INTO test_drop_column VALUES (1, 'A value')")
+        self.execute("COMMIT")
+        self.execute("ALTER TABLE test_drop_column DROP COLUMN data")
+        self.execute("INSERT INTO test_drop_column VALUES (2)")
+        self.execute("COMMIT")
+
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(WriteRowsEvent,),
+            )
+        try:
+            self.stream.fetchone()  # insert with two values
+            self.stream.fetchone()  # insert with one value
+        except Exception as e:
+            self.fail("raised unexpected exception: {exception}".format(exception=e))
+        finally:
+            self.resetBinLog()
+
 
 class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def setUp(self):
