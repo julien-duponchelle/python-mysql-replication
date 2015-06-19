@@ -585,6 +585,33 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         finally:
             self.resetBinLog()
 
+    @unittest.expectedFailure
+    def test_alter_column(self):
+        self.stream.close()
+        self.execute("CREATE TABLE test_alter_column (id INTEGER(11), data VARCHAR(50))")
+        self.execute("INSERT INTO test_alter_column VALUES (1, 'A value')")
+        self.execute("COMMIT")
+        # this is a problem only when column is added in position other than at the end
+        self.execute("ALTER TABLE test_alter_column ADD COLUMN another_data VARCHAR(50) AFTER id")
+        self.execute("INSERT INTO test_alter_column VALUES (2, 'Another value', 'A value')")
+        self.execute("COMMIT")
+
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(WriteRowsEvent,),
+            )
+        event = self.stream.fetchone()  # insert with two values
+        # both of these asserts fail because of issue underlying proble described in issue #118
+        # because it got table schema info after the alter table, it wrongly assumes the second
+        # column of the first insert is 'another_data'
+        # ER: {'id': 1, 'data': 'A value'}
+        # AR: {'id': 1, 'another_data': 'A value'}
+        self.assertIn("data", event.rows[0]["values"])
+        self.assertNot("another_data", event.rows[0]["values"])
+        self.assertEqual(event.rows[0]["values"]["data"], 'A value')
+        self.stream.fetchone()  # insert with three values
+
 
 class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def setUp(self):
