@@ -50,3 +50,9 @@
 * Avoid named parameters passed to packet because it's slower
 * Filter table and schema event
 * PyPy support
+
+0.7 21/06/2015
+* Partial fix for dropped columns blowing up replication when replaying binlog with past events
+* Skipping GTID tests on DBs not set up to support GTID
+* Adding support for skipping the binlog until reaching specified timestamp.
+* Add support for BeginLoadQueryEvent and ExecuteLoadQueryEvent
