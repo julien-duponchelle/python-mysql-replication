@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import pymysql
-import unittest
 import copy
 from pymysqlreplication import BinLogStreamReader
 import os
 import sys
 
-(major, minor, _, _, _) = sys.version_info
-if (major, minor) < (2, 7):
-    import unittest2
-    base = unittest2.TestCase
+if sys.version_info < (2, 7):
+    import unittest2 as unittest
 else:
-    base = unittest.TestCase
+    import unittest
+
+base = unittest.TestCase
 
 
 class PyMySQLReplicationTestCase(base):
