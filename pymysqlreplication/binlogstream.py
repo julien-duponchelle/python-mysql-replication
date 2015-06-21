@@ -49,7 +49,7 @@ class BinLogStreamReader(object):
             only_events: Array of allowed events
             ignored_events: Array of ignored events
             log_file: Set replication start log file
-            log_pos: Set replication start log pos
+            log_pos: Set replication start log pos (resume_stream should be true)
             auto_position: Use master_auto_position gtid to set position
             only_tables: An array with the tables you want to watch
             only_schemas: An array with the schemas you want to watch
