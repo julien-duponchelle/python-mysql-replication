@@ -83,8 +83,8 @@ class Column(object):
         return not self.__eq__(other)
 
     def serializable_data(self):
-        return dict((k, v) for (k, v) in self.__dict__.items() if not k.startswith('_'))
+        return self.data
 
     @property
     def data(self):
-        return self.serializable_data()
+        return dict((k, v) for (k, v) in self.__dict__.items() if not k.startswith('_'))
