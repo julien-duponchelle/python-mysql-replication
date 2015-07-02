@@ -244,6 +244,7 @@ class BinLogStreamReader(object):
             except pymysql.OperationalError as error:
                 code, message = error.args
                 if code in MYSQL_EXPECTED_ERROR_CODES:
+                    self._stream_connection.close()
                     self.__connected_stream = False
                     continue
 
