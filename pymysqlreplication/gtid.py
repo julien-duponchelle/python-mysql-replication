@@ -10,7 +10,7 @@ class Gtid(object):
     def parse_interval(interval):
         m = re.search('^([0-9]+)(?:-([0-9]+))?$', interval)
         if not m:
-            raise ValueError('GTID format is incorrect')
+            raise ValueError('GTID format is incorrect: %r' % (interval, ))
         if not m.group(2):
             return (int(m.group(1)))
         else:
@@ -21,7 +21,7 @@ class Gtid(object):
     def parse(gtid):
         m = re.search('^([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})((?::[0-9-]+)+)$', gtid)
         if not m:
-            raise ValueError('GTID format is incorrect')
+            raise ValueError('GTID format is incorrect: %r' % (gtid, ))
 
         sid = m.group(1)
         intervals = m.group(2)
