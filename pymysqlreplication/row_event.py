@@ -550,7 +550,7 @@ class TableMapEvent(BinLogEvent):
                 try:
                     column_schema = self.column_schemas[i]
                 except IndexError:
-                    # this a dirty hack to prevent row evens containing columns which have been dropped prior
+                    # this a dirty hack to prevent row events containing columns which have been dropped prior
                     # to pymysqlreplication start, but replayed from binlog from blowing up the service.
                     # TODO: this does not address the issue if the column other than the last one is dropped
                     column_schema = {
