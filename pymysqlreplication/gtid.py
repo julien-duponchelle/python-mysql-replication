@@ -88,7 +88,7 @@ class GtidSet(object):
             self.gtids = [Gtid(x) for x in gtid_set.split(',')]
 
     def __str__(self):
-        return ','.join(repr(x) for x in self.gtids)
+        return ','.join(str(x) for x in self.gtids)
 
     def __repr__(self):
         return '<GtidSet "%s"' % ','.join(repr(x) for x in self.gtids)
