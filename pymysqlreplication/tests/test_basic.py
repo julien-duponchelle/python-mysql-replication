@@ -8,6 +8,7 @@ else:
 
 from pymysqlreplication.tests import base
 from pymysqlreplication import BinLogStreamReader
+from pymysqlreplication.gtid import GtidSet
 from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
@@ -694,6 +695,15 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
 
         self.assertEqual(event.query, 'CREATE TABLE test2 (id INT NOT NULL, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))');
+
+
+class TestGtidRepresentation(unittest.TestCase):
+    def test_gtidset_representation(self):
+        set_repr = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56,' \
+                   '4350f323-7565-4e59-8763-4b1b83a0ce0e:1-20'
+
+        myset = GtidSet(set_repr)
+        self.assertEqual(str(myset), set_repr)
 
 
 if __name__ == "__main__":
