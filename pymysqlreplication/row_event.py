@@ -252,11 +252,10 @@ class RowsEvent(BinLogEvent):
             return None
 
         year = (time & ((1 << 15) - 1) << 9) >> 9
-        if year == 0:
-            return None
-
         month = (time & ((1 << 4) - 1) << 5) >> 5
         day = (time & ((1 << 5) - 1))
+        if year == 0 or month == 0 or day == 0:
+            return None
 
         date = datetime.date(
             year=year,
