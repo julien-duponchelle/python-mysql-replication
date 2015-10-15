@@ -67,6 +67,8 @@ Projects using this library
 * Cache buster: an automatic cache invalidation system https://github.com/rackerlabs/cache-busters
 * Zabbix collector for OpenTSDB https://github.com/OpenTSDB/tcollector/blob/master/collectors/0/zabbix_bridge.py
 * Meepo: Event sourcing and event broadcasting for datebases. https://github.com/eleme/meepo
+* Python MySQL Replication Blinker: This package read events from MySQL binlog and send to blinker's signal. https://github.com/tarzanjw/python-mysql-replication-blinker
+* aiomysql_replication: Fork supporting asyncio https://github.com/jettify/aiomysql_replication
 
 MySQL server settings
 =========================
@@ -265,6 +267,8 @@ Similar projects
 ==================
 * Kodoma: Ruby-binlog based MySQL replication listener https://github.com/y310/kodama
 * MySQL Hadoop Applier: C++ version http://dev.mysql.com/tech-resources/articles/mysql-hadoop-applier.html
+* Java: https://github.com/shyiko/mysql-binlog-connector-java
+* GO: https://github.com/siddontang/go-mysql
 
 Special thanks
 ================
