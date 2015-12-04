@@ -249,6 +249,7 @@ class BinLogStreamReader(object):
                     continue
 
             if pkt.is_eof_packet():
+                self.close()
                 return None
 
             if not pkt.is_ok_packet():
