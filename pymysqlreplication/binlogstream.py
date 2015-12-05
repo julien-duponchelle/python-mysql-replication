@@ -57,7 +57,8 @@ class BinLogStreamReader(object):
             skip_to_timestamp: Ignore all events until reaching specified timestamp.
         """
         self.__connection_settings = connection_settings
-        self.__connection_settings["charset"] = "utf8"
+        if not connection_settings.get("charset"):
+            self.__connection_settings["charset"] = "utf8"
 
         self.__connected_stream = False
         self.__connected_ctl = False
