@@ -42,16 +42,15 @@ https://groups.google.com/d/forum/python-mysql-replication
 Project status
 ================
 
-The current project is a proof of concept of what you can do with the MySQL
-replication log.
-
 The project is test with:
 * MySQL 5.5 and 5.6
 * Python >= 2.6
 * Python 3.3 and 3.4 (3.2 is not supported)
 * PyPy (really faster than the standard Python interpreter)
 
-It's not tested in real production situation.
+The project is used in production for critical stuff in some
+medium internet corporations. But all use case as not
+been perfectly test in the real world.
 
 Limitations
 =============
@@ -299,6 +298,10 @@ Other contributors:
 * Wang, Xiaozhe cleanup https://github.com/chaoslawful
 * siddontang improvements https://github.com/siddontang
 * Cheng Chen Python 2.6 compatibility https://github.com/cccc1999
+* Jffifa utf8mb4 compatibility https://github.com/jffifa
+* Romuald Brunet bug fixes https://github.com/romuald
+* Cédric Hourcade Don't fail on incomplete dates https://github.com/hc
+* Giacomo Lozito Explicit close stream connection on exception https://github.com/giacomolozito
 
 Thanks to GetResponse for their support
 
