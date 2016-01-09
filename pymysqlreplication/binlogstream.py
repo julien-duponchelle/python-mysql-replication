@@ -113,7 +113,10 @@ class BinLogStreamReader(object):
 
         if result is None:
             return False
-        var, value = result[:2]
+        if "DictCursor" in repr(self.__connection_settings["cursorclass"]):
+            value = result["Value"]
+        else:
+            var, value = result[:2]
         if value == 'NONE':
             return False
         return True
@@ -140,7 +143,10 @@ class BinLogStreamReader(object):
             if self.log_file is None or self.log_pos is None:
                 cur = self._stream_connection.cursor()
                 cur.execute("SHOW MASTER STATUS")
-                self.log_file, self.log_pos = cur.fetchone()[:2]
+                if "DictCursor" in repr(self.__connection_settings["cursorclass"]):
+                    self.log_file, self.log_pos = data["File"], data["Position"]
+                else:
+                    self.log_file, self.log_pos = cur.fetchone()[:2]
                 cur.close()
 
             prelude = struct.pack('<i', len(self.log_file) + 11) \
