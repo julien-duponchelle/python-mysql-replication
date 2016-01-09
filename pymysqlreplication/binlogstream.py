@@ -113,7 +113,8 @@ class BinLogStreamReader(object):
 
         if result is None:
             return False
-        if "DictCursor" in repr(self.__connection_settings["cursorclass"]):
+        if ("cursorclass" in self.__connection_settings) and \
+           ("DictCursor" in repr(self.__connection_settings["cursorclass"])):
             value = result["Value"]
         else:
             var, value = result[:2]
@@ -143,7 +144,8 @@ class BinLogStreamReader(object):
             if self.log_file is None or self.log_pos is None:
                 cur = self._stream_connection.cursor()
                 cur.execute("SHOW MASTER STATUS")
-                if "DictCursor" in repr(self.__connection_settings["cursorclass"]):
+                if ("cursorclass" in self.__connection_settings) and \
+                   ("DictCursor" in repr(self.__connection_settings["cursorclass"])):
                     self.log_file, self.log_pos = data["File"], data["Position"]
                 else:
                     self.log_file, self.log_pos = cur.fetchone()[:2]
