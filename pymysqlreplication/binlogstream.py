@@ -113,8 +113,7 @@ class BinLogStreamReader(object):
 
         if result is None:
             return False
-        if ("cursorclass" in self.__connection_settings) and \
-           ("DictCursor" in repr(self.__connection_settings["cursorclass"])):
+        if type(result) == type({}):
             value = result["Value"]
         else:
             var, value = result[:2]
@@ -144,8 +143,7 @@ class BinLogStreamReader(object):
             if self.log_file is None or self.log_pos is None:
                 cur = self._stream_connection.cursor()
                 cur.execute("SHOW MASTER STATUS")
-                if ("cursorclass" in self.__connection_settings) and \
-                   ("DictCursor" in repr(self.__connection_settings["cursorclass"])):
+                if type(data) == type({}):
                     self.log_file, self.log_pos = data["File"], data["Position"]
                 else:
                     self.log_file, self.log_pos = cur.fetchone()[:2]
