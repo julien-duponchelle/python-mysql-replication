@@ -31,7 +31,7 @@ class BinLogPacketWrapper(object):
         constants.ROTATE_EVENT: event.RotateEvent,
         constants.FORMAT_DESCRIPTION_EVENT: event.FormatDescriptionEvent,
         constants.XID_EVENT: event.XidEvent,
-        constants.INTVAR_EVENT: event.NotImplementedEvent,
+        constants.INTVAR_EVENT: event.IntvarEvent,
         constants.GTID_LOG_EVENT: event.GtidEvent,
         constants.STOP_EVENT: event.StopEvent,
         constants.BEGIN_LOAD_QUERY_EVENT: event.BeginLoadQueryEvent,
