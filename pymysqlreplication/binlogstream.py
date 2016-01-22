@@ -226,6 +226,7 @@ class BinLogStreamReader(object):
             self._stream_connection.wfile.flush()
         else:
             self._stream_connection._write_bytes(prelude)
+            self._stream_connection._next_seq_id = 1
         self.__connected_stream = True
 
     def fetchone(self):
