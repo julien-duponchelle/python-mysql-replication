@@ -128,7 +128,7 @@ class BinLogStreamReader(object):
                  ignored_events=None, auto_position=None,
                  only_tables=None, only_schemas=None,
                  freeze_schema=False, skip_to_timestamp=None,
-                 report_slave=None):
+                 report_slave=None, slave_uuid=None):
         """
         Attributes:
             resume_stream: Start for event from position or the latest event of
@@ -144,6 +144,7 @@ class BinLogStreamReader(object):
             freeze_schema: If true do not support ALTER TABLE. It's faster.
             skip_to_timestamp: Ignore all events until reaching specified timestamp.
             report_slave: Report slave in SHOW SLAVE HOSTS.
+            slave_uuid: Report slave_uuid in SHOW SLAVE HOSTS.
         """
         self.__connection_settings = connection_settings
         self.__connection_settings["charset"] = "utf8"
@@ -176,6 +177,7 @@ class BinLogStreamReader(object):
 
         if report_slave:
             self.report_slave = ReportSlave(report_slave)
+        self.slave_uuid = slave_uuid
 
     def close(self):
         if self.__connected_stream:
@@ -239,6 +241,11 @@ class BinLogStreamReader(object):
         if self.__use_checksum:
             cur = self._stream_connection.cursor()
             cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")
+            cur.close()
+
+        if self.slave_uuid:
+            cur = self._stream_connection.cursor()
+            cur.execute("set @slave_uuid= '%s'" % self.slave_uuid)
             cur.close()
 
         self._register_slave()
