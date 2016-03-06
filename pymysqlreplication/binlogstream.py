@@ -48,16 +48,22 @@ class ReportSlave(object):
                    if tuple it will be used as (hostname, user, password, port)
         """
 
-        if isinstance(value, tuple):
-            l = len(value)
-            if l > 1:
+        if isinstance(value, (tuple, list)):
+            try:
                 self.hostname = value[0]
-            if l > 2:
                 self.username = value[1]
-            if l > 3:
                 self.password = value[2]
-            if l > 4:
                 self.port = int(value[3])
+            except IndexError:
+                pass
+        elif isinstance(value, dict):
+            try:
+                self.hostname = value['hostname']
+                self.username = value['username']
+                self.password = value['password']
+                self.port = int(value['port'])
+            except KeyError:
+                pass
         else:
             self.hostname = value
 
