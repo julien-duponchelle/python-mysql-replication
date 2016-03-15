@@ -57,13 +57,11 @@ class ReportSlave(object):
             except IndexError:
                 pass
         elif isinstance(value, dict):
-            try:
-                self.hostname = value['hostname']
-                self.username = value['username']
-                self.password = value['password']
-                self.port = int(value['port'])
-            except KeyError:
-                pass
+            for key in ['hostname', 'username', 'password', 'port']:
+                try:
+                    setattr(self, key, value[key])
+                except KeyError:
+                    pass
         else:
             self.hostname = value
 
