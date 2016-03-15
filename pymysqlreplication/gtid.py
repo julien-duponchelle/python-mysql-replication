@@ -85,7 +85,7 @@ class GtidSet(object):
         if not gtid_set:
             self.gtids = []
         else:
-            self.gtids = [Gtid(x) for x in gtid_set.split(',')]
+            self.gtids = [Gtid(x.strip(' \n')) for x in gtid_set.split(',')]
 
     def __str__(self):
         return ','.join(str(x) for x in self.gtids)
