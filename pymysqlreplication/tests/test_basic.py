@@ -32,7 +32,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         self.assertEqual(event.position, 4)
-        self.assertEqual(event.next_binlog, "mysql-bin.000001")
+        self.assertEqual(event.next_binlog, self.bin_log_basename() + ".000001")
         self.assertIsInstance(event, RotateEvent)
 
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
@@ -47,7 +47,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         self.assertEqual(event.position, 4)
-        self.assertEqual(event.next_binlog, "mysql-bin.000001")
+        self.assertEqual(event.next_binlog, self.bin_log_basename() + ".000001")
         self.assertIsInstance(event, RotateEvent)
 
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
@@ -146,6 +146,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
     def test_filtering_table_event(self):
         self.stream.close()
+        self.assertEqual(self.bin_log_format(), "ROW")
         self.stream = BinLogStreamReader(
             self.database,
             server_id=1024,
