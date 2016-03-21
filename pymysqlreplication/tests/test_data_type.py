@@ -194,6 +194,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     def test_timestamp_mysql56(self):
         if not self.isMySQL56AndMore():
             self.skipTest("Not supported in this version of MySQL")
+        self.set_sql_mode()
         create_query = '''CREATE TABLE test (test0 TIMESTAMP(0),
             test1 TIMESTAMP(1),
             test2 TIMESTAMP(2),
@@ -249,6 +250,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test2"], None)
 
     def test_zero_month(self):
+        self.set_sql_mode()
         create_query = "CREATE TABLE test (id INTEGER, test DATE, test2 DATE);"
         insert_query = "INSERT INTO test (id, test2) VALUES(1, '2015-00-21')"
         event = self.create_and_insert_value(create_query, insert_query)
@@ -256,6 +258,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test2"], None)
 
     def test_zero_day(self):
+        self.set_sql_mode()
         create_query = "CREATE TABLE test (id INTEGER, test DATE, test2 DATE);"
         insert_query = "INSERT INTO test (id, test2) VALUES(1, '2015-05-00')"
         event = self.create_and_insert_value(create_query, insert_query)
@@ -281,18 +284,23 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], datetime.datetime(1984, 12, 3, 12, 33, 7))
 
     def test_zero_datetime(self):
+        self.set_sql_mode()
         create_query = "CREATE TABLE test (id INTEGER, test DATETIME NOT NULL DEFAULT 0);"
         insert_query = "INSERT INTO test (id) VALUES(1)"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], None)
 
     def test_broken_datetime(self):
+        self.set_sql_mode()
         create_query = "CREATE TABLE test (test DATETIME NOT NULL);"
         insert_query = "INSERT INTO test VALUES('2013-00-00 00:00:00')"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], None)
 
     def test_year(self):
+        if self.isMySQL57():
+            # https://dev.mysql.com/doc/refman/5.7/en/migrating-to-year4.html
+            self.skipTest("YEAR(2) is unsupported in mysql 5.7")
         create_query = "CREATE TABLE test (a YEAR(4), b YEAR(2))"
         insert_query = "INSERT INTO test VALUES(1984, 1984)"
         event = self.create_and_insert_value(create_query, insert_query)

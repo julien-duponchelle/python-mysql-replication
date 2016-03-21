@@ -23,6 +23,7 @@ class PyMySQLReplicationTestCase(base):
             "host": "localhost",
             "user": "root",
             "passwd": "",
+            "port": 3306,
             "use_unicode": True,
             "charset": "utf8",
             "db": "pymysqlreplication_test"
@@ -54,6 +55,10 @@ class PyMySQLReplicationTestCase(base):
             return True
         return False
 
+    def isMySQL57(self):
+        version = float(self.getMySQLVersion().rsplit('.', 1)[0])
+        return version == 5.7
+
     @property
     def supportsGTID(self):
         if not self.isMySQL56AndMore():
@@ -82,3 +87,21 @@ class PyMySQLReplicationTestCase(base):
             self.stream.close()
         self.stream = BinLogStreamReader(self.database, server_id=1024,
                                          ignored_events=self.ignoredEvents())
+
+    def set_sql_mode(self):
+        """set sql_mode to test with same sql_mode (mysql 5.7 sql_mode default is changed)"""
+        version = float(self.getMySQLVersion().rsplit('.', 1)[0])
+        if version == 5.7:
+            self.execute("set @@sql_mode='NO_ENGINE_SUBSTITUTION'")
+
+    def bin_log_format(self):
+        query = "select @@binlog_format"
+        cursor = self.execute(query)
+        result = cursor.fetchone()
+        return result[0]
+
+    def bin_log_basename(self):
+        cursor = self.execute('select @@log_bin_basename')
+        bin_log_basename = cursor.fetchone()[0]
+        bin_log_basename = bin_log_basename.split("/")[-1]
+        return bin_log_basename
