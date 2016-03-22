@@ -96,7 +96,7 @@ from pymysqlreplication import BinLogStreamReader
 
 mysql_settings = {'host': '127.0.0.1', 'port': 3306, 'user': 'root', 'passwd': ''}
 
-stream = BinLogStreamReader(connection_settings = mysql_settings)
+stream = BinLogStreamReader(connection_settings = mysql_settings, server_id=2)
 
 for binlogevent in stream:
     binlogevent.dump()
@@ -322,5 +322,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
-
