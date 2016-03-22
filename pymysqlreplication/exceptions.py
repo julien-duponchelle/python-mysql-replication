@@ -1,0 +1,2 @@
+class TableMetadataUnavailableError(Exception):
+    pass

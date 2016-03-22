@@ -35,7 +35,7 @@ class BinLogStreamReader(object):
     """Connect to replication stream and read event
     """
 
-    def __init__(self, connection_settings, server_id, resume_stream=False,
+    def __init__(self, connection_settings, server_id, ctl_connection_settings=None, resume_stream=False,
                  blocking=False, only_events=None, log_file=None, log_pos=None,
                  filter_non_implemented_events=True,
                  ignored_events=None, auto_position=None,
@@ -43,6 +43,7 @@ class BinLogStreamReader(object):
                  freeze_schema=False, skip_to_timestamp=None):
         """
         Attributes:
+            ctl_connection_settings: Connection settings for cluster holding schema information
             resume_stream: Start for event from position or the latest event of
                            binlog or from older available event
             blocking: Read on stream is blocking
@@ -56,14 +57,16 @@ class BinLogStreamReader(object):
             freeze_schema: If true do not support ALTER TABLE. It's faster.
             skip_to_timestamp: Ignore all events until reaching specified timestamp.
         """
+
         self.__connection_settings = connection_settings
-	if not connection_settings.get("charset"):
+        if not connection_settings.get("charset"):
             self.__connection_settings["charset"] = "utf8"
 
         self.__connected_stream = False
         self.__connected_ctl = False
         self.__resume_stream = resume_stream
         self.__blocking = blocking
+        self._ctl_connection_settings = ctl_connection_settings
 
         self.__only_tables = only_tables
         self.__only_schemas = only_schemas
@@ -98,7 +101,8 @@ class BinLogStreamReader(object):
             self.__connected_ctl = False
 
     def __connect_to_ctl(self):
-        self._ctl_connection_settings = dict(self.__connection_settings)
+        if not self._ctl_connection_settings:
+            self._ctl_connection_settings = dict(self.__connection_settings)
         self._ctl_connection_settings["db"] = "information_schema"
         self._ctl_connection_settings["cursorclass"] = DictCursor
         self._ctl_connection = pymysql.connect(**self._ctl_connection_settings)
