@@ -13,7 +13,7 @@ from .gtid import GtidSet
 from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
     XidEvent, GtidEvent, StopEvent,
-    BeginLoadQueryEvent, ExecuteLoadQueryEvent,
+    BeginLoadQueryEvent, ExecuteLoadQueryEvent, IntvarEvent,
     NotImplementedEvent)
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
@@ -260,7 +260,11 @@ class BinLogStreamReader(object):
             if self.log_file is None or self.log_pos is None:
                 cur = self._stream_connection.cursor()
                 cur.execute("SHOW MASTER STATUS")
-                self.log_file, self.log_pos = cur.fetchone()[:2]
+                output = cur.fetchone()
+                if not output:
+                    raise Exception('Server is not master')
+                    cur.close()
+                self.log_file, self.log_pos = output[:2]
                 cur.close()
 
             prelude = struct.pack('<i', len(self.log_file) + 11) \
@@ -431,6 +435,7 @@ class BinLogStreamReader(object):
                 ExecuteLoadQueryEvent,
                 UpdateRowsEvent,
                 WriteRowsEvent,
+                IntvarEvent,
                 DeleteRowsEvent,
                 TableMapEvent,
                 NotImplementedEvent))
@@ -465,6 +470,7 @@ class BinLogStreamReader(object):
             except pymysql.OperationalError as error:
                 code, message = error.args
                 if code in MYSQL_EXPECTED_ERROR_CODES:
+                    self._stream_connection.close()
                     self.__connected_ctl = False
                     continue
                 else:
