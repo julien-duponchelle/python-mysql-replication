@@ -40,7 +40,8 @@ class BinLogStreamReader(object):
                  filter_non_implemented_events=True,
                  ignored_events=None, auto_position=None,
                  only_tables=None, only_schemas=None,
-                 freeze_schema=False, skip_to_timestamp=None):
+                 freeze_schema=False, skip_to_timestamp=None,
+                 fail_on_table_metadata_unavailable=False):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding schema information
@@ -56,6 +57,7 @@ class BinLogStreamReader(object):
             only_schemas: An array with the schemas you want to watch
             freeze_schema: If true do not support ALTER TABLE. It's faster.
             skip_to_timestamp: Ignore all events until reaching specified timestamp.
+            fail_on_table_metadata_unavailable: Should raise exception if we can't get table information on row_events
         """
 
         self.__connection_settings = connection_settings
@@ -67,12 +69,15 @@ class BinLogStreamReader(object):
         self.__resume_stream = resume_stream
         self.__blocking = blocking
         self._ctl_connection_settings = ctl_connection_settings
+        if ctl_connection_settings and not ctl_connection_settings.get("charset"):
+            self._ctl_connection_settings["charset"] = "utf8"
 
         self.__only_tables = only_tables
         self.__only_schemas = only_schemas
         self.__freeze_schema = freeze_schema
         self.__allowed_events = self._allowed_event_list(
             only_events, ignored_events, filter_non_implemented_events)
+        self.__fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
 
         # We can't filter on packet level TABLE_MAP and rotate event because
         # we need them for handling other operations
@@ -265,7 +270,8 @@ class BinLogStreamReader(object):
                                                self.__allowed_events_in_packet,
                                                self.__only_tables,
                                                self.__only_schemas,
-                                               self.__freeze_schema)
+                                               self.__freeze_schema,
+                                               self.__fail_on_table_metadata_unavailable)
 
             if self.skip_to_timestamp and binlog_event.timestamp < self.skip_to_timestamp:
                 continue

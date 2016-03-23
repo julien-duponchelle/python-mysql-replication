@@ -33,6 +33,7 @@ class RowsEvent(BinLogEvent):
         except KeyError: #If we have filter the corresponding TableMap Event
             self._processed = False
             return
+
         if self.__only_tables is not None and self.table not in self.__only_tables:
             self._processed = False
             return
@@ -55,7 +56,9 @@ class RowsEvent(BinLogEvent):
         self.columns = self.table_map[self.table_id].columns
 
         if len(self.columns) == 0:  # could not read the table metadata, probably already dropped
-            raise TableMetadataUnavailableError("Table Metadata could not be read for {}".format(self.table))
+            self.complete = False
+            if self._fail_on_table_metadata_unavailable:
+                raise TableMetadataUnavailableError("Table Metadata could not be read for {}".format(self.table))
 
     def __is_null(self, null_bitmap, position):
         bit = null_bitmap[int(position / 8)]
@@ -385,6 +388,9 @@ class RowsEvent(BinLogEvent):
 
     def _fetch_rows(self):
         self.__rows = []
+
+        if not self.complete:
+            return
 
         while self.packet.read_bytes + 1 < self.event_size:
             self.__rows.append(self._fetch_one_row())

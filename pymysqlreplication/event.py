@@ -10,13 +10,15 @@ class BinLogEvent(object):
     def __init__(self, from_packet, event_size, table_map, ctl_connection,
                  only_tables = None,
                  only_schemas = None,
-                 freeze_schema = False):
+                 freeze_schema = False,
+                 fail_on_table_metadata_unavailable = False):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
         self.timestamp = self.packet.timestamp
         self.event_size = event_size
         self._ctl_connection = ctl_connection
+        self._fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
         # The event have been fully processed, if processed is false
         # the event will be skipped
         self._processed = True

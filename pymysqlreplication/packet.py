@@ -54,7 +54,8 @@ class BinLogPacketWrapper(object):
                  allowed_events,
                  only_tables,
                  only_schemas,
-                 freeze_schema):
+                 freeze_schema,
+                 fail_on_table_metadata_unavailable):
         # -1 because we ignore the ok byte
         self.read_bytes = 0
         # Used when we want to override a value in the data buffer
@@ -95,7 +96,8 @@ class BinLogPacketWrapper(object):
                                  ctl_connection,
                                  only_tables = only_tables,
                                  only_schemas = only_schemas,
-                                 freeze_schema = freeze_schema)
+                                 freeze_schema = freeze_schema,
+                                 fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable)
         if self.event._processed == False:
             self.event = None
 
