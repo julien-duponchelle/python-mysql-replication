@@ -70,6 +70,7 @@ Projects using this library
 * Meepo: Event sourcing and event broadcasting for datebases. https://github.com/eleme/meepo
 * Python MySQL Replication Blinker: This package read events from MySQL binlog and send to blinker's signal. https://github.com/tarzanjw/python-mysql-replication-blinker
 * aiomysql_replication: Fork supporting asyncio https://github.com/jettify/aiomysql_replication
+* python-mysql-eventprocessor: Daemon interface for handling MySQL binary log events. https://github.com/jffifa/python-mysql-eventprocessor
 
 MySQL server settings
 =========================
@@ -270,6 +271,7 @@ Similar projects
 * MySQL Hadoop Applier: C++ version http://dev.mysql.com/tech-resources/articles/mysql-hadoop-applier.html
 * Java: https://github.com/shyiko/mysql-binlog-connector-java
 * GO: https://github.com/siddontang/go-mysql
+* PHP: Based on this this project https://github.com/krowinski/php-mysql-replication and https://github.com/fengxiangyun/mysql-replication 
 
 Special thanks
 ================
