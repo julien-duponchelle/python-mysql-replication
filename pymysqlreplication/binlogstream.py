@@ -19,11 +19,11 @@ from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
 
 try:
-    from pymysql.constants.COMMAND import COM_BINLOG_DUMP_GTID
+    from pymysql.constants.COMMAND import COM_BINLOG_DUMP
 except ImportError:
     # Handle old pymysql versions
     # See: https://github.com/PyMySQL/PyMySQL/pull/261
-    COM_BINLOG_DUMP_GTID = 0x1e
+    COM_BINLOG_DUMP = 0x12
 
 # 2013 Connection Lost
 # 2006 MySQL server has gone away
@@ -132,7 +132,8 @@ class BinLogStreamReader(object):
                  ignored_events=None, auto_position=None,
                  only_tables=None, only_schemas=None,
                  freeze_schema=False, skip_to_timestamp=None,
-                 report_slave=None, slave_uuid=None):
+                 report_slave=None, slave_uuid=None,
+                 binlog_name='\0\0\0', binlog_pos=4):
         """
         Attributes:
             resume_stream: Start for event from position or the latest event of
@@ -150,6 +151,9 @@ class BinLogStreamReader(object):
             report_slave: Report slave in SHOW SLAVE HOSTS.
             slave_uuid: Report slave_uuid in SHOW SLAVE HOSTS.
         """
+        self.__binlog_name = binlog_name.encode()
+        self.__binlog_pos = binlog_pos
+
         self.__connection_settings = connection_settings
         self.__connection_settings["charset"] = "utf8"
 
@@ -323,18 +327,18 @@ class BinLogStreamReader(object):
                            4)  # encoded_data_size
 
             prelude = b'' + struct.pack('<i', header_size + encoded_data_size) \
-                + int2byte(COM_BINLOG_DUMP_GTID)
+                + int2byte(COM_BINLOG_DUMP)
 
             # binlog_flags = 0 (2 bytes)
             prelude += struct.pack('<H', 0)
             # server_id (4 bytes)
             prelude += struct.pack('<I', self.__server_id)
             # binlog_name_info_size (4 bytes)
-            prelude += struct.pack('<I', 3)
+            prelude += struct.pack('<I', len(self.__binlog_name))
             # empty_binlog_name (4 bytes)
-            prelude += b'\0\0\0'
+            prelude += self.__binlog_name
             # binlog_pos_info (8 bytes)
-            prelude += struct.pack('<Q', 4)
+            prelude += struct.pack('<Q', self.__binlog_pos)
 
             # encoded_data_size (4 bytes)
             prelude += struct.pack('<I', gtid_set.encoded_length)
