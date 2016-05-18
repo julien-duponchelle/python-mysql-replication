@@ -132,7 +132,8 @@ class BinLogStreamReader(object):
                  ignored_events=None, auto_position=None,
                  only_tables=None, only_schemas=None,
                  freeze_schema=False, skip_to_timestamp=None,
-                 report_slave=None, slave_uuid=None):
+                 report_slave=None, slave_uuid=None,
+                 pymysql_wrapper=None):
         """
         Attributes:
             resume_stream: Start for event from position or the latest event of
@@ -183,6 +184,11 @@ class BinLogStreamReader(object):
             self.report_slave = ReportSlave(report_slave)
         self.slave_uuid = slave_uuid
 
+        if pymysql_wrapper:
+            self.pymysql_wrapper = pymysql_wrapper
+        else:
+            self.pymysql_wrapper = pymysql.connect
+
     def close(self):
         if self.__connected_stream:
             self._stream_connection.close()
@@ -198,7 +204,7 @@ class BinLogStreamReader(object):
         self._ctl_connection_settings = dict(self.__connection_settings)
         self._ctl_connection_settings["db"] = "information_schema"
         self._ctl_connection_settings["cursorclass"] = DictCursor
-        self._ctl_connection = pymysql.connect(**self._ctl_connection_settings)
+        self._ctl_connection = self.pymysql_wrapper(**self._ctl_connection_settings)
         self._ctl_connection._get_table_information = self.__get_table_information
         self.__connected_ctl = True
 
@@ -236,7 +242,7 @@ class BinLogStreamReader(object):
         # flags (2) BINLOG_DUMP_NON_BLOCK (0 or 1)
         # server_id (4) -- server id of this slave
         # log_file (string.EOF) -- filename of the binlog on the master
-        self._stream_connection = pymysql.connect(**self.__connection_settings)
+        self._stream_connection = self.pymysql_wrapper(**self.__connection_settings)
 
         self.__use_checksum = self.__checksum_enabled()
 
