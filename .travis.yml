@@ -9,8 +9,9 @@ env:
   - DB=mysql57
   - DB=mysql56
 install:
-  - "pip install ."
-  - "pip install nose"
+  # Needs a newer version of pip to do the pip installation line
+  - pip install pip --upgrade
+  - pip install .[test] nose
 cache: apt
 before_script:
   - env | grep DB
