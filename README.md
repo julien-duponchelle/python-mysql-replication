@@ -1,8 +1,6 @@
 python-mysql-replication
 ========================
 
-WARNING not compatible with PyMySQL version to 0.7 for the moment
-
 <a href="https://travis-ci.org/noplay/python-mysql-replication"><img src="https://travis-ci.org/noplay/python-mysql-replication.svg?branch=master"></a>&nbsp;
 <a href="https://pypi.python.org/pypi/mysql-replication"><img src="http://img.shields.io/pypi/dm/mysql-replication.svg"></a>
 
