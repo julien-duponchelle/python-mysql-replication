@@ -282,7 +282,9 @@ Contributors
 ==============
 
 Major contributor:
+* Julien Duponchelle Original author https://github.com/noplay
 * bjoernhaeuser for his bugs fixing, improvements and community support https://github.com/bjoernhaeuser
+* Arthur Gautier gtid, slave report...  https://github.com/baloo
 
 Other contributors:
 * Dvir Volk for bug fix https://github.com/dvirsky
@@ -296,7 +298,6 @@ Other contributors:
 * Daniel Gavrila more MySQL error codes https://github.com/danielduduta
 * Bernardo Sulzbach code cleanup https://github.com/mafagafogigante
 * Darioush Jalali Python 2.6 backport https://github.com/darioush
-* Arthur Gautier gtid https://github.com/baloo
 * Jasonz bug fixes https://github.com/jasonzzz
 * Bartek Ogryczak cleanup and improvements https://github.com/vartec
 * Wang, Xiaozhe cleanup https://github.com/chaoslawful
@@ -306,6 +307,9 @@ Other contributors:
 * Romuald Brunet bug fixes https://github.com/romuald
 * Cédric Hourcade Don't fail on incomplete dates https://github.com/hc
 * Giacomo Lozito Explicit close stream connection on exception https://github.com/giacomolozito
+* Giovanni F. MySQL 5.7 support https://github.com/26fe
+* Igor Mastak intvar event https://github.com/mastak
+* Xie Zhenye fix: missing update _next_seq_no https://github.com/xiezhenye
 
 Thanks to GetResponse for their support
 
