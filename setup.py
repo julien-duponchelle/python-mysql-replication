@@ -8,11 +8,11 @@ except ImportError:
 
 import sys
 
-install_requires = ['pymysql']
+tests_require = []
 
-# add unittest2 to install_requires for python < 2.7
+# add unittest2 to tests_require for python < 2.7
 if sys.version_info < (2, 7):
-    install_requires.append("unittest2")
+    tests_require.append("unittest2")
 
 
 class TestCommand(Command):
@@ -49,5 +49,6 @@ setup(
               "pymysqlreplication.constants",
               "pymysqlreplication.tests"],
     cmdclass={"test": TestCommand},
-    install_requires=install_requires,
+    extras_require={'test': tests_require},
+    install_requires=['pymysql'],
 )
