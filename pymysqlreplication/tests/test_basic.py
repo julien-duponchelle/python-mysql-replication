@@ -119,7 +119,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.query, query)
 
         self.conn_control.kill(self.stream._stream_connection.thread_id())
-        for i in range(0, 1000):
+        for i in range(0, 10000):
             event = self.stream.fetchone()
             self.assertIsNotNone(event)
 
