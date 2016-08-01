@@ -288,14 +288,14 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (id INTEGER, test DATETIME NOT NULL DEFAULT 0);"
         insert_query = "INSERT INTO test (id) VALUES(1)"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], None)
+        self.assertEqual(event.rows[0]["values"]["test"], 0)
 
     def test_broken_datetime(self):
         self.set_sql_mode()
         create_query = "CREATE TABLE test (test DATETIME NOT NULL);"
         insert_query = "INSERT INTO test VALUES('2013-00-00 00:00:00')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], None)
+        self.assertEqual(event.rows[0]["values"]["test"], 0)
 
     def test_year(self):
         if self.isMySQL57():
