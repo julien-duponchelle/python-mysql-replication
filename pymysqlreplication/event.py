@@ -2,15 +2,16 @@
 
 import struct
 import datetime
+import sqlparse
 
 from pymysql.util import byte2int, int2byte
 
 
 class BinLogEvent(object):
     def __init__(self, from_packet, event_size, table_map, ctl_connection,
-                 only_tables = None,
-                 only_schemas = None,
-                 freeze_schema = False):
+                 only_tables=None,
+                 only_schemas=None,
+                 freeze_schema=False):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
@@ -46,9 +47,10 @@ class BinLogEvent(object):
 class GtidEvent(BinLogEvent):
     """GTID change in binlog event
     """
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(GtidEvent, self).__init__(from_packet, event_size, table_map,
-                                          ctl_connection, **kwargs)
+                                        ctl_connection, **kwargs)
 
         self.commit_flag = byte2int(self.packet.read(1)) == 1
         self.sid = self.packet.read(16)
@@ -79,6 +81,7 @@ class RotateEvent(BinLogEvent):
         position: Position inside next binlog
         next_binlog: Name of next binlog file
     """
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(RotateEvent, self).__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
@@ -120,6 +123,7 @@ class XidEvent(BinLogEvent):
 class QueryEvent(BinLogEvent):
     '''This evenement is trigger when a query is run of the database.
     Only replicated queries are logged.'''
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(QueryEvent, self).__init__(from_packet, event_size, table_map,
                                          ctl_connection, **kwargs)
@@ -138,7 +142,105 @@ class QueryEvent(BinLogEvent):
 
         self.query = self.packet.read(event_size - 13 - self.status_vars_length
                                       - self.schema_length - 1).decode("utf-8")
-        #string[EOF]    query
+        # string[EOF]    query
+
+        self.ddl_sql = None
+        self.ddl_schema = None
+        self.ddl_table = None
+
+        self.__only_tables = kwargs["only_tables"]
+        self.__only_schemas = kwargs["only_schemas"]
+        self.__sys_schemas = ['mysql', 'information_schema',
+                              'innodb', 'sys', 'performance_schema']
+
+    def parse_query(self):
+        """Capture and parse schema changing queries.
+        """
+
+        sql = self.query
+        parsed = sqlparse.parse(sql)[0]
+        sql_token_types = []
+
+        # A main statement is the starting DDL or DML command in the query.
+        main_statement_counter = 0
+
+        # Keywords can be many things (FROM, WHERE, TABLE, SCHEMA etc.),
+        # but we only care about the first one in a query,
+        # which for DDLs should be either 'database', 'schema' or 'table'
+        keyword_counter = 0
+        first_keyword = ''
+
+        # In the MySQL DDL syntax, the first entity identifier is the one
+        # which will be modified.
+        # slparse returns <schema>.<table> combinations in one Identifier
+        # instance. So we'll have to do some further parsing further down the
+        # line.
+        entity_counter = 0
+        entity_identifier = ''
+        chars_to_remove = str.maketrans({"'": None, '"': None, "`": None})
+
+        # Validate that we're dealing with a DDL statement.
+        for i, t in enumerate(parsed.tokens):
+            sql_token_types.append(t.ttype)
+            if main_statement_counter == 0 and \
+                    t.ttype in [sqlparse.tokens.Keyword.DDL,
+                                sqlparse.tokens.Keyword.DML]:
+                if t.ttype != sqlparse.tokens.Keyword.DDL:
+                    return
+                main_statement_counter += 1
+                continue
+            if keyword_counter == 0 and \
+                    t.ttype == sqlparse.tokens.Keyword:
+                if t.value.lower() not in ['database', 'schema', 'table']:
+                    return
+                first_keyword = t.value.lower()
+                keyword_counter += 1
+                continue
+            if entity_counter == 0 and \
+                    t.__class__.__name__ == 'Identifier':
+                # Remove all quotes from the entity idetifier.
+                entity_identifier = str(t.value).translate(chars_to_remove)
+                entity_counter += 1
+                break
+
+        # Query events are stored together with a 'schema' field in the
+        # binlogs,
+        # which holds the name of the schema that was the execution context of
+        # the query.
+        context_schema = self.schema.decode('utf-8').translate(
+            chars_to_remove)
+
+        if first_keyword in ['database', 'schema']:
+            sql_use = ''
+            self.ddl_schema = entity_identifier
+        elif first_keyword == 'table':
+            sql_use = "USE %s;" % context_schema
+            if '.' in entity_identifier:
+                self.ddl_schema, self.ddl_table = entity_identifier.split('.')
+            else:
+                self.ddl_table = entity_identifier
+                self.ddl_schema = context_schema
+
+        # Do we have a rule defined which tells us to ignore changes
+        # to this entity?
+        if self.ddl_schema in self.__sys_schemas:
+            return
+        if self.__only_tables is not None \
+                and self.ddl_table not in self.__only_tables:
+            return
+        if self.__only_schemas is not None \
+                and self.ddl_schema not in self.__only_schemas:
+            return
+
+        self.ddl_sql = sql_use + ' ' + sql
+
+    def execute_ddl_statement(self):
+
+        with self._ctl_connection.cursor() as cur:
+            cur.execute(self.ddl_sql)
+        self._ctl_connection.commit()
+
+        return
 
     def _dump(self):
         super(QueryEvent, self)._dump()
@@ -154,9 +256,10 @@ class BeginLoadQueryEvent(BinLogEvent):
         file_id
         block-data
     """
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(BeginLoadQueryEvent, self).__init__(from_packet, event_size, table_map,
-                                                     ctl_connection, **kwargs)
+                                                  ctl_connection, **kwargs)
 
         # Payload
         self.file_id = self.packet.read_uint32()
@@ -183,9 +286,10 @@ class ExecuteLoadQueryEvent(BinLogEvent):
         end_pos
         dup_handling_flags
     """
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(ExecuteLoadQueryEvent, self).__init__(from_packet, event_size, table_map,
-                                                        ctl_connection, **kwargs)
+                                                    ctl_connection, **kwargs)
 
         # Post-header
         self.slave_proxy_id = self.packet.read_uint32()
@@ -220,6 +324,7 @@ class IntvarEvent(BinLogEvent):
         type
         value
     """
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(IntvarEvent, self).__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)

@@ -8,7 +8,7 @@ from pymysql.cursors import DictCursor
 from pymysql.util import int2byte
 
 from .packet import BinLogPacketWrapper
-from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
+from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT, QUERY_EVENT
 from .gtid import GtidSet
 from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
@@ -133,7 +133,7 @@ class BinLogStreamReader(object):
                  only_tables=None, only_schemas=None,
                  freeze_schema=False, skip_to_timestamp=None,
                  report_slave=None, slave_uuid=None,
-                 pymysql_wrapper=None):
+                 pymysql_wrapper=None, schema_db_connection_settings=None):
         """
         Attributes:
             resume_stream: Start for event from position or the latest event of
@@ -150,6 +150,10 @@ class BinLogStreamReader(object):
             skip_to_timestamp: Ignore all events until reaching specified timestamp.
             report_slave: Report slave in SHOW SLAVE HOSTS.
             slave_uuid: Report slave_uuid in SHOW SLAVE HOSTS.
+            schema_db_connection_settings: dict. Connection settings of second
+              MySQL instance on which DDL statements shall be executed.
+              This enables the replay of those events that occured before the
+              streaming process has bee initialised.
         """
         self.__connection_settings = connection_settings
         self.__connection_settings["charset"] = "utf8"
@@ -158,6 +162,17 @@ class BinLogStreamReader(object):
         self.__connected_ctl = False
         self.__resume_stream = resume_stream
         self.__blocking = blocking
+
+        if schema_db_connection_settings is not None:
+            self._ctl_connection_settings = dict(
+                self.schema_db_connection_settings)
+            self.is_table_mapping_decoupled = True
+            mandatory_events = [QueryEvent, TableMapEvent, RotateEvent]
+        else:
+            self._ctl_connection_settings = dict(
+                self.__connection_settings)
+            self.is_table_mapping_decoupled = False
+            mandatory_events = [QueryEvent, TableMapEvent, RotateEvent]
 
         self.__only_tables = only_tables
         self.__only_schemas = only_schemas
@@ -168,7 +183,7 @@ class BinLogStreamReader(object):
         # We can't filter on packet level TABLE_MAP and rotate event because
         # we need them for handling other operations
         self.__allowed_events_in_packet = frozenset(
-            [TableMapEvent, RotateEvent]).union(self.__allowed_events)
+            mandatory_events).union(self.__allowed_events)
 
         self.__server_id = server_id
         self.__use_checksum = False
@@ -201,7 +216,6 @@ class BinLogStreamReader(object):
             self.__connected_ctl = False
 
     def __connect_to_ctl(self):
-        self._ctl_connection_settings = dict(self.__connection_settings)
         self._ctl_connection_settings["db"] = "information_schema"
         self._ctl_connection_settings["cursorclass"] = DictCursor
         self._ctl_connection = self.pymysql_wrapper(**self._ctl_connection_settings)
@@ -393,6 +407,19 @@ class BinLogStreamReader(object):
             if self.skip_to_timestamp and binlog_event.timestamp < self.skip_to_timestamp:
                 continue
 
+            if self.is_table_mapping_decoupled is True and \
+                    binlog_event.event_type == QUERY_EVENT:
+                binlog_event.event.parse_query()
+                if binlog_event.event.ddl_sql is not None:
+                    binlog_event.event.execute_ddl_statement()
+                # If our DDL statement has altered a table,
+                # remove that table from the table_map.
+                if binlog_event.event.ddl_table is not None:
+                    self.remove_altered_table_from_map(
+                        binlog_event.event.ddl_schema,
+                        binlog_event.event.ddl_table
+                    )
+
             if binlog_event.event_type == TABLE_MAP_EVENT and \
                     binlog_event.event is not None:
                 self.table_map[binlog_event.event.table_id] = \
@@ -475,6 +502,23 @@ class BinLogStreamReader(object):
                     continue
                 else:
                     raise error
+
+    def remove_altered_table_from_map(self, schema, table):
+        """
+        After schema-changing Query Events make sure that
+        the corresponding entry is removed from the table_map
+        dict. This way, we ensure that a table mapping will
+        be performed for this table before the next row event is
+        processed for it.
+        """
+
+        ids_to_remove = []
+        for k, v in self.table_map.items():
+            if v.schema == schema and table == v.table:
+                ids_to_remove.append(k)
+
+        for key in ids_to_remove:
+            del self.table_map[key]
 
     def __iter__(self):
         return iter(self.fetchone, None)
