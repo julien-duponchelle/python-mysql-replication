@@ -69,6 +69,7 @@ Projects using this library
 * Python MySQL Replication Blinker: This package read events from MySQL binlog and send to blinker's signal. https://github.com/tarzanjw/python-mysql-replication-blinker
 * aiomysql_replication: Fork supporting asyncio https://github.com/jettify/aiomysql_replication
 * python-mysql-eventprocessor: Daemon interface for handling MySQL binary log events. https://github.com/jffifa/python-mysql-eventprocessor
+* mymongo: MySQL to mongo replication https://github.com/njordr/mymongo
 
 MySQL server settings
 =========================
