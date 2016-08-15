@@ -25,7 +25,6 @@ Contents
     :maxdepth: 2
 
     installation
-    changelog
     limitations
     binlogstream
     events
