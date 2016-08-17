@@ -28,6 +28,7 @@ MYSQL_SETTINGS = {
 def main():
     stream = BinLogStreamReader(
         connection_settings=MYSQL_SETTINGS,
+        server_id=3,
         only_events=[DeleteRowsEvent, WriteRowsEvent, UpdateRowsEvent])
 
     for binlogevent in stream:
