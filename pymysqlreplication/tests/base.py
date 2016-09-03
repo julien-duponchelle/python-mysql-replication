@@ -27,7 +27,7 @@ class PyMySQLReplicationTestCase(base):
                 "host": "localhost",
                 "user": "root",
                 "passwd": "msandbox",
-                "port": 5712,
+                "port": 5714,
                 "use_unicode": True,
                 "charset": "utf8",
                 "db": "pymysqlreplication_test"

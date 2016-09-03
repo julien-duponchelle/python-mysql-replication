@@ -12,7 +12,11 @@ install:
   # Needs a newer version of pip to do the pip installation line
   - pip install pip --upgrade
   - pip install .[test] nose
-cache: apt
+cache:
+  apt: true
+  pip: true
+  directories:
+  - $HOME/bins
 before_script:
   - env | grep DB
   - bash -c "if [ '$DB' = 'mysql57' ]; then sudo ./scripts/install_mysql_sandbox.sh; ./scripts/install_mysql57_on_sandbox.sh; fi"
