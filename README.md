@@ -309,6 +309,7 @@ Other contributors:
 * Giovanni F. MySQL 5.7 support https://github.com/26fe
 * Igor Mastak intvar event https://github.com/mastak
 * Xie Zhenye fix: missing update _next_seq_no https://github.com/xiezhenye
+* Abrar Sheikh: Time as mysql.timedelta
 
 Thanks to GetResponse for their support
 

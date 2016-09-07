@@ -266,16 +266,36 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test2"], None)
 
     def test_time(self):
-        create_query = "CREATE TABLE test (test TIME);"
-        insert_query = "INSERT INTO test VALUES('12:33:18')"
+        create_query = "CREATE TABLE test (test1 TIME, test2 TIME);"
+        insert_query = "INSERT INTO test VALUES('838:59:59', '-838:59:59')"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], datetime.time(12, 33, 18))
+        self.assertEqual(event.rows[0]["values"]["test1"], datetime.timedelta(
+            microseconds=(((838*60) + 59)*60 + 59)*1000000
+        ))
+        self.assertEqual(event.rows[0]["values"]["test2"], datetime.timedelta(
+            microseconds=(((-838*60) + 59)*60 + 59)*1000000
+        ))
+
+    def test_time2(self):
+        if not self.isMySQL56AndMore():
+            self.skipTest("Not supported in this version of MySQL")
+        create_query = "CREATE TABLE test (test1 TIME(6), test2 TIME(6));"
+        insert_query = """
+            INSERT INTO test VALUES('838:59:59.000000', '-838:59:59.000000');
+        """
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test1"], datetime.timedelta(
+            microseconds=(((838*60) + 59)*60 + 59)*1000000 + 0
+        ))
+        self.assertEqual(event.rows[0]["values"]["test2"], datetime.timedelta(
+            microseconds=(((-838*60) + 59)*60 + 59)*1000000 + 0
+        ))
 
     def test_zero_time(self):
         create_query = "CREATE TABLE test (id INTEGER, test TIME NOT NULL DEFAULT 0);"
         insert_query = "INSERT INTO test (id) VALUES(1)"
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["test"], datetime.time(0,0))
+        self.assertEqual(event.rows[0]["values"]["test"], datetime.timedelta(seconds=0))
 
     def test_datetime(self):
         create_query = "CREATE TABLE test (test DATETIME);"
