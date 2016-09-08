@@ -70,6 +70,7 @@ Projects using this library
 * aiomysql_replication: Fork supporting asyncio https://github.com/jettify/aiomysql_replication
 * python-mysql-eventprocessor: Daemon interface for handling MySQL binary log events. https://github.com/jffifa/python-mysql-eventprocessor
 * mymongo: MySQL to mongo replication https://github.com/njordr/mymongo
+* pg_chameleon: Migration and replica from MySQL to PostgreSQL https://github.com/the4thdoctor/pg_chameleon
 
 MySQL server settings
 =========================
