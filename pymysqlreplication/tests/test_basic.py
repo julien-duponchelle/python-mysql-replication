@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import time
 import sys
+import io
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
@@ -715,6 +716,24 @@ class TestGtidRepresentation(unittest.TestCase):
         myset = GtidSet(mysql_repr)
         self.assertEqual(str(myset), set_repr)
 
+    def test_gtidset_representation(self):
+        set_repr = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56,' \
+                   '4350f323-7565-4e59-8763-4b1b83a0ce0e:1-20'
+
+        myset = GtidSet(set_repr)
+        payload = myset.encode()
+        parsedset = myset.decode(io.BytesIO(payload))
+
+        self.assertEqual(str(myset), str(parsedset))
+
+        set_repr = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1,' \
+                   '4350f323-7565-4e59-8763-4b1b83a0ce0e:1-20'
+
+        myset = GtidSet(set_repr)
+        payload = myset.encode()
+        parsedset = myset.decode(io.BytesIO(payload))
+
+        self.assertEqual(str(myset), str(parsedset))
 
 if __name__ == "__main__":
     import unittest
