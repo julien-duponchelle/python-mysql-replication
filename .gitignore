@@ -42,3 +42,9 @@ _build
 
 # Pyenv
 .python-version
+
+# Mac System files
+.DS_Store
+
+# Virtualenv folder
+env/
