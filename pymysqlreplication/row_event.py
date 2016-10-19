@@ -58,7 +58,7 @@ class RowsEvent(BinLogEvent):
         if len(self.columns) == 0:  # could not read the table metadata, probably already dropped
             self.complete = False
             if self._fail_on_table_metadata_unavailable:
-                raise TableMetadataUnavailableError("Table Metadata could not be read for {}".format(self.table))
+                raise TableMetadataUnavailableError(self.table)
 
     def __is_null(self, null_bitmap, position):
         bit = null_bitmap[int(position / 8)]
