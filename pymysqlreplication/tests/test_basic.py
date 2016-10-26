@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import time
 import sys
+import io
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
@@ -32,7 +33,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         self.assertEqual(event.position, 4)
-        self.assertEqual(event.next_binlog, "mysql-bin.000001")
+        self.assertEqual(event.next_binlog, self.bin_log_basename() + ".000001")
         self.assertIsInstance(event, RotateEvent)
 
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
@@ -47,7 +48,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         self.assertEqual(event.position, 4)
-        self.assertEqual(event.next_binlog, "mysql-bin.000001")
+        self.assertEqual(event.next_binlog, self.bin_log_basename() + ".000001")
         self.assertIsInstance(event, RotateEvent)
 
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
@@ -119,7 +120,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.query, query)
 
         self.conn_control.kill(self.stream._stream_connection.thread_id())
-        for i in range(0, 1000):
+        for i in range(0, 10000):
             event = self.stream.fetchone()
             self.assertIsNotNone(event)
 
@@ -146,6 +147,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
     def test_filtering_table_event(self):
         self.stream.close()
+        self.assertEqual(self.bin_log_format(), "ROW")
         self.stream = BinLogStreamReader(
             self.database,
             server_id=1024,
@@ -705,6 +707,33 @@ class TestGtidRepresentation(unittest.TestCase):
         myset = GtidSet(set_repr)
         self.assertEqual(str(myset), set_repr)
 
+    def test_gtidset_representation_newline(self):
+        set_repr = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56,' \
+                   '4350f323-7565-4e59-8763-4b1b83a0ce0e:1-20'
+        mysql_repr = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56,\n' \
+                   '4350f323-7565-4e59-8763-4b1b83a0ce0e:1-20'
+
+        myset = GtidSet(mysql_repr)
+        self.assertEqual(str(myset), set_repr)
+
+    def test_gtidset_representation(self):
+        set_repr = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56,' \
+                   '4350f323-7565-4e59-8763-4b1b83a0ce0e:1-20'
+
+        myset = GtidSet(set_repr)
+        payload = myset.encode()
+        parsedset = myset.decode(io.BytesIO(payload))
+
+        self.assertEqual(str(myset), str(parsedset))
+
+        set_repr = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1,' \
+                   '4350f323-7565-4e59-8763-4b1b83a0ce0e:1-20'
+
+        myset = GtidSet(set_repr)
+        payload = myset.encode()
+        parsedset = myset.decode(io.BytesIO(payload))
+
+        self.assertEqual(str(myset), str(parsedset))
 
 if __name__ == "__main__":
     import unittest

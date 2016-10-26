@@ -215,6 +215,27 @@ class ExecuteLoadQueryEvent(BinLogEvent):
         print("Dup handling flags: %d" % (self.dup_handling_flags))
 
 
+class IntvarEvent(BinLogEvent):
+    """
+
+    Attributes:
+        type
+        value
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(IntvarEvent, self).__init__(from_packet, event_size, table_map,
+                                          ctl_connection, **kwargs)
+
+        # Payload
+        self.type = self.packet.read_uint8()
+        self.value = self.packet.read_uint32()
+
+    def _dump(self):
+        super(IntvarEvent, self)._dump()
+        print("type: %d" % (self.type))
+        print("Value: %d" % (self.value))
+
+
 class NotImplementedEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(NotImplementedEvent, self).__init__(

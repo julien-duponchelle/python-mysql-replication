@@ -5,6 +5,7 @@ import decimal
 import datetime
 
 from pymysql.util import byte2int
+from pymysql.charset import charset_to_encoding
 
 from .event import BinLogEvent
 from .exceptions import TableMetadataUnavailableError
@@ -179,6 +180,12 @@ class RowsEvent(BinLogEvent):
         For more details about new date format:
         http://dev.mysql.com/doc/internals/en/date-and-time-data-type-representation.html
         """
+        microsecond = self.__read_fsp(column)
+        if microsecond > 0:
+            time = time.replace(microsecond=microsecond)
+        return time
+
+    def __read_fsp(self, column):
         read = 0
         if column.fsp == 1 or column.fsp == 2:
             read = 1
@@ -189,17 +196,16 @@ class RowsEvent(BinLogEvent):
         if read > 0:
             microsecond = self.packet.read_int_be_by_size(read)
             if column.fsp % 2:
-                time = time.replace(microsecond=int(microsecond / 10))
+                return int(microsecond / 10)
             else:
-                time = time.replace(microsecond=microsecond)
-        return time
+                return microsecond
+
+        return 0
 
     def __read_string(self, size, column):
         string = self.packet.read_length_coded_pascal_string(size)
         if column.character_set_name is not None:
-            character_set_name = "utf8" if column.character_set_name == "utf8mb4" \
-                else column.character_set_name
-            string = string.decode(character_set_name)
+            string = string.decode(charset_to_encoding(column.character_set_name))
         return string
 
     def __read_bit(self, column):
@@ -227,10 +233,10 @@ class RowsEvent(BinLogEvent):
 
     def __read_time(self):
         time = self.packet.read_uint24()
-        date = datetime.time(
-            hour=int(time / 10000),
-            minute=int((time % 10000) / 100),
-            second=int(time % 100))
+        date = datetime.timedelta(
+            hours=int(time / 10000),
+            minutes=int((time % 10000) / 100),
+            seconds=int(time % 100))
         return date
 
     def __read_time2(self, column):
@@ -245,11 +251,20 @@ class RowsEvent(BinLogEvent):
         24 bits = 3 bytes
         """
         data = self.packet.read_int_be_by_size(3)
-        t = datetime.time(
-            hour=self.__read_binary_slice(data, 2, 10, 24),
-            minute=self.__read_binary_slice(data, 12, 6, 24),
-            second=self.__read_binary_slice(data, 18, 6, 24))
-        return self.__add_fsp_to_time(t, column)
+
+        sign = 1 if self.__read_binary_slice(data, 0, 1, 24) else -1
+        if sign == -1:
+            # negative integers are stored as 2's compliment
+            # hence take 2's compliment again to get the right value.
+            data = ~data + 1
+
+        t = datetime.timedelta(
+            hours=sign*self.__read_binary_slice(data, 2, 10, 24),
+            minutes=self.__read_binary_slice(data, 12, 6, 24),
+            seconds=self.__read_binary_slice(data, 18, 6, 24),
+            microseconds=self.__read_fsp(column)
+        )
+        return t
 
     def __read_date(self):
         time = self.packet.read_uint24()
