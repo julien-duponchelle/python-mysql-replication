@@ -11,6 +11,7 @@ from pymysqlreplication.tests import base
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.gtid import GtidSet
 from pymysqlreplication.event import *
+from pymysqlreplication.exceptions import TableMetadataUnavailableError
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 
@@ -569,6 +570,27 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertEqual([], event.rows)
 
+    def test_drop_table_tablemetadata_unavailable(self):
+        self.stream.close()
+        self.execute("CREATE TABLE test (id INTEGER(11))")
+        self.execute("INSERT INTO test VALUES (1)")
+        self.execute("DROP TABLE test")
+        self.execute("COMMIT")
+
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(WriteRowsEvent,),
+            fail_on_table_metadata_unavailable=True
+        )
+
+        try:
+            event = self.stream.fetchone()
+        except TableMetadataUnavailableError as e:
+            assert "test" in e.args[0]
+        finally:
+            self.resetBinLog()
+
     def test_drop_column(self):
         self.stream.close()
         self.execute("CREATE TABLE test_drop_column (id INTEGER(11), data VARCHAR(50))")
@@ -581,7 +603,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.stream = BinLogStreamReader(
             self.database,
             server_id=1024,
-            only_events=(WriteRowsEvent,),
+            only_events=(WriteRowsEvent,)
             )
         try:
             self.stream.fetchone()  # insert with two values

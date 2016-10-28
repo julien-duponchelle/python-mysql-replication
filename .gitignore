@@ -37,6 +37,9 @@ _build
 *.xml
 *.iml
 
+# Temp vim .swp s
+*.swp
+
 # Nose
 .noseids
 
