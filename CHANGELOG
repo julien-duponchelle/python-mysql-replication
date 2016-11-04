@@ -56,3 +56,33 @@
 * Skipping GTID tests on DBs not set up to support GTID
 * Adding support for skipping the binlog until reaching specified timestamp.
 * Add support for BeginLoadQueryEvent and ExecuteLoadQueryEvent
+
+0.8 02/01/2016
+
+* bugfix for decoding values of columns in charset "utf8mb4"
+* Close connection on EOF packet
+* Don't fail on incomplete dates (with 0 as day or month), such as 2015-00-21 or 2015-05-00
+* Fix GtidSet __str__ representation
+* Fix typo in TableMapEvent comment
+* gtid failed parsing: raise with value
+* Explicit close stream connection on exception, to prevent sockets from sitting in CLOSE_WAIT status with PyPy
+* Further (micro)optimization: Moving popular column types to top of if/elif, so they can shortcircuit earlier.
+* Making Column attribiutes into regular object attributes instead of a dictionary. This makes getting the attribute about 20 times faster.
+
+0.9 20/05/2016
+
+* Allow to specify a pymysql wrapper or subclass
+* setup travis to run test on multiple mysql version (5.6 and 5.7)
+* test run with mysql5.7
+* report-slave: Allow reporting of port if username not supplied
+* gtid: fixup parsing on mysql format
+* added intvar event
+* binlogstream: improve slave report
+* Support for slave_uuid
+* Report slave in SHOW SLAVE HOSTS
+* fix: missing update _next_seq_no
+* PyMYSQL 0.7
+* Add more contributors
+
+0.10 NOT YET RELEASED
+* row-events: TIME is now encoded as python.timedelta

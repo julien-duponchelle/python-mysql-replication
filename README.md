@@ -42,16 +42,15 @@ https://groups.google.com/d/forum/python-mysql-replication
 Project status
 ================
 
-The current project is a proof of concept of what you can do with the MySQL
-replication log.
-
 The project is test with:
 * MySQL 5.5 and 5.6
 * Python >= 2.6
 * Python 3.3 and 3.4 (3.2 is not supported)
 * PyPy (really faster than the standard Python interpreter)
 
-It's not tested in real production situation.
+The project is used in production for critical stuff in some
+medium internet corporations. But all use case as not
+been perfectly test in the real world.
 
 Limitations
 =============
@@ -67,6 +66,11 @@ Projects using this library
 * Cache buster: an automatic cache invalidation system https://github.com/rackerlabs/cache-busters
 * Zabbix collector for OpenTSDB https://github.com/OpenTSDB/tcollector/blob/master/collectors/0/zabbix_bridge.py
 * Meepo: Event sourcing and event broadcasting for datebases. https://github.com/eleme/meepo
+* Python MySQL Replication Blinker: This package read events from MySQL binlog and send to blinker's signal. https://github.com/tarzanjw/python-mysql-replication-blinker
+* aiomysql_replication: Fork supporting asyncio https://github.com/jettify/aiomysql_replication
+* python-mysql-eventprocessor: Daemon interface for handling MySQL binary log events. https://github.com/jffifa/python-mysql-eventprocessor
+* mymongo: MySQL to mongo replication https://github.com/njordr/mymongo
+* pg_chameleon: Migration and replica from MySQL to PostgreSQL https://github.com/the4thdoctor/pg_chameleon
 
 MySQL server settings
 =========================
@@ -93,7 +97,7 @@ from pymysqlreplication import BinLogStreamReader
 
 mysql_settings = {'host': '127.0.0.1', 'port': 3306, 'user': 'root', 'passwd': ''}
 
-stream = BinLogStreamReader(connection_settings = mysql_settings)
+stream = BinLogStreamReader(connection_settings = mysql_settings, server_id=100)
 
 for binlogevent in stream:
     binlogevent.dump()
@@ -265,6 +269,9 @@ Similar projects
 ==================
 * Kodoma: Ruby-binlog based MySQL replication listener https://github.com/y310/kodama
 * MySQL Hadoop Applier: C++ version http://dev.mysql.com/tech-resources/articles/mysql-hadoop-applier.html
+* Java: https://github.com/shyiko/mysql-binlog-connector-java
+* GO: https://github.com/siddontang/go-mysql
+* PHP: Based on this this project https://github.com/krowinski/php-mysql-replication and https://github.com/fengxiangyun/mysql-replication 
 
 Special thanks
 ================
@@ -275,7 +282,9 @@ Contributors
 ==============
 
 Major contributor:
+* Julien Duponchelle Original author https://github.com/noplay
 * bjoernhaeuser for his bugs fixing, improvements and community support https://github.com/bjoernhaeuser
+* Arthur Gautier gtid, slave report...  https://github.com/baloo
 
 Other contributors:
 * Dvir Volk for bug fix https://github.com/dvirsky
@@ -289,12 +298,19 @@ Other contributors:
 * Daniel Gavrila more MySQL error codes https://github.com/danielduduta
 * Bernardo Sulzbach code cleanup https://github.com/mafagafogigante
 * Darioush Jalali Python 2.6 backport https://github.com/darioush
-* Arthur Gautier gtid https://github.com/baloo
 * Jasonz bug fixes https://github.com/jasonzzz
 * Bartek Ogryczak cleanup and improvements https://github.com/vartec
 * Wang, Xiaozhe cleanup https://github.com/chaoslawful
 * siddontang improvements https://github.com/siddontang
 * Cheng Chen Python 2.6 compatibility https://github.com/cccc1999
+* Jffifa utf8mb4 compatibility https://github.com/jffifa
+* Romuald Brunet bug fixes https://github.com/romuald
+* Cédric Hourcade Don't fail on incomplete dates https://github.com/hc
+* Giacomo Lozito Explicit close stream connection on exception https://github.com/giacomolozito
+* Giovanni F. MySQL 5.7 support https://github.com/26fe
+* Igor Mastak intvar event https://github.com/mastak
+* Xie Zhenye fix: missing update _next_seq_no https://github.com/xiezhenye
+* Abrar Sheikh: Time as mysql.timedelta
 
 Thanks to GetResponse for their support
 

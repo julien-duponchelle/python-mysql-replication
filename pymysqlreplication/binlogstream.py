@@ -3,7 +3,7 @@
 import pymysql
 import struct
 
-from pymysql.constants.COMMAND import COM_BINLOG_DUMP
+from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE
 from pymysql.cursors import DictCursor
 from pymysql.util import int2byte
 
@@ -30,10 +30,101 @@ except ImportError:
 MYSQL_EXPECTED_ERROR_CODES = [2013, 2006]
 
 
+class ReportSlave(object):
+
+    """Represent the values that you may report when connecting as a slave
+    to a master. SHOW SLAVE HOSTS related"""
+
+    hostname = ''
+    username = ''
+    password = ''
+    port = 0
+
+    def __init__(self, value):
+        """
+        Attributes:
+            value: string or tuple
+                   if string, then it will be used hostname
+                   if tuple it will be used as (hostname, user, password, port)
+        """
+
+        if isinstance(value, (tuple, list)):
+            try:
+                self.hostname = value[0]
+                self.username = value[1]
+                self.password = value[2]
+                self.port = int(value[3])
+            except IndexError:
+                pass
+        elif isinstance(value, dict):
+            for key in ['hostname', 'username', 'password', 'port']:
+                try:
+                    setattr(self, key, value[key])
+                except KeyError:
+                    pass
+        else:
+            self.hostname = value
+
+    def __repr__(self):
+        return '<ReportSlave hostname=%s username=%s password=%s port=%d>' %\
+            (self.hostname, self.username, self.password, self.port)
+
+    def encoded(self, server_id, master_id=0):
+        """
+        server_id: the slave server-id
+        master_id: usually 0. Appears as "master id" in SHOW SLAVE HOSTS
+                   on the master. Unknown what else it impacts.
+        """
+
+        # 1              [15] COM_REGISTER_SLAVE
+        # 4              server-id
+        # 1              slaves hostname length
+        # string[$len]   slaves hostname
+        # 1              slaves user len
+        # string[$len]   slaves user
+        # 1              slaves password len
+        # string[$len]   slaves password
+        # 2              slaves mysql-port
+        # 4              replication rank
+        # 4              master-id
+
+        lhostname = len(self.hostname)
+        lusername = len(self.username)
+        lpassword = len(self.password)
+
+        packet_len = (1 +  # command
+                      4 +  # server-id
+                      1 +  # hostname length
+                      lhostname +
+                      1 +  # username length
+                      lusername +
+                      1 +  # password length
+                      lpassword +
+                      2 +  # slave mysql port
+                      4 +  # replication rank
+                      4)  # master-id
+
+        MAX_STRING_LEN = 257  # one byte for length + 256 chars
+
+        return (struct.pack('<i', packet_len) +
+                int2byte(COM_REGISTER_SLAVE) +
+                struct.pack('<L', server_id) +
+                struct.pack('<%dp' % min(MAX_STRING_LEN, lhostname + 1),
+                            self.hostname) +
+                struct.pack('<%dp' % min(MAX_STRING_LEN, lusername + 1),
+                            self.username) +
+                struct.pack('<%dp' % min(MAX_STRING_LEN, lpassword + 1),
+                            self.password) +
+                struct.pack('<H', self.port) +
+                struct.pack('<l', 0) +
+                struct.pack('<l', master_id))
+
 
 class BinLogStreamReader(object):
+
     """Connect to replication stream and read event
     """
+    report_slave = None
 
     def __init__(self, connection_settings, server_id, ctl_connection_settings=None, resume_stream=False,
                  blocking=False, only_events=None, log_file=None, log_pos=None,
@@ -41,6 +132,8 @@ class BinLogStreamReader(object):
                  ignored_events=None, auto_position=None,
                  only_tables=None, only_schemas=None,
                  freeze_schema=False, skip_to_timestamp=None,
+                 report_slave=None, slave_uuid=None,
+                 pymysql_wrapper=None,
                  fail_on_table_metadata_unavailable=False):
         """
         Attributes:
@@ -57,7 +150,10 @@ class BinLogStreamReader(object):
             only_schemas: An array with the schemas you want to watch
             freeze_schema: If true do not support ALTER TABLE. It's faster.
             skip_to_timestamp: Ignore all events until reaching specified timestamp.
-            fail_on_table_metadata_unavailable: Should raise exception if we can't get table information on row_events
+            report_slave: Report slave in SHOW SLAVE HOSTS.
+            slave_uuid: Report slave_uuid in SHOW SLAVE HOSTS.
+            fail_on_table_metadata_unavailable: Should raise exception if we can't get
+                                                table information on row_events
         """
 
         self.__connection_settings = connection_settings
@@ -94,6 +190,15 @@ class BinLogStreamReader(object):
         self.auto_position = auto_position
         self.skip_to_timestamp = skip_to_timestamp
 
+        if report_slave:
+            self.report_slave = ReportSlave(report_slave)
+        self.slave_uuid = slave_uuid
+
+        if pymysql_wrapper:
+            self.pymysql_wrapper = pymysql_wrapper
+        else:
+            self.pymysql_wrapper = pymysql.connect
+
     def close(self):
         if self.__connected_stream:
             self._stream_connection.close()
@@ -110,7 +215,7 @@ class BinLogStreamReader(object):
             self._ctl_connection_settings = dict(self.__connection_settings)
         self._ctl_connection_settings["db"] = "information_schema"
         self._ctl_connection_settings["cursorclass"] = DictCursor
-        self._ctl_connection = pymysql.connect(**self._ctl_connection_settings)
+        self._ctl_connection = self.pymysql_wrapper(**self._ctl_connection_settings)
         self._ctl_connection._get_table_information = self.__get_table_information
         self.__connected_ctl = True
 
@@ -128,12 +233,27 @@ class BinLogStreamReader(object):
             return False
         return True
 
+    def _register_slave(self):
+        if not self.report_slave:
+            return
+
+        packet = self.report_slave.encoded(self.__server_id)
+
+        if pymysql.__version__ < "0.6":
+            self._stream_connection.wfile.write(packet)
+            self._stream_connection.wfile.flush()
+            self._stream_connection.read_packet()
+        else:
+            self._stream_connection._write_bytes(packet)
+            self._stream_connection._next_seq_id = 1
+            self._stream_connection._read_packet()
+
     def __connect_to_stream(self):
         # log_pos (4) -- position in the binlog-file to start the stream with
         # flags (2) BINLOG_DUMP_NON_BLOCK (0 or 1)
         # server_id (4) -- server id of this slave
         # log_file (string.EOF) -- filename of the binlog on the master
-        self._stream_connection = pymysql.connect(**self.__connection_settings)
+        self._stream_connection = self.pymysql_wrapper(**self.__connection_settings)
 
         self.__use_checksum = self.__checksum_enabled()
 
@@ -143,6 +263,13 @@ class BinLogStreamReader(object):
             cur = self._stream_connection.cursor()
             cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")
             cur.close()
+
+        if self.slave_uuid:
+            cur = self._stream_connection.cursor()
+            cur.execute("set @slave_uuid= '%s'" % self.slave_uuid)
+            cur.close()
+
+        self._register_slave()
 
         if not self.auto_position:
             # only when log_file and log_pos both provided, the position info is
@@ -236,6 +363,7 @@ class BinLogStreamReader(object):
             self._stream_connection.wfile.flush()
         else:
             self._stream_connection._write_bytes(prelude)
+            self._stream_connection._next_seq_id = 1
         self.__connected_stream = True
 
     def fetchone(self):
@@ -259,6 +387,7 @@ class BinLogStreamReader(object):
                     continue
 
             if pkt.is_eof_packet():
+                self.close()
                 return None
 
             if not pkt.is_ok_packet():
