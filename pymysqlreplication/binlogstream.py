@@ -157,16 +157,15 @@ class BinLogStreamReader(object):
         """
 
         self.__connection_settings = connection_settings
-        if not connection_settings.get("charset"):
-            self.__connection_settings["charset"] = "utf8"
+        self.__connection_settings.setdefault("charset", "utf8")
 
         self.__connected_stream = False
         self.__connected_ctl = False
         self.__resume_stream = resume_stream
         self.__blocking = blocking
         self._ctl_connection_settings = ctl_connection_settings
-        if ctl_connection_settings and not ctl_connection_settings.get("charset"):
-            self._ctl_connection_settings["charset"] = "utf8"
+        if ctl_connection_settings:
+            self._ctl_connection_settings.setdefault("charset", "utf8")
 
         self.__only_tables = only_tables
         self.__only_schemas = only_schemas

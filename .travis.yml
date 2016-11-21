@@ -19,7 +19,7 @@ cache:
   - $HOME/bins
 before_script:
   - env | grep DB
-  - bash -c "if [ '$DB' = 'mysql57' ]; then sudo ./scripts/install_mysql_sandbox.sh; ./scripts/install_mysql57_on_sandbox.sh; fi"
+  - bash -c "if [ '$DB' = 'mysql57' ]; then sudo ./scripts/install_mysql57.sh; fi"
   - bash -c "if [ '$DB' = 'mysql56' ]; then sudo ./scripts/install_mysql56.sh; fi"
 script:
   - "nosetests"
