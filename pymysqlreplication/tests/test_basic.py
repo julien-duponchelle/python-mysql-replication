@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import pymysql
+import copy
 import time
 import sys
 import io
@@ -11,10 +13,11 @@ from pymysqlreplication.tests import base
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.gtid import GtidSet
 from pymysqlreplication.event import *
+from pymysqlreplication.exceptions import TableMetadataUnavailableError
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 
-__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestGtidBinLogStreamReader"]
+__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader"]
 
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
@@ -569,6 +572,29 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertEqual([], event.rows)
 
+    def test_drop_table_tablemetadata_unavailable(self):
+        self.stream.close()
+        self.execute("CREATE TABLE test (id INTEGER(11))")
+        self.execute("INSERT INTO test VALUES (1)")
+        self.execute("DROP TABLE test")
+        self.execute("COMMIT")
+
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(WriteRowsEvent,),
+            fail_on_table_metadata_unavailable=True
+        )
+        had_error = False
+        try:
+            event = self.stream.fetchone()
+        except TableMetadataUnavailableError as e:
+            had_error = True
+            assert "test" in e.args[0]
+        finally:
+            self.resetBinLog()
+            assert had_error
+
     def test_drop_column(self):
         self.stream.close()
         self.execute("CREATE TABLE test_drop_column (id INTEGER(11), data VARCHAR(50))")
@@ -581,7 +607,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.stream = BinLogStreamReader(
             self.database,
             server_id=1024,
-            only_events=(WriteRowsEvent,),
+            only_events=(WriteRowsEvent,)
             )
         try:
             self.stream.fetchone()  # insert with two values
@@ -618,6 +644,61 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["data"], 'A value')
         self.stream.fetchone()  # insert with three values
 
+class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
+
+    def setUp(self):
+        super(TestCTLConnectionSettings, self).setUp()
+        self.stream.close()
+        ctl_db = copy.copy(self.database)
+        ctl_db["db"] = None
+        ctl_db["port"] = 3307
+        self.ctl_conn_control = pymysql.connect(**ctl_db)
+        self.ctl_conn_control.cursor().execute("DROP DATABASE IF EXISTS pymysqlreplication_test")
+        self.ctl_conn_control.cursor().execute("CREATE DATABASE pymysqlreplication_test")
+        self.ctl_conn_control.close()
+        ctl_db["db"] = "pymysqlreplication_test"
+        self.ctl_conn_control = pymysql.connect(**ctl_db)
+        self.stream = BinLogStreamReader(
+            self.database,
+            ctl_connection_settings=ctl_db,
+            server_id=1024,
+            only_events=(WriteRowsEvent,),
+            fail_on_table_metadata_unavailable=True
+        )
+
+    def tearDown(self):
+        super(TestCTLConnectionSettings, self).tearDown()
+        self.ctl_conn_control.close()
+
+    def test_seperate_ctl_settings_table_metadata_unavailable(self):
+        self.execute("CREATE TABLE test (id INTEGER(11))")
+        self.execute("INSERT INTO test VALUES (1)")
+        self.execute("COMMIT")
+
+        had_error = False
+        try:
+            event = self.stream.fetchone()
+        except TableMetadataUnavailableError as e:
+            had_error = True
+            assert "test" in e.args[0]
+        finally:
+            self.resetBinLog()
+            assert had_error
+
+    def test_seperate_ctl_settings_no_error(self):
+        self.execute("CREATE TABLE test (id INTEGER(11))")
+        self.execute("INSERT INTO test VALUES (1)")
+        self.execute("DROP TABLE test")
+        self.execute("COMMIT")
+        self.ctl_conn_control.cursor().execute("CREATE TABLE test (id INTEGER(11))")
+        self.ctl_conn_control.cursor().execute("INSERT INTO test VALUES (1)")
+        self.ctl_conn_control.cursor().execute("COMMIT")
+        try:
+            self.stream.fetchone()
+        except Exception as e:
+            self.fail("raised unexpected exception: {exception}".format(exception=e))
+        finally:
+            self.resetBinLog()
 
 class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def setUp(self):

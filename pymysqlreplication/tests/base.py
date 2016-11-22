@@ -21,30 +21,18 @@ class PyMySQLReplicationTestCase(base):
     def setUp(self):
 
         db = os.environ.get('DB')
-        if db == 'mysql57':
-            # mysql 5.7 sandbox running on travis
-            self.database = {
-                "host": "localhost",
-                "user": "root",
-                "passwd": "msandbox",
-                "port": 5714,
-                "use_unicode": True,
-                "charset": "utf8",
-                "db": "pymysqlreplication_test"
-            }
-        else:
-            # default
-            self.database = {
-                "host": "localhost",
-                "user": "root",
-                "passwd": "",
-                "port": 3306,
-                "use_unicode": True,
-                "charset": "utf8",
-                "db": "pymysqlreplication_test"
-            }
-            if os.getenv("TRAVIS") is not None:
-                self.database["user"] = "travis"
+        # default
+        self.database = {
+            "host": "localhost",
+            "user": "root",
+            "passwd": "",
+            "port": 3306,
+            "use_unicode": True,
+            "charset": "utf8",
+            "db": "pymysqlreplication_test"
+        }
+        if os.getenv("TRAVIS") is not None and db == "mysql56":
+            self.database["user"] = "travis"
 
         self.conn_control = None
         db = copy.copy(self.database)

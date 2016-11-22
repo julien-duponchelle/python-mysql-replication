@@ -43,11 +43,17 @@ To run tests:
 
     python setup.py test
 
-Running mysql in docker:
+Running mysql in docker (main):
 
 ::
 
     docker run --name python-mysql-replication-tests -e MYSQL_ALLOW_EMPTY_PASSWORD=true -p 3306:3306 --rm percona:latest --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave_updates
+
+Running mysql in docker (for ctl server):
+
+::
+    
+    docker run --name python-mysql-replication-tests-ctl --expose=3307 -e MYSQL_ALLOW_EMPTY_PASSWORD=true -p 3307:3307 --rm percona:latest --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave-updates -P 3307
 
 
 Each pull request is tested on Travis CI:

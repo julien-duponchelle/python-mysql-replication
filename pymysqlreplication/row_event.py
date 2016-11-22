@@ -8,6 +8,7 @@ from pymysql.util import byte2int
 from pymysql.charset import charset_to_encoding
 
 from .event import BinLogEvent
+from .exceptions import TableMetadataUnavailableError
 from .constants import FIELD_TYPE
 from .constants import BINLOG
 from .column import Column
@@ -57,6 +58,8 @@ class RowsEvent(BinLogEvent):
 
         if len(self.columns) == 0:  # could not read the table metadata, probably already dropped
             self.complete = False
+            if self._fail_on_table_metadata_unavailable:
+                raise TableMetadataUnavailableError(self.table)
 
     def __is_null(self, null_bitmap, position):
         bit = null_bitmap[int(position / 8)]
@@ -251,7 +254,7 @@ class RowsEvent(BinLogEvent):
 
         sign = 1 if self.__read_binary_slice(data, 0, 1, 24) else -1
         if sign == -1:
-            # negative integers are stored as 2's compliment 
+            # negative integers are stored as 2's compliment
             # hence take 2's compliment again to get the right value.
             data = ~data + 1
 

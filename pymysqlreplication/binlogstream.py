@@ -126,16 +126,18 @@ class BinLogStreamReader(object):
     """
     report_slave = None
 
-    def __init__(self, connection_settings, server_id, resume_stream=False,
+    def __init__(self, connection_settings, server_id, ctl_connection_settings=None, resume_stream=False,
                  blocking=False, only_events=None, log_file=None, log_pos=None,
                  filter_non_implemented_events=True,
                  ignored_events=None, auto_position=None,
                  only_tables=None, only_schemas=None,
                  freeze_schema=False, skip_to_timestamp=None,
                  report_slave=None, slave_uuid=None,
-                 pymysql_wrapper=None):
+                 pymysql_wrapper=None,
+                 fail_on_table_metadata_unavailable=False):
         """
         Attributes:
+            ctl_connection_settings: Connection settings for cluster holding schema information
             resume_stream: Start for event from position or the latest event of
                            binlog or from older available event
             blocking: Read on stream is blocking
@@ -150,20 +152,27 @@ class BinLogStreamReader(object):
             skip_to_timestamp: Ignore all events until reaching specified timestamp.
             report_slave: Report slave in SHOW SLAVE HOSTS.
             slave_uuid: Report slave_uuid in SHOW SLAVE HOSTS.
+            fail_on_table_metadata_unavailable: Should raise exception if we can't get
+                                                table information on row_events
         """
+
         self.__connection_settings = connection_settings
-        self.__connection_settings["charset"] = "utf8"
+        self.__connection_settings.setdefault("charset", "utf8")
 
         self.__connected_stream = False
         self.__connected_ctl = False
         self.__resume_stream = resume_stream
         self.__blocking = blocking
+        self._ctl_connection_settings = ctl_connection_settings
+        if ctl_connection_settings:
+            self._ctl_connection_settings.setdefault("charset", "utf8")
 
         self.__only_tables = only_tables
         self.__only_schemas = only_schemas
         self.__freeze_schema = freeze_schema
         self.__allowed_events = self._allowed_event_list(
             only_events, ignored_events, filter_non_implemented_events)
+        self.__fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
 
         # We can't filter on packet level TABLE_MAP and rotate event because
         # we need them for handling other operations
@@ -201,7 +210,8 @@ class BinLogStreamReader(object):
             self.__connected_ctl = False
 
     def __connect_to_ctl(self):
-        self._ctl_connection_settings = dict(self.__connection_settings)
+        if not self._ctl_connection_settings:
+            self._ctl_connection_settings = dict(self.__connection_settings)
         self._ctl_connection_settings["db"] = "information_schema"
         self._ctl_connection_settings["cursorclass"] = DictCursor
         self._ctl_connection = self.pymysql_wrapper(**self._ctl_connection_settings)
@@ -388,7 +398,8 @@ class BinLogStreamReader(object):
                                                self.__allowed_events_in_packet,
                                                self.__only_tables,
                                                self.__only_schemas,
-                                               self.__freeze_schema)
+                                               self.__freeze_schema,
+                                               self.__fail_on_table_metadata_unavailable)
 
             if self.skip_to_timestamp and binlog_event.timestamp < self.skip_to_timestamp:
                 continue
