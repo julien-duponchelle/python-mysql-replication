@@ -84,5 +84,9 @@
 * PyMYSQL 0.7
 * Add more contributors
 
-0.10 NOT YET RELEASED
+0.10 30/11/2016 
 * row-events: TIME is now encoded as python.timedelta
+* Allow users to define ctl_connection_settings and the option to fail when table information is unavailable (#176)
+* Decode gtid from network packet
+* fixed count of fetched events
+* unittest2 is only a test requirement

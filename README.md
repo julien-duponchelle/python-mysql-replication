@@ -309,9 +309,9 @@ Other contributors:
 * Giacomo Lozito Explicit close stream connection on exception https://github.com/giacomolozito
 * Giovanni F. MySQL 5.7 support https://github.com/26fe
 * Igor Mastak intvar event https://github.com/mastak
-* Xie Zhenye fix: missing update _next_seq_no https://github.com/xiezhenye
-* Abrar Sheikh: Time as mysql.timedelta
-* Keegan Parker secondary database for reference schema https://github.com/kdparker
+* Xie Zhenye fix missing update _next_seq_no https://github.com/xiezhenye
+* Abrar Sheikh: Time as mysql.timedelta https://github.com/abrarsheikh
+* Keegan Parker: secondary database for reference schema https://github.com/kdparker
 
 Thanks to GetResponse for their support
 
