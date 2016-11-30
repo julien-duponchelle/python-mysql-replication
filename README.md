@@ -72,6 +72,7 @@ Projects using this library
 * mymongo: MySQL to mongo replication https://github.com/njordr/mymongo
 * pg_chameleon: Migration and replica from MySQL to PostgreSQL https://github.com/the4thdoctor/pg_chameleon
 * MySQLStreamer: MySQLStreamer is a database change data capture and publish system https://github.com/Yelp/mysql_streamer
+* Yelp Data Pipeline: https://engineeringblog.yelp.com/2016/11/open-sourcing-yelps-data-pipeline.html
 
 MySQL server settings
 =========================
