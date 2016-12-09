@@ -43,7 +43,7 @@ Project status
 ================
 
 The project is test with:
-* MySQL 5.5 and 5.6
+* MySQL 5.5, 5.6 and 5.7
 * Python >= 2.6
 * Python 3.3 and 3.4 (3.2 is not supported)
 * PyPy (really faster than the standard Python interpreter)
