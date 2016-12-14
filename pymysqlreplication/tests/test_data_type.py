@@ -14,8 +14,20 @@ from pymysqlreplication.tests import base
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 from pymysqlreplication.event import *
+from pymysqlreplication._compat import text_type
+
 
 __all__ = ["TestDataType"]
+
+
+def to_binary_dict(d):
+    def encode_value(v):
+        if isinstance(v, text_type):
+            return v.encode()
+        if isinstance(v, list):
+            return [encode_value(x) for x in v]
+        return v
+    return dict([(k.encode(), encode_value(v)) for (k, v) in d.items()])
 
 
 class TestDataType(base.PyMySQLReplicationTestCase):
@@ -412,6 +424,94 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         insert_query = "INSERT INTO test VALUES(GeomFromText('POINT(1 1)'))"
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test"], b'\x00\x00\x00\x00\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\xf0?')
+
+    def test_json(self):
+        if not self.isMySQL57():
+            self.skipTest("Json is only supported in mysql 5.7")
+        create_query = "CREATE TABLE test (id int, value json);"
+        insert_query = """INSERT INTO test (id, value) VALUES (1, '{"my_key": "my_val", "my_key2": "my_val2"}');"""
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["value"], {b"my_key": b"my_val", b"my_key2": b"my_val2"})
+
+    def test_json_array(self):
+        if not self.isMySQL57():
+            self.skipTest("Json is only supported in mysql 5.7")
+        create_query = "CREATE TABLE test (id int, value json);"
+        insert_query = """INSERT INTO test (id, value) VALUES (1, '["my_val", "my_val2"]');"""
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["value"], [b'my_val', b'my_val2'])
+
+    def test_json_large(self):
+        if not self.isMySQL57():
+            self.skipTest("Json is only supported in mysql 5.7")
+        data = dict([('foooo%i'%i, 'baaaaar%i'%i) for i in range(2560)])  # Make it large enough to reach 2^16 length
+        create_query = "CREATE TABLE test (id int, value json);"
+        insert_query = """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
+        event = self.create_and_insert_value(create_query, insert_query)
+
+        self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict(data))
+
+    def test_json_types(self):
+        if not self.isMySQL57():
+            self.skipTest("Json is only supported in mysql 5.7")
+
+        types = [
+           True,
+           False,
+           None,
+           1.2,
+           2^14,
+           2^30,
+           2^62,
+           -1 * 2^14,
+           -1 * 2^30,
+           -1 * 2^62,
+           ['foo', 'bar']
+        ]
+
+        for t in types:
+            data = {'foo': t}
+            create_query = "CREATE TABLE test (id int, value json);"
+            insert_query = """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
+            event = self.create_and_insert_value(create_query, insert_query)
+            self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict(data))
+
+            self.tearDown()
+            self.setUp()
+
+    def test_json_basic(self):
+        if not self.isMySQL57():
+            self.skipTest("Json is only supported in mysql 5.7")
+
+        types = [
+           True,
+           False,
+           None,
+           1.2,
+           2^14,
+           2^30,
+           2^62,
+           -1 * 2^14,
+           -1 * 2^30,
+           -1 * 2^62,
+        ]
+
+        for data in types:
+            create_query = "CREATE TABLE test (id int, value json);"
+            insert_query = """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
+            event = self.create_and_insert_value(create_query, insert_query)
+            self.assertEqual(event.rows[0]["values"]["value"], data)
+
+            self.tearDown()
+            self.setUp()
+
+    def test_json_unicode(self):
+        if not self.isMySQL57():
+            self.skipTest("Json is only supported in mysql 5.7")
+        create_query = "CREATE TABLE test (id int, value json);"
+        insert_query = u"""INSERT INTO test (id, value) VALUES (1, '{"miam": "🍔"}');"""
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["value"][b"miam"], u'🍔'.encode('utf8'))
 
     def test_null(self):
         create_query = "CREATE TABLE test ( \

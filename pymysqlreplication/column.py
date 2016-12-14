@@ -47,6 +47,8 @@ class Column(object):
             self.length_size = packet.read_uint8()
         elif self.type == FIELD_TYPE.GEOMETRY:
             self.length_size = packet.read_uint8()
+        elif self.type == FIELD_TYPE.JSON:
+            self.length_size = packet.read_uint8()
         elif self.type == FIELD_TYPE.NEWDECIMAL:
             self.precision = packet.read_uint8()
             self.decimals = packet.read_uint8()
