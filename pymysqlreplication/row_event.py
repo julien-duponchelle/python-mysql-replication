@@ -3,6 +3,7 @@
 import struct
 import decimal
 import datetime
+import json
 
 from pymysql.util import byte2int
 from pymysql.charset import charset_to_encoding
@@ -167,6 +168,8 @@ class RowsEvent(BinLogEvent):
             elif column.type == FIELD_TYPE.GEOMETRY:
                 values[name] = self.packet.read_length_coded_pascal_string(
                     column.length_size)
+            elif column.type == FIELD_TYPE.JSON:
+                values[name] = self.packet.read_binary_json(column.length_size)
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" %
                                           (column.type))

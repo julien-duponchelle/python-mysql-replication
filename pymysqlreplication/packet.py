@@ -18,6 +18,40 @@ UNSIGNED_INT24_LENGTH = 3
 UNSIGNED_INT64_LENGTH = 8
 
 
+JSONB_TYPE_SMALL_OBJECT = 0x0
+JSONB_TYPE_LARGE_OBJECT = 0x1
+JSONB_TYPE_SMALL_ARRAY = 0x2
+JSONB_TYPE_LARGE_ARRAY = 0x3
+JSONB_TYPE_LITERAL = 0x4
+JSONB_TYPE_INT16 = 0x5
+JSONB_TYPE_UINT16 = 0x6
+JSONB_TYPE_INT32 = 0x7
+JSONB_TYPE_UINT32 = 0x8
+JSONB_TYPE_INT64 = 0x9
+JSONB_TYPE_UINT64 = 0xA
+JSONB_TYPE_DOUBLE = 0xB
+JSONB_TYPE_STRING = 0xC
+JSONB_TYPE_OPAQUE = 0xF
+
+JSONB_LITERAL_NULL = 0x0
+JSONB_LITERAL_TRUE = 0x1
+JSONB_LITERAL_FALSE = 0x2
+
+
+def read_offset_or_inline(packet, large):
+    t = packet.read_uint8()
+
+    if t in (JSONB_TYPE_LITERAL,
+             JSONB_TYPE_INT16, JSONB_TYPE_UINT16):
+        return (t, None, packet.read_binary_json_type_inlined(t))
+    if large and t in (JSONB_TYPE_INT32, JSONB_TYPE_UINT32):
+        return (t, None, packet.read_binary_json_type_inlined(t))
+
+    if large:
+        return (t, packet.read_uint32(), None)
+    return (t, packet.read_uint16(), None)
+
+
 class BinLogPacketWrapper(object):
     """
     Bin Log Packet Wrapper. It uses an existing packet object, and wraps
@@ -230,6 +264,9 @@ class BinLogPacketWrapper(object):
     def read_uint8(self):
         return struct.unpack('<B', self.read(1))[0]
 
+    def read_int16(self):
+        return struct.unpack('<h', self.read(2))[0]
+
     def read_uint16(self):
         return struct.unpack('<H', self.read(2))[0]
 
@@ -281,3 +318,126 @@ class BinLogPacketWrapper(object):
                 + (struct.unpack('B', n[3])[0] << 24)
         except TypeError:
             return n[0] + (n[1] << 8) + (n[2] << 16) + (n[3] << 24)
+
+    def read_binary_json(self, size):
+        length = self.read_uint_by_size(size)
+        payload = self.read(length)
+        self.unread(payload)
+        print('payload', payload)
+        t = self.read_uint8()
+
+        return self.read_binary_json_type(t, length)
+
+    def read_binary_json_type(self, t, length):
+        large = (t in (JSONB_TYPE_LARGE_OBJECT, JSONB_TYPE_LARGE_ARRAY))
+        if t in (JSONB_TYPE_SMALL_OBJECT, JSONB_TYPE_LARGE_OBJECT):
+            return self.read_binary_json_object(length - 1, large)
+        elif t in (JSONB_TYPE_SMALL_ARRAY, JSONB_TYPE_LARGE_ARRAY):
+            return self.read_binary_json_array(length - 1, large)
+        elif t in (JSONB_TYPE_STRING,):
+            return self.read_length_coded_pascal_string(1)
+        elif t in (JSONB_TYPE_LITERAL,):
+            value = self.read_uint8()
+            print('value', value)
+            if value == JSONB_LITERAL_NULL:
+                return None
+            elif value == JSONB_LITERAL_TRUE:
+                return True
+            elif value == JSONB_LITERAL_FALSE:
+                return False
+        elif t == JSONB_TYPE_INT16:
+            return self.read_int16()
+        elif t == JSONB_TYPE_UINT16:
+            return self.read_uint16()
+        elif t in (JSONB_TYPE_DOUBLE,):
+            return struct.unpack('<d', self.read(8))[0]
+        elif t == JSONB_TYPE_INT32:
+            return self.read_int32()
+        elif t == JSONB_TYPE_UINT32:
+            return self.read_uint32()
+        elif t == JSONB_TYPE_INT64:
+            return self.read_int64()
+        elif t == JSONB_TYPE_UINT64:
+            return self.read_uint64()
+
+        raise ValueError('Json type %d is not handled' % t)
+
+    def read_binary_json_type_inlined(self, t):
+        if t == JSONB_TYPE_LITERAL:
+            value = self.read_uint16()
+            if value == JSONB_LITERAL_NULL:
+                return None
+            elif value == JSONB_LITERAL_TRUE:
+                return True
+            elif value == JSONB_LITERAL_FALSE:
+                return False
+        elif t == JSONB_TYPE_INT16:
+            return self.read_int16()
+        elif t == JSONB_TYPE_UINT16:
+            return self.read_uint16()
+        elif t == JSONB_TYPE_INT32:
+            return self.read_int32()
+        elif t == JSONB_TYPE_UINT32:
+            return self.read_uint32()
+
+        raise ValueError('Json type %d is not handled' % t)
+
+    def read_binary_json_object(self, length, large):
+        if large:
+            elements = self.read_uint32()
+            size = self.read_uint32()
+        else:
+            elements = self.read_uint16()
+            size = self.read_uint16()
+
+        if size > length:
+            raise ValueError('Json length is larger than packet length')
+
+        if large:
+            key_offset_lengths = [(
+                self.read_uint32(),  # offset (we don't actually need that)
+                self.read_uint16()   # size of the key
+                ) for _ in range(elements)]
+        else:
+            key_offset_lengths = [(
+                self.read_uint16(),  # offset (we don't actually need that)
+                self.read_uint16()   # size of key
+                ) for _ in range(elements)]
+
+        value_type_inlined_lengths = [read_offset_or_inline(self, large)
+                                      for _ in range(elements)]
+
+        keys = [self.read(x[1]) for x in key_offset_lengths]
+
+        out = {}
+        for i in range(elements):
+            if value_type_inlined_lengths[i][1] is None:
+                data = value_type_inlined_lengths[i][2]
+            else:
+                t = value_type_inlined_lengths[i][0]
+                data = self.read_binary_json_type(t, length)
+            out[keys[i]] = data
+
+        return out
+
+    def read_binary_json_array(self, length, large):
+        if large:
+            elements = self.read_uint32()
+            size = self.read_uint32()
+        else:
+            elements = self.read_uint16()
+            size = self.read_uint16()
+
+        if size > length:
+            raise ValueError('Json length is larger than packet length')
+
+        values_type_offset_inline = [
+            read_offset_or_inline(self, large)
+            for _ in range(elements)]
+
+        def _read(x):
+            if x[1] is None:
+                return x[2]
+            return self.read_binary_json_type(x[0], length)
+
+        return [_read(x) for x in values_type_offset_inline]
