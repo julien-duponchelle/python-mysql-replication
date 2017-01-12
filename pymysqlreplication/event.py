@@ -135,7 +135,7 @@ class QueryEvent(BinLogEvent):
 
         # Payload
         self.status_vars = self.packet.read(self.status_vars_length)
-        self.schema = self.packet.read(self.schema_length)
+        self.schema = self.packet.read(self.schema_length).decode()
         self.packet.advance(1)
 
         self.query = self.packet.read(event_size - 13 - self.status_vars_length
