@@ -7,6 +7,7 @@ from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE
 from pymysql.cursors import DictCursor
 from pymysql.util import int2byte
 
+from pymysqlreplication.representation import Human, string_to_types
 from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
 from .gtid import GtidSet
@@ -134,7 +135,8 @@ class BinLogStreamReader(object):
                  freeze_schema=False, skip_to_timestamp=None,
                  report_slave=None, slave_uuid=None,
                  pymysql_wrapper=None,
-                 fail_on_table_metadata_unavailable=False):
+                 fail_on_table_metadata_unavailable=False,
+                 representation='HUMAN_READABLE'):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding schema information
@@ -155,7 +157,7 @@ class BinLogStreamReader(object):
             fail_on_table_metadata_unavailable: Should raise exception if we can't get
                                                 table information on row_events
         """
-
+        self.representation = string_to_types[representation]()
         self.__connection_settings = connection_settings
         self.__connection_settings.setdefault("charset", "utf8")
 
@@ -391,7 +393,6 @@ class BinLogStreamReader(object):
 
             if not pkt.is_ok_packet():
                 continue
-
             binlog_event = BinLogPacketWrapper(pkt, self.table_map,
                                                self._ctl_connection,
                                                self.__use_checksum,
@@ -399,7 +400,8 @@ class BinLogStreamReader(object):
                                                self.__only_tables,
                                                self.__only_schemas,
                                                self.__freeze_schema,
-                                               self.__fail_on_table_metadata_unavailable)
+                                               self.__fail_on_table_metadata_unavailable,
+                                               self.representation)
 
             if self.skip_to_timestamp and binlog_event.timestamp < self.skip_to_timestamp:
                 continue

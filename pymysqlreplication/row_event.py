@@ -17,12 +17,13 @@ from .table import Table
 from .bitmap import BitCount, BitGet
 
 class RowsEvent(BinLogEvent):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, representation_type = None, **kwargs):
         super(RowsEvent, self).__init__(from_packet, event_size, table_map,
-                                        ctl_connection, **kwargs)
+                                        ctl_connection, representation_type = representation_type, **kwargs)
         self.__rows = None
         self.__only_tables = kwargs["only_tables"]
         self.__only_schemas = kwargs["only_schemas"]
+        self._representation = representation_type.get_representation(self.__class__)(self)
 
         #Header
         self.table_id = self._read_table_id()
@@ -400,9 +401,7 @@ class RowsEvent(BinLogEvent):
 
     def _dump(self):
         super(RowsEvent, self)._dump()
-        print("Table: %s.%s" % (self.schema, self.table))
-        print("Affected columns: %d" % self.number_of_columns)
-        print("Changed rows: %d" % (len(self.rows)))
+        print(self._representation.get_representation())
 
     def _fetch_rows(self):
         self.__rows = []
@@ -426,9 +425,10 @@ class DeleteRowsEvent(RowsEvent):
     For each row you have a hash with a single key: values which contain the data of the removed line.
     """
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, representation_type = None, **kwargs):
         super(DeleteRowsEvent, self).__init__(from_packet, event_size,
-                                              table_map, ctl_connection, **kwargs)
+                                              table_map, ctl_connection, representation_type = representation_type, **kwargs)
+        self._representation = representation_type.get_representation(self.__class__)(self)
         if self._processed:
             self.columns_present_bitmap = self.packet.read(
                 (self.number_of_columns + 7) / 8)
@@ -441,11 +441,7 @@ class DeleteRowsEvent(RowsEvent):
 
     def _dump(self):
         super(DeleteRowsEvent, self)._dump()
-        print("Values:")
-        for row in self.rows:
-            print("--")
-            for key in row["values"]:
-                print("*", key, ":", row["values"][key])
+        print(self._representation.get_representation())
 
 
 class WriteRowsEvent(RowsEvent):
@@ -454,9 +450,10 @@ class WriteRowsEvent(RowsEvent):
     For each row you have a hash with a single key: values which contain the data of the new line.
     """
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, representation_type = None, **kwargs):
         super(WriteRowsEvent, self).__init__(from_packet, event_size,
-                                             table_map, ctl_connection, **kwargs)
+                                             table_map, ctl_connection, representation_type = representation_type, **kwargs)
+        self._representation = representation_type.get_representation(self.__class__)(self)
         if self._processed:
             self.columns_present_bitmap = self.packet.read(
                 (self.number_of_columns + 7) / 8)
@@ -469,11 +466,7 @@ class WriteRowsEvent(RowsEvent):
 
     def _dump(self):
         super(WriteRowsEvent, self)._dump()
-        print("Values:")
-        for row in self.rows:
-            print("--")
-            for key in row["values"]:
-                print("*", key, ":", row["values"][key])
+        print(self._representation.get_representation())
 
 
 class UpdateRowsEvent(RowsEvent):
@@ -487,9 +480,11 @@ class UpdateRowsEvent(RowsEvent):
     http://dev.mysql.com/doc/refman/5.6/en/replication-options-binary-log.html#sysvar_binlog_row_image
     """
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(UpdateRowsEvent, self).__init__(from_packet, event_size,
-                                              table_map, ctl_connection, **kwargs)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, representation_type = None, **kwargs):
+        super(UpdateRowsEvent, self).__init__(from_packet, event_size,table_map,
+                                              ctl_connection, representation_type = representation_type,
+                                              **kwargs)
+        self._representation = representation_type.get_representation(self.__class__)(self)
         if self._processed:
             #Body
             self.columns_present_bitmap = self.packet.read(
@@ -507,14 +502,7 @@ class UpdateRowsEvent(RowsEvent):
 
     def _dump(self):
         super(UpdateRowsEvent, self)._dump()
-        print("Affected columns: %d" % self.number_of_columns)
-        print("Values:")
-        for row in self.rows:
-            print("--")
-            for key in row["before_values"]:
-                print("*%s:%s=>%s" % (key,
-                                      row["before_values"][key],
-                                      row["after_values"][key]))
+        print(self._representation.get_representation())
 
 
 class TableMapEvent(BinLogEvent):
@@ -523,9 +511,10 @@ class TableMapEvent(BinLogEvent):
     A end user of the lib should have no usage of this
     """
 
-    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(TableMapEvent, self).__init__(from_packet, event_size,
-                                            table_map, ctl_connection, **kwargs)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, representation_type = None, **kwargs):
+        super(TableMapEvent, self).__init__(from_packet, event_size,table_map,
+                                            ctl_connection, representation_type = representation_type, **kwargs)
+        self._representation = representation_type.get_representation(self.__class__)(self)
         self.__only_tables = kwargs["only_tables"]
         self.__only_schemas = kwargs["only_schemas"]
         self.__freeze_schema = kwargs["freeze_schema"]
@@ -597,7 +586,4 @@ class TableMapEvent(BinLogEvent):
 
     def _dump(self):
         super(TableMapEvent, self)._dump()
-        print("Table id: %d" % (self.table_id))
-        print("Schema: %s" % (self.schema))
-        print("Table: %s" % (self.table))
-        print("Columns: %s" % (self.column_count))
+        print(self._representation.get_representation())
