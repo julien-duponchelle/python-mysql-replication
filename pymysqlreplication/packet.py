@@ -323,7 +323,6 @@ class BinLogPacketWrapper(object):
         length = self.read_uint_by_size(size)
         payload = self.read(length)
         self.unread(payload)
-        print('payload', payload)
         t = self.read_uint8()
 
         return self.read_binary_json_type(t, length)
@@ -338,7 +337,6 @@ class BinLogPacketWrapper(object):
             return self.read_length_coded_pascal_string(1)
         elif t in (JSONB_TYPE_LITERAL,):
             value = self.read_uint8()
-            print('value', value)
             if value == JSONB_LITERAL_NULL:
                 return None
             elif value == JSONB_LITERAL_TRUE:
