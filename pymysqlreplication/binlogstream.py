@@ -14,7 +14,7 @@ from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
     XidEvent, GtidEvent, StopEvent,
     BeginLoadQueryEvent, ExecuteLoadQueryEvent,
-    NotImplementedEvent)
+    HeartbeatLogEvent, NotImplementedEvent)
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
 
@@ -134,7 +134,8 @@ class BinLogStreamReader(object):
                  freeze_schema=False, skip_to_timestamp=None,
                  report_slave=None, slave_uuid=None,
                  pymysql_wrapper=None,
-                 fail_on_table_metadata_unavailable=False):
+                 fail_on_table_metadata_unavailable=False,
+                 slave_heartbeat=None):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding schema information
@@ -154,6 +155,11 @@ class BinLogStreamReader(object):
             slave_uuid: Report slave_uuid in SHOW SLAVE HOSTS.
             fail_on_table_metadata_unavailable: Should raise exception if we can't get
                                                 table information on row_events
+            slave_heartbeat: (seconds) Should master actively send heartbeat on
+                             connection. This also reduces traffic in GTID replication
+                             on replication resumption (in case many event to skip in
+                             binlog). See MASTER_HEARTBEAT_PERIOD in mysql documentation
+                             for semantics
         """
 
         self.__connection_settings = connection_settings
@@ -192,6 +198,7 @@ class BinLogStreamReader(object):
         if report_slave:
             self.report_slave = ReportSlave(report_slave)
         self.slave_uuid = slave_uuid
+        self.slave_heartbeat = slave_heartbeat
 
         if pymysql_wrapper:
             self.pymysql_wrapper = pymysql_wrapper
@@ -266,6 +273,22 @@ class BinLogStreamReader(object):
         if self.slave_uuid:
             cur = self._stream_connection.cursor()
             cur.execute("set @slave_uuid= '%s'" % self.slave_uuid)
+            cur.close()
+
+        if self.slave_heartbeat:
+            # 4294967 is documented as the max value for heartbeats
+            net_timeout = float(self.__connection_settings.get('read_timeout',
+                                                               4294967))
+            # If heartbeat is too low, the connection will disconnect before,
+            # this is also the behavior in mysql
+            heartbeat = float(min(net_timeout/2., self.slave_heartbeat))
+            if heartbeat > 4294967:
+                heartbeat = 4294967
+
+            # master_heartbeat_period is nanoseconds
+            heartbeat = int(heartbeat * 1000000000)
+            cur = self._stream_connection.cursor()
+            cur.execute("set @master_heartbeat_period= %d" % heartbeat)
             cur.close()
 
         self._register_slave()
@@ -450,7 +473,9 @@ class BinLogStreamReader(object):
                 WriteRowsEvent,
                 DeleteRowsEvent,
                 TableMapEvent,
-                NotImplementedEvent))
+                HeartbeatLogEvent,
+                NotImplementedEvent,
+                ))
         if ignored_events is not None:
             for e in ignored_events:
                 events.remove(e)

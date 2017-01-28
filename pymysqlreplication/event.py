@@ -119,6 +119,37 @@ class XidEvent(BinLogEvent):
         print("Transaction ID: %d" % (self.xid))
 
 
+class HeartbeatLogEvent(BinLogEvent):
+    """A Heartbeat event
+    Heartbeats are sent by the master only if there are no unsent events in the
+    binary log file for a period longer than the interval defined by
+    MASTER_HEARTBEAT_PERIOD connection setting.
+
+    A mysql server will also play those to the slave for each skipped
+    events in the log. I (baloo) believe the intention is to make the slave
+    bump its position so that if a disconnection occurs, the slave only
+    reconnects from the last skipped position (see Binlog_sender::send_events
+    in sql/rpl_binlog_sender.cc). That makes 106 bytes of data for skipped
+    event in the binlog. *this is also the case with GTID replication*. To
+    mitigate such behavior, you are expected to keep the binlog small (see
+    max_binlog_size, defaults to 1G).
+    In any case, the timestamp is 0 (as in 1970-01-01T00:00:00).
+
+    Attributes:
+        ident: Name of the current binlog
+    """
+
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(HeartbeatLogEvent, self).__init__(from_packet, event_size,
+                                                table_map, ctl_connection,
+                                                **kwargs)
+        self.ident = self.packet.read(event_size).decode()
+
+    def _dump(self):
+        super(HeartbeatLogEvent, self)._dump()
+        print("Current binlog: %s" % (self.ident))
+
+
 class QueryEvent(BinLogEvent):
     '''This evenement is trigger when a query is run of the database.
     Only replicated queries are logged.'''

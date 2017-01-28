@@ -70,6 +70,7 @@ class BinLogPacketWrapper(object):
         constants.STOP_EVENT: event.StopEvent,
         constants.BEGIN_LOAD_QUERY_EVENT: event.BeginLoadQueryEvent,
         constants.EXECUTE_LOAD_QUERY_EVENT: event.ExecuteLoadQueryEvent,
+        constants.HEARTBEAT_LOG_EVENT: event.HeartbeatLogEvent,
         # row_event
         constants.UPDATE_ROWS_EVENT_V1: row_event.UpdateRowsEvent,
         constants.WRITE_ROWS_EVENT_V1: row_event.WriteRowsEvent,
