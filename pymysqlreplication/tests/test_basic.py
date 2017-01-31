@@ -25,9 +25,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         return [GtidEvent]
 
     def test_allowed_event_list(self):
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 13)
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 12)
-        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 12)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 14)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 13)
+        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 13)
         self.assertEqual(len(self.stream._allowed_event_list([RotateEvent], None, False)), 1)
 
     def test_read_query_event(self):
@@ -714,7 +714,8 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.stream.close()
         self.stream = BinLogStreamReader(
-            self.database, server_id=1024, blocking=True, auto_position=gtid)
+            self.database, server_id=1024, blocking=True, auto_position=gtid,
+            ignored_events=[HeartbeatLogEvent])
 
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
@@ -770,7 +771,8 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.stream.close()
         self.stream = BinLogStreamReader(
-            self.database, server_id=1024, blocking=True, auto_position=gtid)
+            self.database, server_id=1024, blocking=True, auto_position=gtid,
+            ignored_events=[HeartbeatLogEvent])
 
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
