@@ -90,3 +90,7 @@
 * Decode gtid from network packet
 * fixed count of fetched events
 * unittest2 is only a test requirement
+
+0.11 07/02/2017
+* Implement Heartbeat (#191)
+* Fix handling of JSON data (#182)
