@@ -12,10 +12,10 @@ sed -i'' 's/table_cache/table_open_cache/' /etc/mysql/my.cnf
 sed -i'' 's/log_slow_queries/slow_query_log/' /etc/mysql/my.cnf
 
 # Install new mysql version
-echo deb http://repo.mysql.com/apt/ubuntu/ precise mysql-5.6 | tee /etc/apt/sources.list.d/mysql.list
+echo deb http://repo.mysql.com/apt/ubuntu/ trusty mysql-5.6 | tee /etc/apt/sources.list.d/mysql.list
 apt-key add .mysql/dev.mysql.com.gpg.key
 apt-get update
-env DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::='--force-confold' -q -y mysql-server
+env DEBIAN_FRONTEND=noninteractive apt-get install -o Dpkg::Options::='--force-confold' -q -y mysql-server mysql-client
 
 # Cleanup old mysql datas
 rm -rf /var/ramfs/mysql/
