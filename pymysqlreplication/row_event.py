@@ -519,8 +519,8 @@ class UpdateRowsEvent(RowsEvent):
 
 class TableMapEvent(BinLogEvent):
     """This evenement describe the structure of a table.
-    It's send before a change append on a table.
-    A end user of the lib should have no usage of this
+    It's sent before a change happens on a table.
+    An end user of the lib should have no usage of this
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
