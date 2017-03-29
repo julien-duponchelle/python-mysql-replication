@@ -37,11 +37,14 @@ Make sure you have the following configuration set in your mysql config file (us
     enforce_gtid_consistency
 
 
-To run tests:
+Run tests with
 
 ::
 
-    python setup.py test
+    py.test -k "not test_no_trailing_rotate_event"
+
+This will skip the ``test_no_trailing_rotate_event`` which requires that the
+user running the test have permission to alter the binary log files.
 
 Running mysql in docker (main):
 
