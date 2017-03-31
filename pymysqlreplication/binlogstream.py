@@ -498,7 +498,7 @@ class BinLogStreamReader(object):
                         COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME,
                         COLUMN_COMMENT, COLUMN_TYPE, COLUMN_KEY
                     FROM
-                        columns
+                        information_schema.columns
                     WHERE
                         table_schema = %s AND table_name = %s
                     """, (schema, table))
