@@ -22,7 +22,9 @@ class RowsEvent(BinLogEvent):
                                         ctl_connection, **kwargs)
         self.__rows = None
         self.__only_tables = kwargs["only_tables"]
+        self.__ignored_tables = kwargs["ignored_tables"]
         self.__only_schemas = kwargs["only_schemas"]
+        self.__ignored_schemas = kwargs["ignored_schemas"]
 
         #Header
         self.table_id = self._read_table_id()
@@ -39,7 +41,14 @@ class RowsEvent(BinLogEvent):
         if self.__only_tables is not None and self.table not in self.__only_tables:
             self._processed = False
             return
+        elif self.__ignored_tables is not None and self.table in self.__ignored_tables:
+            self._processed = False
+            return
+
         if self.__only_schemas is not None and self.schema not in self.__only_schemas:
+            self._processed = False
+            return
+        elif self.__ignored_schemas is not None and self.schema in self.__ignored_schemas:
             self._processed = False
             return
 
@@ -527,7 +536,9 @@ class TableMapEvent(BinLogEvent):
         super(TableMapEvent, self).__init__(from_packet, event_size,
                                             table_map, ctl_connection, **kwargs)
         self.__only_tables = kwargs["only_tables"]
+        self.__ignored_tables = kwargs["ignored_tables"]
         self.__only_schemas = kwargs["only_schemas"]
+        self.__ignored_schemas = kwargs["ignored_schemas"]
         self.__freeze_schema = kwargs["freeze_schema"]
 
         # Post-Header
@@ -549,7 +560,14 @@ class TableMapEvent(BinLogEvent):
         if self.__only_tables is not None and self.table not in self.__only_tables:
             self._processed = False
             return
+        elif self.__ignored_tables is not None and self.table in self.__ignored_tables:
+            self._processed = False
+            return
+
         if self.__only_schemas is not None and self.schema not in self.__only_schemas:
+            self._processed = False
+            return
+        elif self.__ignored_schemas is not None and self.schema in self.__ignored_schemas:
             self._processed = False
             return
 

@@ -126,16 +126,31 @@ class BinLogStreamReader(object):
     """
     report_slave = None
 
-    def __init__(self, connection_settings, server_id, ctl_connection_settings=None, resume_stream=False,
-                 blocking=False, only_events=None, log_file=None, log_pos=None,
-                 filter_non_implemented_events=True,
-                 ignored_events=None, auto_position=None,
-                 only_tables=None, only_schemas=None,
-                 freeze_schema=False, skip_to_timestamp=None,
-                 report_slave=None, slave_uuid=None,
-                 pymysql_wrapper=None,
-                 fail_on_table_metadata_unavailable=False,
-                 slave_heartbeat=None):
+    def __init__(
+        self,
+        connection_settings,
+        server_id,
+        ctl_connection_settings=None,
+        resume_stream=False,
+        blocking=False,
+        only_events=None,
+        log_file=None,
+        log_pos=None,
+        filter_non_implemented_events=True,
+        ignored_events=None,
+        auto_position=None,
+        only_tables=None,
+        ignored_tables=None,
+        only_schemas=None,
+        ignored_schemas=None,
+        freeze_schema=False,
+        skip_to_timestamp=None,
+        report_slave=None,
+        slave_uuid=None,
+        pymysql_wrapper=None,
+        fail_on_table_metadata_unavailable=False,
+        slave_heartbeat=None
+    ):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding schema information
@@ -148,7 +163,9 @@ class BinLogStreamReader(object):
             log_pos: Set replication start log pos (resume_stream should be true)
             auto_position: Use master_auto_position gtid to set position
             only_tables: An array with the tables you want to watch
+            ignored_tables: An array with the tables you want to skip
             only_schemas: An array with the schemas you want to watch
+            ignored_schemas: An array with the schemas you want to skip
             freeze_schema: If true do not support ALTER TABLE. It's faster.
             skip_to_timestamp: Ignore all events until reaching specified timestamp.
             report_slave: Report slave in SHOW SLAVE HOSTS.
@@ -174,7 +191,9 @@ class BinLogStreamReader(object):
             self._ctl_connection_settings.setdefault("charset", "utf8")
 
         self.__only_tables = only_tables
+        self.__ignored_tables = ignored_tables
         self.__only_schemas = only_schemas
+        self.__ignored_schemas = ignored_schemas
         self.__freeze_schema = freeze_schema
         self.__allowed_events = self._allowed_event_list(
             only_events, ignored_events, filter_non_implemented_events)
@@ -415,14 +434,19 @@ class BinLogStreamReader(object):
             if not pkt.is_ok_packet():
                 continue
 
-            binlog_event = BinLogPacketWrapper(pkt, self.table_map,
-                                               self._ctl_connection,
-                                               self.__use_checksum,
-                                               self.__allowed_events_in_packet,
-                                               self.__only_tables,
-                                               self.__only_schemas,
-                                               self.__freeze_schema,
-                                               self.__fail_on_table_metadata_unavailable)
+            binlog_event = BinLogPacketWrapper(
+                pkt,
+                self.table_map,
+                self._ctl_connection,
+                self.__use_checksum,
+                self.__allowed_events_in_packet,
+                self.__only_tables,
+                self.__ignored_tables,
+                self.__only_schemas,
+                self.__ignored_schemas,
+                self.__freeze_schema,
+                self.__fail_on_table_metadata_unavailable
+            )
 
             if self.skip_to_timestamp and binlog_event.timestamp < self.skip_to_timestamp:
                 continue
