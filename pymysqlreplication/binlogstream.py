@@ -126,31 +126,17 @@ class BinLogStreamReader(object):
     """
     report_slave = None
 
-    def __init__(
-        self,
-        connection_settings,
-        server_id,
-        ctl_connection_settings=None,
-        resume_stream=False,
-        blocking=False,
-        only_events=None,
-        log_file=None,
-        log_pos=None,
-        filter_non_implemented_events=True,
-        ignored_events=None,
-        auto_position=None,
-        only_tables=None,
-        ignored_tables=None,
-        only_schemas=None,
-        ignored_schemas=None,
-        freeze_schema=False,
-        skip_to_timestamp=None,
-        report_slave=None,
-        slave_uuid=None,
-        pymysql_wrapper=None,
-        fail_on_table_metadata_unavailable=False,
-        slave_heartbeat=None
-    ):
+    def __init__(self, connection_settings, server_id, ctl_connection_settings=None, resume_stream=False,
+                 blocking=False, only_events=None, log_file=None, log_pos=None,
+                 filter_non_implemented_events=True,
+                 ignored_events=None, auto_position=None,
+                 only_tables=None, ignored_tables=None,
+                 only_schemas=None, ignored_schemas=None,
+                 freeze_schema=False, skip_to_timestamp=None,
+                 report_slave=None, slave_uuid=None,
+                 pymysql_wrapper=None,
+                 fail_on_table_metadata_unavailable=False,
+                 slave_heartbeat=None):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding schema information
@@ -434,19 +420,16 @@ class BinLogStreamReader(object):
             if not pkt.is_ok_packet():
                 continue
 
-            binlog_event = BinLogPacketWrapper(
-                pkt,
-                self.table_map,
-                self._ctl_connection,
-                self.__use_checksum,
-                self.__allowed_events_in_packet,
-                self.__only_tables,
-                self.__ignored_tables,
-                self.__only_schemas,
-                self.__ignored_schemas,
-                self.__freeze_schema,
-                self.__fail_on_table_metadata_unavailable
-            )
+            binlog_event = BinLogPacketWrapper(pkt, self.table_map,
+                                               self._ctl_connection,
+                                               self.__use_checksum,
+                                               self.__allowed_events_in_packet,
+                                               self.__only_tables,
+                                               self.__ignored_tables,
+                                               self.__only_schemas,
+                                               self.__ignored_schemas,
+                                               self.__freeze_schema,
+                                               self.__fail_on_table_metadata_unavailable)
 
             if self.skip_to_timestamp and binlog_event.timestamp < self.skip_to_timestamp:
                 continue
