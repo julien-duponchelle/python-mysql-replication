@@ -431,14 +431,6 @@ class BinLogStreamReader(object):
                                                self.__freeze_schema,
                                                self.__fail_on_table_metadata_unavailable)
 
-            if self.skip_to_timestamp and binlog_event.timestamp < self.skip_to_timestamp:
-                continue
-
-            if binlog_event.event_type == TABLE_MAP_EVENT and \
-                    binlog_event.event is not None:
-                self.table_map[binlog_event.event.table_id] = \
-                    binlog_event.event.get_table()
-
             if binlog_event.event_type == ROTATE_EVENT:
                 self.log_pos = binlog_event.event.position
                 self.log_file = binlog_event.event.next_binlog
@@ -454,6 +446,38 @@ class BinLogStreamReader(object):
                 self.table_map = {}
             elif binlog_event.log_pos:
                 self.log_pos = binlog_event.log_pos
+
+            # This check must not occur before clearing the ``table_map`` as a
+            # result of a RotateEvent.
+            #
+            # The first RotateEvent in a binlog file has a timestamp of
+            # zero.  If the server has moved to a new log and not written a
+            # timestamped RotateEvent at the end of the previous log, the
+            # RotateEvent at the beginning of the new log will be ignored
+            # if the caller provided a positive ``skip_to_timestamp``
+            # value.  This will result in the ``table_map`` becoming
+            # corrupt.
+            #
+            # https://dev.mysql.com/doc/internals/en/event-data-for-specific-event-types.html
+            # From the MySQL Internals Manual:
+            #
+            #   ROTATE_EVENT is generated locally and written to the binary
+            #   log on the master. It is written to the relay log on the
+            #   slave when FLUSH LOGS occurs, and when receiving a
+            #   ROTATE_EVENT from the master. In the latter case, there
+            #   will be two rotate events in total originating on different
+            #   servers.
+            #
+            #   There are conditions under which the terminating
+            #   log-rotation event does not occur. For example, the server
+            #   might crash.
+            if self.skip_to_timestamp and binlog_event.timestamp < self.skip_to_timestamp:
+                continue
+
+            if binlog_event.event_type == TABLE_MAP_EVENT and \
+                    binlog_event.event is not None:
+                self.table_map[binlog_event.event.table_id] = \
+                    binlog_event.event.get_table()
 
             # event is none if we have filter it on packet level
             # we filter also not allowed events
