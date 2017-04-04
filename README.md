@@ -312,14 +312,16 @@ Other contributors:
 * Giovanni F. MySQL 5.7 support https://github.com/26fe
 * Igor Mastak intvar event https://github.com/mastak
 * Xie Zhenye fix missing update _next_seq_no https://github.com/xiezhenye
-* Abrar Sheikh: Time as mysql.timedelta https://github.com/abrarsheikh
+* Abrar Sheikh: Multiple contributions https://github.com/abrarsheikh
 * Keegan Parker: secondary database for reference schema https://github.com/kdparker
+* Troy J. Farrell Clear table_map if RotateEvent has timestamp of 0 https://github.com/troyjfarrell
+* Zhanwei Wang Fail to get table informations https://github.com/wangzw
 
 Thanks to GetResponse for their support
 
 Licence
 =======
-Copyright 2012-2016 Julien Duponchelle
+Copyright 2012-2017 Julien Duponchelle
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

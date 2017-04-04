@@ -94,3 +94,8 @@
 0.11 07/02/2017
 * Implement Heartbeat (#191)
 * Fix handling of JSON data (#182)
+
+0.12 04/04/2017
+* Clear table_map if RotateEvent has timestamp of 0 (#197)
+* Add support for ignored_tables and ignored_schema (#201)
+* failed to get table information (#199)
