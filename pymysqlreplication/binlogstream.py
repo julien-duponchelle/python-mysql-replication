@@ -88,9 +88,9 @@ class ReportSlave(object):
         # 4              replication rank
         # 4              master-id
 
-        lhostname = len(self.hostname)
-        lusername = len(self.username)
-        lpassword = len(self.password)
+        lhostname = len(self.hostname.encode())
+        lusername = len(self.username.encode())
+        lpassword = len(self.password.encode())
 
         packet_len = (1 +  # command
                       4 +  # server-id
@@ -110,11 +110,11 @@ class ReportSlave(object):
                 int2byte(COM_REGISTER_SLAVE) +
                 struct.pack('<L', server_id) +
                 struct.pack('<%dp' % min(MAX_STRING_LEN, lhostname + 1),
-                            self.hostname) +
+                            self.hostname.encode()) +
                 struct.pack('<%dp' % min(MAX_STRING_LEN, lusername + 1),
-                            self.username) +
+                            self.username.encode()) +
                 struct.pack('<%dp' % min(MAX_STRING_LEN, lpassword + 1),
-                            self.password) +
+                            self.password.encode()) +
                 struct.pack('<H', self.port) +
                 struct.pack('<l', 0) +
                 struct.pack('<l', master_id))
