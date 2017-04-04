@@ -26,3 +26,12 @@ before_script:
 script:
   - "sudo $(cat ~/where-is-nosetests) pymysqlreplication.tests.test_abnormal:TestAbnormalBinLogStreamReader.test_no_trailing_rotate_event"
   - "nosetests -e test_no_trailing_rotate_event"
+
+deploy:
+  provider: pypi
+  user: noplay
+  password:
+    secure: "uUIWiYzfgNTUuz4rKpNv/JFjnHncHPtBLiwhknCoaVJ9QGenpj9qaEWyvHZ/Aq4HyXCSjsogtQBesSxBTQCsrut6DDOWbOOFGr7WHA2N5O6EEu8rB7U4m+ziJn27+pN+MIl672tJGao7Ky9F+RO3X110Lscb0nguEMnWcHxb16U="
+  on:
+    tags: true
+    repo: noplay/python-mysql-replication
