@@ -194,7 +194,6 @@ class Gtid(object):
                 len(self.intervals))
 
     def encode(self):
-        print 'encoding %r' % self
         buffer = b''
         # sid
         buffer += binascii.unhexlify(self.sid.replace('-', ''))
