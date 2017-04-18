@@ -99,3 +99,10 @@
 * Clear table_map if RotateEvent has timestamp of 0 (#197)
 * Add support for ignored_tables and ignored_schema (#201)
 * failed to get table information (#199)
+
+0.13 18/04/2017
+* Fixup gtid parsing (#204)
+  This remove duplicate event from your stream if you use auto_position (the
+  first one in the stream used to be a duplicate on reconnection, this is no
+  longer the case).
+* Fix struct.pack in ReportSlave (#194)
