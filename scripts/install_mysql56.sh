@@ -48,7 +48,7 @@ echo 'log_slave_updates'              | tee -a /etc/mysql/conf.d/gtid.cnf
 # Start mysql (avoid errors to have logs)
 /etc/init.d/mysql start || true
 tail -1000 /var/log/syslog
-nohup mysqld --log-bin=mysql-ctl-bin.log --server-id 2 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave-updates -P 3307 --socket=/var/run/mysqld/mysqld-ctl.sock --datadir=/var/ramfs/mysql-ctl --pid-file=/var/lib/mysql/mysql-ctl.pid &
+nohup mysqld --log-bin=mysql-ctl-bin.log --server-id 2 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave-updates -P 3307 --socket=/var/run/mysqld/mysqld-ctl.sock --datadir=/var/ramfs/mysql-ctl --pid-file=/var/lib/mysql/mysql-ctl.pid --user=root &
 #Give it time to start
 sleep 5
 tail -1000 nohup.out
