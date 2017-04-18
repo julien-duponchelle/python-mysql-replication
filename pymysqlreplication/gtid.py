@@ -227,7 +227,7 @@ class Gtid(object):
         intervals = []
         for i in range(0, n_intervals):
             start, end = struct.unpack('<QQ', payload.read(16))
-            intervals.append((start, end))
+            intervals.append((start, end-1))
 
         return cls('%s:%s' % (sid.decode('ascii'), ':'.join([
             '%d-%d' % x
