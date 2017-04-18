@@ -810,10 +810,11 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
         query = "COMMIT;"
         self.execute(query)
 
-        query = "CREATE TABLE test2 (id INT NOT NULL, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
-        self.execute(query)
         query = "SELECT @@global.gtid_executed;"
         gtid = self.execute(query).fetchone()[0]
+
+        query = "CREATE TABLE test2 (id INT NOT NULL, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
 
         self.stream.close()
         self.stream = BinLogStreamReader(
