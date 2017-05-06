@@ -181,6 +181,10 @@ class QueryEvent(BinLogEvent):
         print("Execution time: %d" % (self.execution_time))
         print("Query: %s" % (self.query))
 
+    @property
+    def query(self):
+	return self.query
+
 
 class BeginLoadQueryEvent(BinLogEvent):
     """
