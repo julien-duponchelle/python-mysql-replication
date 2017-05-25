@@ -148,7 +148,8 @@ class BinLogStreamReader(object):
             log_file: Set replication start log file
             log_pos: Set replication start log pos (resume_stream should be true)
             auto_position: Use master_auto_position gtid to set position
-            only_tables: An array with the tables you want to watch
+            only_tables: An array with the tables you want to watch (only works
+                         in binlog_format ROW)
             ignored_tables: An array with the tables you want to skip
             only_schemas: An array with the schemas you want to watch
             ignored_schemas: An array with the schemas you want to skip
