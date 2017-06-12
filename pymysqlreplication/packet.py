@@ -282,6 +282,9 @@ class BinLogPacketWrapper(object):
     def read_uint32(self):
         return struct.unpack('<I', self.read(4))[0]
 
+    def read_int32(self):
+        return struct.unpack('<i', self.read(4))[0]
+
     def read_uint40(self):
         a, b = struct.unpack("<BI", self.read(5))
         return a + (b << 8)
