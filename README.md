@@ -71,6 +71,7 @@ Projects using this library
 * python-mysql-eventprocessor: Daemon interface for handling MySQL binary log events. https://github.com/jffifa/python-mysql-eventprocessor
 * mymongo: MySQL to mongo replication https://github.com/njordr/mymongo
 * pg_chameleon: Migration and replica from MySQL to PostgreSQL https://github.com/the4thdoctor/pg_chameleon
+* pg_ninja: The ninja elephant obfuscation and replica tool https://github.com/transferwise/pg_ninja/ (http://tech.transferwise.com/pg_ninja-replica-with-obfuscation/)
 * MySQLStreamer: MySQLStreamer is a database change data capture and publish system https://github.com/Yelp/mysql_streamer
 * Yelp Data Pipeline: https://engineeringblog.yelp.com/2016/11/open-sourcing-yelps-data-pipeline.html
 
