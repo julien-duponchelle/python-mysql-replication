@@ -136,7 +136,8 @@ class BinLogStreamReader(object):
                  report_slave=None, slave_uuid=None,
                  pymysql_wrapper=None,
                  fail_on_table_metadata_unavailable=False,
-                 slave_heartbeat=None):
+                 slave_heartbeat=None,
+                 date_tostr=None):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding schema information
@@ -164,6 +165,10 @@ class BinLogStreamReader(object):
                              on replication resumption (in case many event to skip in
                              binlog). See MASTER_HEARTBEAT_PERIOD in mysql documentation
                              for semantics
+            date_tostr: False by default, convert MySQL.datetime to string not python.datetime.
+                        handle '0000-00-00 00:00:00' to str rather than None, to keep data consistent for applying
+                        timestamp is not covered, it's easy if need: datetime.datetime.fromtimestamp(0)='1970-01-01 08:00:00'
+                        ref: https://dev.mysql.com/doc/refman/5.7/en/datetime.html
         """
 
         self.__connection_settings = connection_settings
@@ -176,6 +181,7 @@ class BinLogStreamReader(object):
         self._ctl_connection_settings = ctl_connection_settings
         if ctl_connection_settings:
             self._ctl_connection_settings.setdefault("charset", "utf8")
+        self.date_tostr = date_tostr
 
         self.__only_tables = only_tables
         self.__ignored_tables = ignored_tables
@@ -227,6 +233,13 @@ class BinLogStreamReader(object):
             self._ctl_connection_settings = dict(self.__connection_settings)
         self._ctl_connection_settings["db"] = "information_schema"
         self._ctl_connection_settings["cursorclass"] = DictCursor
+        if self.date_tostr:
+            from pymysql.converters import conversions  # decoders
+            myconv = conversions.copy()
+            conv_date_tostr = {12: str, 18: str, 10: str}  # see FIELD_TYPE.py
+            myconv.update(conv_date_tostr)
+            self._ctl_connection_settings.setdefault("conv", myconv)
+
         self._ctl_connection = self.pymysql_wrapper(**self._ctl_connection_settings)
         self._ctl_connection._get_table_information = self.__get_table_information
         self.__connected_ctl = True
