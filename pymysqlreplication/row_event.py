@@ -146,8 +146,11 @@ class RowsEvent(BinLogEvent):
             elif column.type == FIELD_TYPE.DATE:
                 values[name] = self.__read_date()
             elif column.type == FIELD_TYPE.TIMESTAMP:
-                values[name] = datetime.datetime.fromtimestamp(
-                    self.packet.read_uint32())
+                time_valid = self.packet.read_uint32()
+                if time_valid:
+                    values[name] = datetime.datetime.fromtimestamp(time_valid)
+                else:
+                    values[name] = '0000-00-00 00:00:00'
 
             # For new date format:
             elif column.type == FIELD_TYPE.DATETIME2:
@@ -155,9 +158,13 @@ class RowsEvent(BinLogEvent):
             elif column.type == FIELD_TYPE.TIME2:
                 values[name] = self.__read_time2(column)
             elif column.type == FIELD_TYPE.TIMESTAMP2:
-                values[name] = self.__add_fsp_to_time(
-                    datetime.datetime.fromtimestamp(
-                        self.packet.read_int_be_by_size(4)), column)
+                time_valid = self.packet.read_int_be_by_size(4)
+                if time_valid:
+                    values[name] = self.__add_fsp_to_time(
+                        datetime.datetime.fromtimestamp(time_valid), column)
+                else:
+                    # if timestamp is 0, only this value, no other or microseconds
+                    values[name] = self.__add_fsp_to_time('0000-00-00 00:00:00', column)
             elif column.type == FIELD_TYPE.LONGLONG:
                 if unsigned:
                     values[name] = self.packet.read_uint64()
@@ -200,7 +207,7 @@ class RowsEvent(BinLogEvent):
         microsecond = self.__read_fsp(column)
         if microsecond > 0:
             if isinstance(time ,str):
-                return "{0}.{1}".format(time, microsecond)
+                return "{0}.{1:0>6}".format(time, microsecond)
             else:
                 return time.replace(microsecond=microsecond)
         else:

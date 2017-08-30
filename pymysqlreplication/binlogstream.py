@@ -167,7 +167,7 @@ class BinLogStreamReader(object):
                              for semantics
             date_tostr: False by default, convert MySQL.datetime to string not python.datetime.
                         handle '0000-00-00 00:00:00' to str rather than None, to keep data consistent for applying
-                        timestamp is not covered, it's easy if need: datetime.datetime.fromtimestamp(0)='1970-01-01 08:00:00'
+                        timestamp does not convert, but also set 0 to '0000-00-00' rather than '1970-01-01 08:01:00'
                         ref: https://dev.mysql.com/doc/refman/5.7/en/datetime.html
         """
 
