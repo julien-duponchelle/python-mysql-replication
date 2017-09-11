@@ -106,3 +106,8 @@
   first one in the stream used to be a duplicate on reconnection, this is no
   longer the case).
 * Fix struct.pack in ReportSlave (#194)
+
+0.14 11/09/2017
+* binlogstream: only_tables requires row binlog_format (#209)
+* Add implementation of read_int32 (#213)
+* fix formatting of GTIDs under py3 (#227)
