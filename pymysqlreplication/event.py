@@ -2,6 +2,7 @@
 
 import struct
 import datetime
+import chardet
 
 from pymysql.util import byte2int, int2byte
 
@@ -186,7 +187,8 @@ class QueryEvent(BinLogEvent):
         try:
             encoded_query = query.decode("utf-8")
         except UnicodeError:
-            encoded_query = query.decode("latin-1")
+            encoding = chardet.detect(query)['encoding']
+            encoded_query = query.decode(encoding)
 
         return encoded_query
 
