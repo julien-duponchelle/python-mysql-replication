@@ -281,13 +281,13 @@ class RowsEvent(BinLogEvent):
     def __read_date(self):
         time = self.packet.read_uint24()
         if time == 0:  # nasty mysql 0000-00-00 dates
-            return None
+            return 0
 
         year = (time & ((1 << 15) - 1) << 9) >> 9
         month = (time & ((1 << 4) - 1) << 5) >> 5
         day = (time & ((1 << 5) - 1))
         if year == 0 or month == 0 or day == 0:
-            return None
+            return 0
 
         date = datetime.date(
             year=year,
@@ -299,7 +299,7 @@ class RowsEvent(BinLogEvent):
     def __read_datetime(self):
         value = self.packet.read_uint64()
         if value == 0:  # nasty mysql 0000-00-00 dates
-            return None
+            return 0
 
         date = value / 1000000
         time = int(value % 1000000)
@@ -308,7 +308,7 @@ class RowsEvent(BinLogEvent):
         month = int((date % 10000) / 100)
         day = int(date % 100)
         if year == 0 or month == 0 or day == 0:
-            return None
+            return 0
 
         date = datetime.datetime(
             year=year,
@@ -342,7 +342,7 @@ class RowsEvent(BinLogEvent):
                 minute=self.__read_binary_slice(data, 28, 6, 40),
                 second=self.__read_binary_slice(data, 34, 6, 40))
         except ValueError:
-            return None
+            return 0
         return self.__add_fsp_to_time(t, column)
 
     def __read_new_decimal(self, column):
