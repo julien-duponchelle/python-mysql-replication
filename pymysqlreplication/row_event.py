@@ -25,6 +25,11 @@ class RowsEvent(BinLogEvent):
         self.__ignored_tables = kwargs["ignored_tables"]
         self.__only_schemas = kwargs["only_schemas"]
         self.__ignored_schemas = kwargs["ignored_schemas"]
+        if ctl_connection.decoders.get(FIELD_TYPE.DATETIME2) is str:  # also affect DATETIME, DATE, see binlogstream.py:__connect_to_ctl()
+            # map datetime to string, in case of inproper convertions
+            self.__date_tostr = 1
+        else:
+            self.__date_tostr = 0
 
         #Header
         self.table_id = self._read_table_id()
@@ -141,8 +146,11 @@ class RowsEvent(BinLogEvent):
             elif column.type == FIELD_TYPE.DATE:
                 values[name] = self.__read_date()
             elif column.type == FIELD_TYPE.TIMESTAMP:
-                values[name] = datetime.datetime.fromtimestamp(
-                    self.packet.read_uint32())
+                time_valid = self.packet.read_uint32()
+                if time_valid:
+                    values[name] = datetime.datetime.fromtimestamp(time_valid)
+                else:
+                    values[name] = '0000-00-00 00:00:00'
 
             # For new date format:
             elif column.type == FIELD_TYPE.DATETIME2:
@@ -150,9 +158,13 @@ class RowsEvent(BinLogEvent):
             elif column.type == FIELD_TYPE.TIME2:
                 values[name] = self.__read_time2(column)
             elif column.type == FIELD_TYPE.TIMESTAMP2:
-                values[name] = self.__add_fsp_to_time(
-                    datetime.datetime.fromtimestamp(
-                        self.packet.read_int_be_by_size(4)), column)
+                time_valid = self.packet.read_int_be_by_size(4)
+                if time_valid:
+                    values[name] = self.__add_fsp_to_time(
+                        datetime.datetime.fromtimestamp(time_valid), column)
+                else:
+                    # if timestamp is 0, only this value, no other or microseconds
+                    values[name] = self.__add_fsp_to_time('0000-00-00 00:00:00', column)
             elif column.type == FIELD_TYPE.LONGLONG:
                 if unsigned:
                     values[name] = self.packet.read_uint64()
@@ -194,8 +206,12 @@ class RowsEvent(BinLogEvent):
         """
         microsecond = self.__read_fsp(column)
         if microsecond > 0:
-            time = time.replace(microsecond=microsecond)
-        return time
+            if isinstance(time ,str):
+                return "{0}.{1:0>6}".format(time, microsecond)
+            else:
+                return time.replace(microsecond=microsecond)
+        else:
+            return time
 
     def __read_fsp(self, column):
         read = 0
@@ -280,13 +296,18 @@ class RowsEvent(BinLogEvent):
 
     def __read_date(self):
         time = self.packet.read_uint24()
-        if time == 0:  # nasty mysql 0000-00-00 dates
-            return None
 
         year = (time & ((1 << 15) - 1) << 9) >> 9
         month = (time & ((1 << 4) - 1) << 5) >> 5
         day = (time & ((1 << 5) - 1))
-        if year == 0 or month == 0 or day == 0:
+
+        if self.__date_tostr:
+            fmt = "{0:0>4}-{1:0>2}-{2:0>2}"
+            date_str = fmt.format(year, month, day)
+            return date_str
+
+        if time == 0 or year == 0 or month == 0 or day == 0:
+            # nasty mysql 0000-00-00 dates
             return None
 
         date = datetime.date(
@@ -298,8 +319,6 @@ class RowsEvent(BinLogEvent):
 
     def __read_datetime(self):
         value = self.packet.read_uint64()
-        if value == 0:  # nasty mysql 0000-00-00 dates
-            return None
 
         date = value / 1000000
         time = int(value % 1000000)
@@ -307,16 +326,26 @@ class RowsEvent(BinLogEvent):
         year = int(date / 10000)
         month = int((date % 10000) / 100)
         day = int(date % 100)
-        if year == 0 or month == 0 or day == 0:
+        hour=int(time / 10000)
+        minute=int((time % 10000) / 100)
+        second=int(time % 100)
+
+        if self.__date_tostr:
+            fmt = "{0:0>4}-{1:0>2}-{2:0>2} {3:0>2}:{4:0>2}:{5:0>2}"
+            datetime_str = fmt.format(year, month, day, hour, minute, second)
+            return datetime_str
+
+        if value == 0 or year == 0 or month == 0 or day == 0:
+            # nasty mysql 0000-00-00 dates
             return None
 
         date = datetime.datetime(
             year=year,
             month=month,
             day=day,
-            hour=int(time / 10000),
-            minute=int((time % 10000) / 100),
-            second=int(time % 100))
+            hour=hour,
+            minute=minute,
+            second=second)
         return date
 
     def __read_datetime2(self, column):
@@ -333,16 +362,27 @@ class RowsEvent(BinLogEvent):
         """
         data = self.packet.read_int_be_by_size(5)
         year_month = self.__read_binary_slice(data, 1, 17, 40)
-        try:
-            t = datetime.datetime(
-                year=int(year_month / 13),
-                month=year_month % 13,
-                day=self.__read_binary_slice(data, 18, 5, 40),
-                hour=self.__read_binary_slice(data, 23, 5, 40),
-                minute=self.__read_binary_slice(data, 28, 6, 40),
-                second=self.__read_binary_slice(data, 34, 6, 40))
-        except ValueError:
-            return None
+        year = int(year_month / 13)
+        month = year_month % 13
+        day = self.__read_binary_slice(data, 18, 5, 40)
+        hour = self.__read_binary_slice(data, 23, 5, 40)
+        minute = self.__read_binary_slice(data, 28, 6, 40)
+        second = self.__read_binary_slice(data, 34, 6, 40)
+
+        if self.__date_tostr:
+            fmt = "{0:0>4}-{1:0>2}-{2:0>2} {3:0>2}:{4:0>2}:{5:0>2}"
+            t = fmt.format(year, month, day, hour, minute, second)  # datetime_str
+        else:
+            try:
+                t = datetime.datetime(
+                    year=year,
+                    month=month,
+                    day=day,
+                    hour=hour,
+                    minute=minute,
+                    second=second)
+            except ValueError:
+                return None
         return self.__add_fsp_to_time(t, column)
 
     def __read_new_decimal(self, column):
