@@ -342,6 +342,7 @@ class RowsEvent(BinLogEvent):
                 minute=self.__read_binary_slice(data, 28, 6, 40),
                 second=self.__read_binary_slice(data, 34, 6, 40))
         except ValueError:
+            self.__read_fsp(column)
             return None
         return self.__add_fsp_to_time(t, column)
 
