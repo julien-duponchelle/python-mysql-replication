@@ -74,7 +74,7 @@ Projects using this library
 * pg_ninja: The ninja elephant obfuscation and replica tool https://github.com/transferwise/pg_ninja/ (http://tech.transferwise.com/pg_ninja-replica-with-obfuscation/)
 * MySQLStreamer: MySQLStreamer is a database change data capture and publish system https://github.com/Yelp/mysql_streamer
 * Yelp Data Pipeline: https://engineeringblog.yelp.com/2016/11/open-sourcing-yelps-data-pipeline.html
-* binlog2sql: a popular binlog parser that could convert raw binlog to sql and could also generate flashback sql from raw binlog
+* binlog2sql: a popular binlog parser that could convert raw binlog to sql and could also generate flashback sql from raw binlog https://github.com/danfengcao/binlog2sql
 
 MySQL server settings
 =========================
