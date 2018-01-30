@@ -513,6 +513,16 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["value"][b"miam"], u'🍔'.encode('utf8'))
 
+    def test_json_long_string(self):
+        if not self.isMySQL57():
+            self.skipTest("Json is only supported in mysql 5.7")
+        create_query = "CREATE TABLE test (id int, value json);"
+        # The string length needs to be larger than what can fit in a single byte.
+        string_value = "super_long_string" * 100
+        insert_query = "INSERT INTO test (id, value) VALUES (1, '{\"my_key\": \"%s\"}');" % (string_value,)
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict({"my_key": string_value}))
+
     def test_null(self):
         create_query = "CREATE TABLE test ( \
             test TINYINT NULL DEFAULT NULL, \
