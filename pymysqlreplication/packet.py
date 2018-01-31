@@ -252,6 +252,22 @@ class BinLogPacketWrapper(object):
         length = self.read_uint_by_size(size)
         return self.read(length)
 
+    def read_variable_length_string(self):
+        """Read a variable length string where the first 1-5 bytes stores the
+        length of the string.
+        
+        For each byte, the first bit being high indicates another byte must be
+        read.
+        """
+        byte = 0x80
+        length = 0
+        bits_read = 0
+        while byte & 0x80 != 0:
+            byte = byte2int(self.read(1))
+            length = length | ((byte & 0x7f) << bits_read)
+            bits_read = bits_read + 7
+        return self.read(length)
+
     def read_int24(self):
         a, b, c = struct.unpack("BBB", self.read(3))
         res = a | (b << 8) | (c << 16)
@@ -342,7 +358,7 @@ class BinLogPacketWrapper(object):
         elif t in (JSONB_TYPE_SMALL_ARRAY, JSONB_TYPE_LARGE_ARRAY):
             return self.read_binary_json_array(length - 1, large)
         elif t in (JSONB_TYPE_STRING,):
-            return self.read_length_coded_pascal_string(1)
+            return self.read_variable_length_string()
         elif t in (JSONB_TYPE_LITERAL,):
             value = self.read_uint8()
             if value == JSONB_LITERAL_NULL:
