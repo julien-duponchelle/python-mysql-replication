@@ -120,3 +120,5 @@
 * binlogstream: Raise an explanatory exception when binary logging is not enabled. (#245)
 * datetime: Fixup parsing (#236)
 
+0.17 02/02/2018
+* remove python2.6 support
