@@ -111,3 +111,12 @@
 * binlogstream: only_tables requires row binlog_format (#209)
 * Add implementation of read_int32 (#213)
 * fix formatting of GTIDs under py3 (#227)
+
+0.15 11/09/2017
+* event: fixup gtid serialization
+
+0.16 02/02/2018
+* json: Fixup string parsing (#246)
+* binlogstream: Raise an explanatory exception when binary logging is not enabled. (#245)
+* datetime: Fixup parsing (#236)
+
