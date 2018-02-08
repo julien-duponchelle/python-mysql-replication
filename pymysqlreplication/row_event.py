@@ -281,7 +281,12 @@ class RowsEvent(BinLogEvent):
     def __read_date(self):
         time = self.packet.read_uint24()
         if time == 0:  # nasty mysql 0000-00-00 dates
-            return None
+            date = datetime.date(
+                year=1,
+                month=1,
+                day=1
+            )
+            return date
 
         year = (time & ((1 << 15) - 1) << 9) >> 9
         month = (time & ((1 << 4) - 1) << 5) >> 5
@@ -299,7 +304,14 @@ class RowsEvent(BinLogEvent):
     def __read_datetime(self):
         value = self.packet.read_uint64()
         if value == 0:  # nasty mysql 0000-00-00 dates
-            return None
+            date = datetime.datetime(
+                year=1,
+                month=1,
+                day=1,
+                hour=0,
+                minute=0,
+                second=0)
+            return date
 
         date = value / 1000000
         time = int(value % 1000000)
@@ -334,15 +346,23 @@ class RowsEvent(BinLogEvent):
         data = self.packet.read_int_be_by_size(5)
         year_month = self.__read_binary_slice(data, 1, 17, 40)
         try:
-            t = datetime.datetime(
-                year=int(year_month / 13),
-                month=year_month % 13,
-                day=self.__read_binary_slice(data, 18, 5, 40),
-                hour=self.__read_binary_slice(data, 23, 5, 40),
-                minute=self.__read_binary_slice(data, 28, 6, 40),
-                second=self.__read_binary_slice(data, 34, 6, 40))
+            if year_month is 0:
+                t = datetime.datetime(
+                    year=1,
+                    month=1,
+                    day=1,
+                    hour=0,
+                    minute=0,
+                    second=0)
+            else:
+                t = datetime.datetime(
+                    year=int(year_month / 13),
+                    month=year_month % 13,
+                    day=self.__read_binary_slice(data, 18, 5, 40),
+                    hour=self.__read_binary_slice(data, 23, 5, 40),
+                    minute=self.__read_binary_slice(data, 28, 6, 40),
+                    second=self.__read_binary_slice(data, 34, 6, 40))
         except ValueError:
-            self.__read_fsp(column)
             return None
         return self.__add_fsp_to_time(t, column)
 
