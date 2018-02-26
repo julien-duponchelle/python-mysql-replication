@@ -5,4 +5,4 @@ class TableMetadataUnavailableError(Exception):
 
 class BinLogNotEnabled(Exception):
     def __init__(self):
-        Exception.__init__(self, "MySQL binary loggging is not enabled.")
+        Exception.__init__(self, "MySQL binary logging is not enabled.")
