@@ -417,6 +417,7 @@ class BinLogStreamReader(object):
                     self._stream_connection.close()
                     self.__connected_stream = False
                     continue
+                raise
 
             if pkt.is_eof_packet():
                 self.close()
