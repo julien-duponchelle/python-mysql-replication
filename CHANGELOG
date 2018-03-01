@@ -122,3 +122,6 @@
 
 0.17 02/02/2018
 * remove python2.6 support
+
+0.18 01/03/2018
+* bubble up protocol errors
