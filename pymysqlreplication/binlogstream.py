@@ -12,7 +12,7 @@ from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
 from .gtid import GtidSet
 from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
-    XidEvent, GtidEvent, StopEvent,
+    XidEvent, GtidEvent, StopEvent, XAPrepareEvent,
     BeginLoadQueryEvent, ExecuteLoadQueryEvent,
     HeartbeatLogEvent, NotImplementedEvent)
 from .exceptions import BinLogNotEnabled
@@ -502,6 +502,7 @@ class BinLogStreamReader(object):
                 RotateEvent,
                 StopEvent,
                 FormatDescriptionEvent,
+                XAPrepareEvent,
                 XidEvent,
                 GtidEvent,
                 BeginLoadQueryEvent,

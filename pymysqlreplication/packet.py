@@ -71,6 +71,7 @@ class BinLogPacketWrapper(object):
         constants.BEGIN_LOAD_QUERY_EVENT: event.BeginLoadQueryEvent,
         constants.EXECUTE_LOAD_QUERY_EVENT: event.ExecuteLoadQueryEvent,
         constants.HEARTBEAT_LOG_EVENT: event.HeartbeatLogEvent,
+        constants.XA_PREPARE_EVENT: event.XAPrepareEvent,
         # row_event
         constants.UPDATE_ROWS_EVENT_V1: row_event.UpdateRowsEvent,
         constants.WRITE_ROWS_EVENT_V1: row_event.WriteRowsEvent,
