@@ -86,7 +86,10 @@ class BinLogPacketWrapper(object):
 
     }
 
-    def __init__(self, from_packet, table_map, ctl_connection, use_checksum,
+    def __init__(self, from_packet, table_map,
+                 ctl_connection,
+                 mysql_version,
+                 use_checksum,
                  allowed_events,
                  only_tables,
                  ignored_tables,
@@ -132,6 +135,7 @@ class BinLogPacketWrapper(object):
             return
         self.event = event_class(self, event_size_without_header, table_map,
                                  ctl_connection,
+                                 mysql_version=mysql_version,
                                  only_tables=only_tables,
                                  ignored_tables=ignored_tables,
                                  only_schemas=only_schemas,

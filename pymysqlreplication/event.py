@@ -9,6 +9,7 @@ from pymysql.util import byte2int, int2byte
 
 class BinLogEvent(object):
     def __init__(self, from_packet, event_size, table_map, ctl_connection,
+                 mysql_version=(0,0,0),
                  only_tables=None,
                  ignored_tables=None,
                  only_schemas=None,
@@ -21,6 +22,7 @@ class BinLogEvent(object):
         self.timestamp = self.packet.timestamp
         self.event_size = event_size
         self._ctl_connection = ctl_connection
+        self.mysql_version = mysql_version
         self._fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
         # The event have been fully processed, if processed is false
         # the event will be skipped
@@ -59,8 +61,10 @@ class GtidEvent(BinLogEvent):
         self.sid = self.packet.read(16)
         self.gno = struct.unpack('<Q', self.packet.read(8))[0]
         self.lt_type = byte2int(self.packet.read(1))
-        self.last_committed = struct.unpack('<Q', self.packet.read(8))[0]
-        self.sequence_number = struct.unpack('<Q', self.packet.read(8))[0]
+
+        if self.mysql_version >= (5, 7):
+            self.last_committed = struct.unpack('<Q', self.packet.read(8))[0]
+            self.sequence_number = struct.unpack('<Q', self.packet.read(8))[0]
 
     @property
     def gtid(self):
@@ -76,8 +80,9 @@ class GtidEvent(BinLogEvent):
     def _dump(self):
         print("Commit: %s" % self.commit_flag)
         print("GTID_NEXT: %s" % self.gtid)
-        print("last_committed: %d" % self.last_committed)
-        print("sequence_number: %d" % self.sequence_number)
+        if hasattr(self, "last_committed"):
+            print("last_committed: %d" % self.last_committed)
+            print("sequence_number: %d" % self.sequence_number)
 
     def __repr__(self):
         return '<GtidEvent "%s">' % self.gtid
@@ -135,7 +140,17 @@ class XAPrepareEvent(BinLogEvent):
 
 
 class FormatDescriptionEvent(BinLogEvent):
-    pass
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(FormatDescriptionEvent, self).__init__(from_packet, event_size, table_map,
+                                          ctl_connection, **kwargs)
+        self.binlog_version = struct.unpack('<H', self.packet.read(2))
+        self.mysql_version_str = self.packet.read(50).rstrip(b'\0').decode()
+        numbers = self.mysql_version_str.split('-')[0]
+        self.mysql_version = tuple(map(int, numbers.split('.')))
+
+    def _dump(self):
+        print("Binlog version: %s" % self.binlog_version)
+        print("MySQL version: %s" % self.mysql_version_str)
 
 
 class StopEvent(BinLogEvent):

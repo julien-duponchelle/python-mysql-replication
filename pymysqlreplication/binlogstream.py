@@ -8,7 +8,7 @@ from pymysql.cursors import DictCursor
 from pymysql.util import int2byte
 
 from .packet import BinLogPacketWrapper
-from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
+from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT, FORMAT_DESCRIPTION_EVENT
 from .gtid import GtidSet
 from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
@@ -211,6 +211,7 @@ class BinLogStreamReader(object):
             self.pymysql_wrapper = pymysql_wrapper
         else:
             self.pymysql_wrapper = pymysql.connect
+        self.mysql_version = (0, 0, 0)
 
     def close(self):
         if self.__connected_stream:
@@ -428,6 +429,7 @@ class BinLogStreamReader(object):
 
             binlog_event = BinLogPacketWrapper(pkt, self.table_map,
                                                self._ctl_connection,
+                                               self.mysql_version,
                                                self.__use_checksum,
                                                self.__allowed_events_in_packet,
                                                self.__only_tables,
@@ -489,6 +491,9 @@ class BinLogStreamReader(object):
             # we filter also not allowed events
             if binlog_event.event is None or (binlog_event.event.__class__ not in self.__allowed_events):
                 continue
+
+            if binlog_event.event_type == FORMAT_DESCRIPTION_EVENT:
+                self.mysql_version = binlog_event.event.mysql_version
 
             return binlog_event.event
 
