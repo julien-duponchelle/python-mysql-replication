@@ -15,6 +15,7 @@ from .event import (
     XidEvent, GtidEvent, StopEvent,
     BeginLoadQueryEvent, ExecuteLoadQueryEvent,
     HeartbeatLogEvent, NotImplementedEvent)
+from .exceptions import BinLogNotEnabled
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
 
@@ -305,7 +306,10 @@ class BinLogStreamReader(object):
             if self.log_file is None or self.log_pos is None:
                 cur = self._stream_connection.cursor()
                 cur.execute("SHOW MASTER STATUS")
-                self.log_file, self.log_pos = cur.fetchone()[:2]
+                master_status = cur.fetchone()
+                if master_status is None:
+                    raise BinLogNotEnabled()
+                self.log_file, self.log_pos = master_status[:2]
                 cur.close()
 
             prelude = struct.pack('<i', len(self.log_file) + 11) \
@@ -413,6 +417,7 @@ class BinLogStreamReader(object):
                     self._stream_connection.close()
                     self.__connected_stream = False
                     continue
+                raise
 
             if pkt.is_eof_packet():
                 self.close()
