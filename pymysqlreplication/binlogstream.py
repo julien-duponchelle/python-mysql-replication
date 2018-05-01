@@ -8,7 +8,7 @@ from pymysql.cursors import DictCursor
 from pymysql.util import int2byte
 
 from .packet import BinLogPacketWrapper
-from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
+from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT, FORMAT_DESCRIPTION_EVENT
 from .gtid import GtidSet
 from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
@@ -273,8 +273,13 @@ class BinLogStreamReader(object):
         # If checksum is enabled we need to inform the server about the that
         # we support it
         if self.__use_checksum:
+            #sagi's fix
+            print("connect_to_stream - __use_checksum")
+
             cur = self._stream_connection.cursor()
-            cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")
+            #cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")
+            #sagi's fix
+            cur.execute("set @master_binlog_checksum= 'NONE'")
             cur.close()
 
         if self.slave_uuid:
@@ -426,9 +431,18 @@ class BinLogStreamReader(object):
             if not pkt.is_ok_packet():
                 continue
 
+            #sagi's fix
+
+            if 'stream_has_checksum' in dir(self):
+                checksum_to_use = self.stream_has_checksum #use checksum from stream
+            else:
+                checksum_to_use = False #self.__use_checksum #use checksum from server
+
             binlog_event = BinLogPacketWrapper(pkt, self.table_map,
                                                self._ctl_connection,
-                                               self.__use_checksum,
+                                               #self.__use_checksum,
+                                               checksum_to_use,
+                                               #False,
                                                self.__allowed_events_in_packet,
                                                self.__only_tables,
                                                self.__ignored_tables,
@@ -436,6 +450,9 @@ class BinLogStreamReader(object):
                                                self.__ignored_schemas,
                                                self.__freeze_schema,
                                                self.__fail_on_table_metadata_unavailable)
+            #sagi's fix
+            if binlog_event.event_type == FORMAT_DESCRIPTION_EVENT:
+                self.stream_has_checksum = binlog_event.event.has_checksum
 
             if binlog_event.event_type == ROTATE_EVENT:
                 self.log_pos = binlog_event.event.position

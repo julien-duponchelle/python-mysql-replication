@@ -3,6 +3,7 @@
 import binascii
 import struct
 import datetime
+import chardet
 
 from pymysql.util import byte2int, int2byte
 
@@ -99,7 +100,31 @@ class RotateEvent(BinLogEvent):
 
 
 class FormatDescriptionEvent(BinLogEvent):
-    pass
+    #sagi's fix
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(FormatDescriptionEvent, self).__init__(from_packet, event_size, table_map,
+                                          ctl_connection, **kwargs)
+        self.binlog_version = struct.unpack('<H', self.packet.read(2))[0]
+        self.server_version = self.packet.read(50).rstrip('\x00')
+        self.has_checksum = False
+        if "5.6.1"<= self.server_version or \
+                (("mariadb" in self.server_version) and ("5.3" <= self.server_version)):
+            self.packet.read((event_size - 2 - 50) - 5) # skip event types
+            if struct.unpack('b', self.packet.read(1))[0] == 1: #if checksum algorithm type is CRC32 (=1)
+                self.has_checksum = True
+            # 4 remaining bytes - checksum itself
+        else:
+            self.has_checksum = False
+
+
+
+    def dump(self):
+        print("=== %s ===" % (self.__class__.__name__))
+        print("Binlog Version: %s" % self.binlog_version)
+        print("Server Version: %s" % self.server_version)
+        print()
+
+    #pass
 
 
 class StopEvent(BinLogEvent):
@@ -174,7 +199,8 @@ class QueryEvent(BinLogEvent):
         self.packet.advance(1)
 
         self.query = self.packet.read(event_size - 13 - self.status_vars_length
-                                      - self.schema_length - 1).decode("utf-8")
+                                      - self.schema_length - 1)
+        self.query = self._decode_query(self.query)
         #string[EOF]    query
 
     def _dump(self):
@@ -183,6 +209,14 @@ class QueryEvent(BinLogEvent):
         print("Execution time: %d" % (self.execution_time))
         print("Query: %s" % (self.query))
 
+    def _decode_query(self, query):
+        try:
+            encoded_query = query.decode("utf-8")
+        except UnicodeError:
+            encoding = chardet.detect(query)['encoding']
+            encoded_query = query.decode(encoding)
+
+        return encoded_query
 
 class BeginLoadQueryEvent(BinLogEvent):
     """
