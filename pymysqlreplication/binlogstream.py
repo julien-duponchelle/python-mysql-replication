@@ -273,12 +273,12 @@ class BinLogStreamReader(object):
         # If checksum is enabled we need to inform the server about the that
         # we support it
         if self.__use_checksum:
-            #sagi's fix
-            print("connect_to_stream - __use_checksum")
-
             cur = self._stream_connection.cursor()
-            #cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")
-            #sagi's fix
+            # sagi's fix
+            # cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")            
+            # if checksum is enabled on server - 
+            # turn it off at current session for getting rotate events always 
+            # without checksum
             cur.execute("set @master_binlog_checksum= 'NONE'")
             cur.close()
 
@@ -434,15 +434,16 @@ class BinLogStreamReader(object):
             #sagi's fix
 
             if 'stream_has_checksum' in dir(self):
-                checksum_to_use = self.stream_has_checksum #use checksum from stream
+                # use checksum from stream
+                checksum_to_use = self.stream_has_checksum
             else:
-                checksum_to_use = False #self.__use_checksum #use checksum from server
+                # use checksum from server
+                checksum_to_use = False #self.__use_checksum
 
             binlog_event = BinLogPacketWrapper(pkt, self.table_map,
                                                self._ctl_connection,
                                                #self.__use_checksum,
                                                checksum_to_use,
-                                               #False,
                                                self.__allowed_events_in_packet,
                                                self.__only_tables,
                                                self.__ignored_tables,
@@ -451,12 +452,18 @@ class BinLogStreamReader(object):
                                                self.__freeze_schema,
                                                self.__fail_on_table_metadata_unavailable)
             #sagi's fix
+            # if FORMAT_DESCRIPTION event has checksum - 
+            # means hole file includes checksum
             if binlog_event.event_type == FORMAT_DESCRIPTION_EVENT:
                 self.stream_has_checksum = binlog_event.event.has_checksum
 
             if binlog_event.event_type == ROTATE_EVENT:
-                self.log_pos = binlog_event.event.position
-                self.log_file = binlog_event.event.next_binlog
+                # sagi's fix
+                # increment file if the new file is actually the next one and
+                # it isn't fake rotate
+                if self.log_file < binlog_event.event.next_binlog:
+                    self.log_pos = binlog_event.event.position
+                    self.log_file = binlog_event.event.next_binlog
                 # Table Id in binlog are NOT persistent in MySQL - they are in-memory identifiers
                 # that means that when MySQL master restarts, it will reuse same table id for different tables
                 # which will cause errors for us since our in-memory map will try to decode row data with

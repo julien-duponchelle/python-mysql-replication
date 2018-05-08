@@ -119,8 +119,7 @@ class BinLogPacketWrapper(object):
         self.flags = unpack[6]
 
         # MySQL 5.6 and more if binlog-checksum = CRC32
-        #sagi's fix
-        #event_size_without_header = self.event_size - 19
+
         if use_checksum:
             event_size_without_header = self.event_size - 23
         else:

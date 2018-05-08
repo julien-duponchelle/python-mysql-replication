@@ -90,7 +90,13 @@ class RotateEvent(BinLogEvent):
         super(RotateEvent, self).__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
         self.position = struct.unpack('<Q', self.packet.read(8))[0]
-        self.next_binlog = self.packet.read(event_size - 8).decode()
+        # Sagi's fix
+        rest_of_event_data = self.packet.read(event_size - 8)
+        try:
+            self.next_binlog = rest_of_event_data.decode()
+        
+        except UnicodeDecodeError:
+            self.next_binlog = rest_of_event_data[:-4].decode()
 
     def dump(self):
         print("=== %s ===" % (self.__class__.__name__))
@@ -107,10 +113,15 @@ class FormatDescriptionEvent(BinLogEvent):
         self.binlog_version = struct.unpack('<H', self.packet.read(2))[0]
         self.server_version = self.packet.read(50).rstrip('\x00')
         self.has_checksum = False
-        if "5.6.1"<= self.server_version or \
+        if "5.6.1" <= self.server_version or \
                 (("mariadb" in self.server_version) and ("5.3" <= self.server_version)):
-            self.packet.read((event_size - 2 - 50) - 5) # skip event types
-            if struct.unpack('b', self.packet.read(1))[0] == 1: #if checksum algorithm type is CRC32 (=1)
+            event_size_without_header = self.packet.event_size - 19
+            # skip event types and stop reading before 5 last chars that
+            # representing checksum algorithm (1) + checksum (4)
+            self.packet.read((event_size_without_header - 2 - 50) - 5)
+
+            # if checksum algorithm type is CRC32 (=1)
+            if struct.unpack('b', self.packet.read(1))[0] == 1:
                 self.has_checksum = True
             # 4 remaining bytes - checksum itself
         else:
