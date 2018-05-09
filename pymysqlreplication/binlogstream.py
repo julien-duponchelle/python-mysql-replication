@@ -193,7 +193,8 @@ class BinLogStreamReader(object):
             [TableMapEvent, RotateEvent]).union(self.__allowed_events)
 
         self.__server_id = server_id
-        self.__use_checksum = False
+        self.__server_has_checksum = False
+        self.__current_file_has_checksum = False
 
         # Store table meta information
         self.table_map = {}
@@ -268,16 +269,13 @@ class BinLogStreamReader(object):
         # log_file (string.EOF) -- filename of the binlog on the master
         self._stream_connection = self.pymysql_wrapper(**self.__connection_settings)
 
-        self.__use_checksum = self.__checksum_enabled()
+        self.__server_has_checksum = self.__checksum_enabled()
 
-        # If checksum is enabled we need to inform the server about the that
-        # we support it
-        if self.__use_checksum:
+        # If checksum is enabled on server we turn it off for our session
+        # so that we get all RotateEvents without a checksum
+        if self.__server_has_checksum:
             cur = self._stream_connection.cursor()
-            # if checksum is enabled on server - 
-            # turn it off at the current session for getting rotate events always
-            # without checksum
-            cur.execute("set @master_binlog_checksum= 'NONE'")
+            cur.execute("set @master_binlog_checksum = 'NONE'")
             cur.close()
 
         if self.slave_uuid:
@@ -429,16 +427,9 @@ class BinLogStreamReader(object):
             if not pkt.is_ok_packet():
                 continue
 
-            if 'stream_has_checksum' in dir(self):
-                # use checksum from stream
-                checksum_to_use = self.stream_has_checksum
-            else:
-                # use checksum from server
-                checksum_to_use = False
-
             binlog_event = BinLogPacketWrapper(pkt, self.table_map,
                                                self._ctl_connection,
-                                               checksum_to_use,
+                                               self.__current_file_has_checksum,
                                                self.__allowed_events_in_packet,
                                                self.__only_tables,
                                                self.__ignored_tables,
@@ -448,16 +439,15 @@ class BinLogStreamReader(object):
                                                self.__fail_on_table_metadata_unavailable)
 
             if binlog_event.event_type == FORMAT_DESCRIPTION_EVENT:
-                # if FORMAT_DESCRIPTION event has checksum -
-                # means hole file includes checksum
-                self.stream_has_checksum = binlog_event.event.has_checksum
+                # if the FDE contains a checksum, we update our checksum config for the file
+                self.__current_file_has_checksum = \
+                    binlog_event.event.has_checksum
 
             if binlog_event.event_type == ROTATE_EVENT:
-                # increment file if the new file is actually the next one and
-                # it isn't fake rotate
-                if self.log_file < binlog_event.event.next_binlog:
+                if binlog_event.event.next_binlog is not None:
                     self.log_pos = binlog_event.event.position
                     self.log_file = binlog_event.event.next_binlog
+
                 # Table Id in binlog are NOT persistent in MySQL - they are in-memory identifiers
                 # that means that when MySQL master restarts, it will reuse same table id for different tables
                 # which will cause errors for us since our in-memory map will try to decode row data with
@@ -468,6 +458,7 @@ class BinLogStreamReader(object):
                 # again for each logfile which is potentially wasted effort but we can't really do much better
                 # without being broken in restart case
                 self.table_map = {}
+
             elif binlog_event.log_pos:
                 self.log_pos = binlog_event.log_pos
 

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import binascii
+import re
 import struct
 import datetime
-import chardet
 
 from pymysql.util import byte2int, int2byte
 
@@ -92,10 +92,10 @@ class RotateEvent(BinLogEvent):
         self.position = struct.unpack('<Q', self.packet.read(8))[0]
         rest_of_event_data = self.packet.read(event_size - 8)
         try:
-            self.next_binlog = rest_of_event_data.decode()
-        
-        except UnicodeDecodeError:
-            self.next_binlog = rest_of_event_data[:-4].decode()
+            self.next_binlog = re.findall('.+\.\d+', rest_of_event_data)[0]
+
+        except IndexError:  # We failed to parse the next binlog file name
+            self.next_binlog = None
 
     def dump(self):
         print("=== %s ===" % (self.__class__.__name__))
@@ -202,8 +202,7 @@ class QueryEvent(BinLogEvent):
         self.packet.advance(1)
 
         self.query = self.packet.read(event_size - 13 - self.status_vars_length
-                                      - self.schema_length - 1)
-        self.query = self._decode_query(self.query)
+                                      - self.schema_length - 1).decode("utf-8")
         #string[EOF]    query
 
     def _dump(self):
@@ -212,14 +211,6 @@ class QueryEvent(BinLogEvent):
         print("Execution time: %d" % (self.execution_time))
         print("Query: %s" % (self.query))
 
-    def _decode_query(self, query):
-        try:
-            encoded_query = query.decode("utf-8")
-        except UnicodeError:
-            encoding = chardet.detect(query)['encoding']
-            encoded_query = query.decode(encoding)
-
-        return encoded_query
 
 class BeginLoadQueryEvent(BinLogEvent):
     """
