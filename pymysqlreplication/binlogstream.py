@@ -187,10 +187,10 @@ class BinLogStreamReader(object):
             only_events, ignored_events, filter_non_implemented_events)
         self.__fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
 
-        # We can't filter on packet level TABLE_MAP and rotate event because
-        # we need them for handling other operations
+        # We can't filter on packet level TABLE_MAP, rotate event and
+        # format description event because we need them for handling other operations
         self.__allowed_events_in_packet = frozenset(
-            [TableMapEvent, RotateEvent]).union(self.__allowed_events)
+            [TableMapEvent, RotateEvent, FormatDescriptionEvent]).union(self.__allowed_events)
 
         self.__server_id = server_id
         self.__server_has_checksum = False
