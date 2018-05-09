@@ -122,18 +122,12 @@ class FormatDescriptionEvent(BinLogEvent):
             if struct.unpack('b', self.packet.read(1))[0] == 1:
                 self.has_checksum = True
             # 4 remaining bytes - checksum itself
-        else:
-            self.has_checksum = False
-
-
 
     def dump(self):
         print("=== %s ===" % (self.__class__.__name__))
         print("Binlog Version: %s" % self.binlog_version)
         print("Server Version: %s" % self.server_version)
         print()
-
-    #pass
 
 
 class StopEvent(BinLogEvent):

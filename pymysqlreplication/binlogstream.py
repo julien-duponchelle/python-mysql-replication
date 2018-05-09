@@ -446,9 +446,10 @@ class BinLogStreamReader(object):
                                                self.__ignored_schemas,
                                                self.__freeze_schema,
                                                self.__fail_on_table_metadata_unavailable)
-            # if FORMAT_DESCRIPTION event has checksum -
-            # means hole file includes checksum
+
             if binlog_event.event_type == FORMAT_DESCRIPTION_EVENT:
+                # if FORMAT_DESCRIPTION event has checksum -
+                # means hole file includes checksum
                 self.stream_has_checksum = binlog_event.event.has_checksum
 
             if binlog_event.event_type == ROTATE_EVENT:
