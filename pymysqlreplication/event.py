@@ -90,7 +90,6 @@ class RotateEvent(BinLogEvent):
         super(RotateEvent, self).__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
         self.position = struct.unpack('<Q', self.packet.read(8))[0]
-        # Sagi's fix
         rest_of_event_data = self.packet.read(event_size - 8)
         try:
             self.next_binlog = rest_of_event_data.decode()
@@ -106,7 +105,6 @@ class RotateEvent(BinLogEvent):
 
 
 class FormatDescriptionEvent(BinLogEvent):
-    #sagi's fix
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(FormatDescriptionEvent, self).__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)

@@ -274,10 +274,8 @@ class BinLogStreamReader(object):
         # we support it
         if self.__use_checksum:
             cur = self._stream_connection.cursor()
-            # sagi's fix
-            # cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")            
             # if checksum is enabled on server - 
-            # turn it off at current session for getting rotate events always 
+            # turn it off at the current session for getting rotate events always
             # without checksum
             cur.execute("set @master_binlog_checksum= 'NONE'")
             cur.close()
@@ -431,18 +429,15 @@ class BinLogStreamReader(object):
             if not pkt.is_ok_packet():
                 continue
 
-            #sagi's fix
-
             if 'stream_has_checksum' in dir(self):
                 # use checksum from stream
                 checksum_to_use = self.stream_has_checksum
             else:
                 # use checksum from server
-                checksum_to_use = False #self.__use_checksum
+                checksum_to_use = False
 
             binlog_event = BinLogPacketWrapper(pkt, self.table_map,
                                                self._ctl_connection,
-                                               #self.__use_checksum,
                                                checksum_to_use,
                                                self.__allowed_events_in_packet,
                                                self.__only_tables,
@@ -451,14 +446,12 @@ class BinLogStreamReader(object):
                                                self.__ignored_schemas,
                                                self.__freeze_schema,
                                                self.__fail_on_table_metadata_unavailable)
-            #sagi's fix
-            # if FORMAT_DESCRIPTION event has checksum - 
+            # if FORMAT_DESCRIPTION event has checksum -
             # means hole file includes checksum
             if binlog_event.event_type == FORMAT_DESCRIPTION_EVENT:
                 self.stream_has_checksum = binlog_event.event.has_checksum
 
             if binlog_event.event_type == ROTATE_EVENT:
-                # sagi's fix
                 # increment file if the new file is actually the next one and
                 # it isn't fake rotate
                 if self.log_file < binlog_event.event.next_binlog:
