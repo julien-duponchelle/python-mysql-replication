@@ -23,9 +23,9 @@ class PyMySQLReplicationTestCase(base):
         db = os.environ.get('DB')
         # default
         self.database = {
-            "host": "sagi-i.alooma-dev.com",#""localhost",
+            "host": "localhost",
             "user": "root",
-            "passwd": "pass",#""",
+            "passwd": "",
             "port": 3306,
             "use_unicode": True,
             "charset": "utf8",
