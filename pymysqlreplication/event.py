@@ -93,7 +93,7 @@ class RotateEvent(BinLogEvent):
         rest_of_event_data = self.packet.read(event_size - 8)
         try:
             self.next_binlog = re.findall(b'.+\.\d+', rest_of_event_data)[0]
-            # TODO: sometimes got: TypeError: cannot use a string pattern on a bytes-like object
+            
         except IndexError:  # We failed to parse the next binlog file name
             self.next_binlog = None
 
@@ -109,7 +109,7 @@ class FormatDescriptionEvent(BinLogEvent):
         super(FormatDescriptionEvent, self).__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
         self.binlog_version = struct.unpack('<H', self.packet.read(2))[0]
-        self.server_version = self.packet.read(50).rstrip('\x00')
+        self.server_version = self.packet.read(50).rstrip(b'\x00')
         self.has_checksum = False
         if "5.6.1" <= self.server_version or \
                 (("mariadb" in self.server_version) and ("5.3" <= self.server_version)):
