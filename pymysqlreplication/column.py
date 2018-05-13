@@ -72,8 +72,8 @@ class Column(object):
     def __read_enum_metadata(self, column_schema):
         enums = column_schema["COLUMN_TYPE"]
         if self.type == FIELD_TYPE.ENUM:
-            self.enum_values = enums.replace('enum(', '')\
-                .replace(')', '').replace('\'', '').split(',')
+            self.enum_values = [''] + enums.replace('enum(', '').\
+                replace(')', '').replace('\'', '').split(',')
         else:
             self.set_values = enums.replace('set(', '')\
                 .replace(')', '').replace('\'', '').split(',')
