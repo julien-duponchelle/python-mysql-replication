@@ -378,6 +378,18 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], 'ba')
         self.assertEqual(event.rows[0]["values"]["test2"], 'a')
 
+    def test_enum_empty_string(self):
+        create_query = "CREATE TABLE test (test ENUM('a', 'ba', 'c'), test2 ENUM('a', 'ba', 'c')) CHARACTER SET latin1 COLLATE latin1_bin;"
+        insert_query = "INSERT INTO test VALUES('ba', 'asdf')"
+        last_sql_mode = self.execute("SELECT @@SESSION.sql_mode;"). \
+            fetchall()[0][0]
+        self.execute("SET SESSION sql_mode = 'ANSI';")
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.execute("SET SESSION sql_mode = '%s';" % last_sql_mode)
+
+        self.assertEqual(event.rows[0]["values"]["test"], 'ba')
+        self.assertEqual(event.rows[0]["values"]["test2"], '')
+
     def test_set(self):
         create_query = "CREATE TABLE test (test SET('a', 'ba', 'c'), test2 SET('a', 'ba', 'c')) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = "INSERT INTO test VALUES('ba,a,c', 'a,c')"

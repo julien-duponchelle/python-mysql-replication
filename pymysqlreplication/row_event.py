@@ -162,7 +162,7 @@ class RowsEvent(BinLogEvent):
                 values[name] = self.packet.read_uint8() + 1900
             elif column.type == FIELD_TYPE.ENUM:
                 values[name] = column.enum_values[
-                    self.packet.read_uint_by_size(column.size) - 1]
+                    self.packet.read_uint_by_size(column.size)]
             elif column.type == FIELD_TYPE.SET:
                 # We read set columns as a bitmap telling us which options
                 # are enabled
