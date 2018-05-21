@@ -8,7 +8,7 @@ from pymysql.cursors import DictCursor
 from pymysql.util import int2byte
 
 from .packet import BinLogPacketWrapper
-from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
+from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT, FORMAT_DESCRIPTION_EVENT
 from .gtid import GtidSet
 from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
@@ -187,13 +187,14 @@ class BinLogStreamReader(object):
             only_events, ignored_events, filter_non_implemented_events)
         self.__fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
 
-        # We can't filter on packet level TABLE_MAP and rotate event because
-        # we need them for handling other operations
+        # We can't filter on packet level TABLE_MAP, rotate event and
+        # format description event because we need them for handling other operations
         self.__allowed_events_in_packet = frozenset(
-            [TableMapEvent, RotateEvent]).union(self.__allowed_events)
+            [TableMapEvent, RotateEvent, FormatDescriptionEvent]).union(self.__allowed_events)
 
         self.__server_id = server_id
-        self.__use_checksum = False
+        self.__server_has_checksum = False
+        self.__current_file_has_checksum = False
 
         # Store table meta information
         self.table_map = {}
@@ -268,13 +269,13 @@ class BinLogStreamReader(object):
         # log_file (string.EOF) -- filename of the binlog on the master
         self._stream_connection = self.pymysql_wrapper(**self.__connection_settings)
 
-        self.__use_checksum = self.__checksum_enabled()
+        self.__server_has_checksum = self.__checksum_enabled()
 
-        # If checksum is enabled we need to inform the server about the that
-        # we support it
-        if self.__use_checksum:
+        # If checksum is enabled on server we turn it off for our session
+        # so that we get all RotateEvents without a checksum
+        if self.__server_has_checksum:
             cur = self._stream_connection.cursor()
-            cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")
+            cur.execute("set @master_binlog_checksum = 'NONE'")
             cur.close()
 
         if self.slave_uuid:
@@ -428,7 +429,7 @@ class BinLogStreamReader(object):
 
             binlog_event = BinLogPacketWrapper(pkt, self.table_map,
                                                self._ctl_connection,
-                                               self.__use_checksum,
+                                               self.__current_file_has_checksum,
                                                self.__allowed_events_in_packet,
                                                self.__only_tables,
                                                self.__ignored_tables,
@@ -437,9 +438,16 @@ class BinLogStreamReader(object):
                                                self.__freeze_schema,
                                                self.__fail_on_table_metadata_unavailable)
 
+            if binlog_event.event_type == FORMAT_DESCRIPTION_EVENT:
+                # if the FDE contains a checksum, we update our checksum config for the file
+                self.__current_file_has_checksum = \
+                    binlog_event.event.has_checksum
+
             if binlog_event.event_type == ROTATE_EVENT:
-                self.log_pos = binlog_event.event.position
-                self.log_file = binlog_event.event.next_binlog
+                if binlog_event.event.next_binlog is not None:
+                    self.log_pos = binlog_event.event.position
+                    self.log_file = binlog_event.event.next_binlog
+
                 # Table Id in binlog are NOT persistent in MySQL - they are in-memory identifiers
                 # that means that when MySQL master restarts, it will reuse same table id for different tables
                 # which will cause errors for us since our in-memory map will try to decode row data with
@@ -450,6 +458,7 @@ class BinLogStreamReader(object):
                 # again for each logfile which is potentially wasted effort but we can't really do much better
                 # without being broken in restart case
                 self.table_map = {}
+
             elif binlog_event.log_pos:
                 self.log_pos = binlog_event.log_pos
 
