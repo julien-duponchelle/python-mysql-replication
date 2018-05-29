@@ -208,10 +208,8 @@ class RowsEvent(BinLogEvent):
         if read > 0:
             microsecond = self.packet.read_int_be_by_size(read)
             if column.fsp % 2:
-                return int(microsecond / 10)
-            else:
-                return microsecond
-
+                microsecond = int(microsecond / 10)
+            return microsecond * (10 ** (6-column.fsp))
         return 0
 
     def __read_string(self, size, column):
