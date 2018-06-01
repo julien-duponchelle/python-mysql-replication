@@ -223,11 +223,11 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             '1984-12-03 12:33:07.123456')'''
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.rows[0]["values"]["test0"], datetime.datetime(1984, 12, 3, 12, 33, 7))
-        self.assertEqual(event.rows[0]["values"]["test1"], datetime.datetime(1984, 12, 3, 12, 33, 7, 1))
-        self.assertEqual(event.rows[0]["values"]["test2"], datetime.datetime(1984, 12, 3, 12, 33, 7, 12))
-        self.assertEqual(event.rows[0]["values"]["test3"], datetime.datetime(1984, 12, 3, 12, 33, 7, 123))
-        self.assertEqual(event.rows[0]["values"]["test4"], datetime.datetime(1984, 12, 3, 12, 33, 7, 1234))
-        self.assertEqual(event.rows[0]["values"]["test5"], datetime.datetime(1984, 12, 3, 12, 33, 7, 12345))
+        self.assertEqual(event.rows[0]["values"]["test1"], datetime.datetime(1984, 12, 3, 12, 33, 7, 100000))
+        self.assertEqual(event.rows[0]["values"]["test2"], datetime.datetime(1984, 12, 3, 12, 33, 7, 120000))
+        self.assertEqual(event.rows[0]["values"]["test3"], datetime.datetime(1984, 12, 3, 12, 33, 7, 123000))
+        self.assertEqual(event.rows[0]["values"]["test4"], datetime.datetime(1984, 12, 3, 12, 33, 7, 123400))
+        self.assertEqual(event.rows[0]["values"]["test5"], datetime.datetime(1984, 12, 3, 12, 33, 7, 123450))
         self.assertEqual(event.rows[0]["values"]["test6"], datetime.datetime(1984, 12, 3, 12, 33, 7, 123456))
 
     def test_longlong(self):
