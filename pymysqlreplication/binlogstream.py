@@ -248,13 +248,13 @@ class BinLogStreamReader(object):
 
     def __get_server_version(self):
         cur = self._stream_connection.cursor()
-        cur.execute("SELECT 'version',VERSION()")
+        cur.execute("SELECT VERSION()")
         result = cur.fetchone()
         cur.close()
 
         if result is None:
             return None
-        var, value = result[:2]
+        value = result[0]
         return value
 
     def _register_slave(self):
