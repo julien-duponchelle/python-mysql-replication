@@ -93,7 +93,7 @@ class RotateEvent(BinLogEvent):
         self.position = struct.unpack('<Q', self.packet.read(8))[0]
         rest_of_event_data = self.packet.read(event_size - 8)
         try:
-            self.next_binlog = re.findall(b'.+\.\d+', rest_of_event_data)[0].decode()
+            self.next_binlog = re.findall(b'.+\.\d{6}', rest_of_event_data)[0].decode()
 
         except IndexError:  # We failed to parse the next binlog file name
             self.next_binlog = None
