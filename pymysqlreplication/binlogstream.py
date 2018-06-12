@@ -193,7 +193,6 @@ class BinLogStreamReader(object):
             [TableMapEvent, RotateEvent, FormatDescriptionEvent]).union(self.__allowed_events)
 
         self.__server_id = server_id
-        self.__server_has_checksum = False
         self.__current_file_has_checksum = False
 
         # Store table meta information
@@ -247,6 +246,17 @@ class BinLogStreamReader(object):
             return False
         return True
 
+    def __get_server_version(self):
+        cur = self._stream_connection.cursor()
+        cur.execute("SELECT VERSION()")
+        result = cur.fetchone()
+        cur.close()
+
+        if result is None:
+            return None
+        value = result[0]
+        return value
+
     def _register_slave(self):
         if not self.report_slave:
             return
@@ -269,13 +279,13 @@ class BinLogStreamReader(object):
         # log_file (string.EOF) -- filename of the binlog on the master
         self._stream_connection = self.pymysql_wrapper(**self.__connection_settings)
 
-        self.__server_has_checksum = self.__checksum_enabled()
-
-        # If checksum is enabled on server we turn it off for our session
-        # so that we get all RotateEvents without a checksum
-        if self.__server_has_checksum:
+        # If the server support checksum we need to inform it that
+        # we support it too
+        server_version = self.__get_server_version()
+        if "5.6.1" <= server_version or \
+                (("mariadb" in server_version) and ("5.3" <= server_version)):
             cur = self._stream_connection.cursor()
-            cur.execute("set @master_binlog_checksum = 'NONE'")
+            cur.execute("set @master_binlog_checksum = 'CRC32'")
             cur.close()
 
         if self.slave_uuid:
