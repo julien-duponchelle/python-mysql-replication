@@ -213,14 +213,24 @@ class QueryEvent(BinLogEvent):
         print("Execution time: %d" % (self.execution_time))
         print("Query: %s" % (self.query))
 
-    def _decode_query(self, query):
+    @staticmethod
+    def _decode_query(query):
+        if not query:
+            return query
+
         try:
             encoded_query = query.decode("utf-8")
+
         except UnicodeError:
-            encoding = chardet.detect(query)['encoding']
-            encoded_query = query.decode(encoding)
+            try:
+                encoding = chardet.detect(query)['encoding']
+                encoded_query = query.decode(encoding)
+
+            except UnicodeError:  # Un recognized encoding
+                encoded_query = query
 
         return encoded_query
+
 
 class BeginLoadQueryEvent(BinLogEvent):
     """

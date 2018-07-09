@@ -2,11 +2,11 @@ dist: trusty
 language: python
 python:
   - "2.7"
-  - "3.3"
   - "3.4"
   - "3.5"
   - "3.6"
   - "pypy"
+  - "pypy3"
 env:
   - DB=mysql57
   - DB=mysql56
