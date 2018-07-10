@@ -226,7 +226,7 @@ class QueryEvent(BinLogEvent):
                 encoding = chardet.detect(query)['encoding']
                 encoded_query = query.decode(encoding)
 
-            except UnicodeError:  # Un recognized encoding
+            except (TypeError, UnicodeError):  # Unrecognized encoding
                 encoded_query = query
 
         return encoded_query
