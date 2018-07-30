@@ -7,7 +7,7 @@ import datetime
 import chardet
 
 from pymysql.util import byte2int, int2byte
-import utils
+from pymysqlreplication import utils
 
 
 class BinLogEvent(object):

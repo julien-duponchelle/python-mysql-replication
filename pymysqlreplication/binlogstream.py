@@ -18,7 +18,7 @@ from .event import (
 from .exceptions import BinLogNotEnabled
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
-import utils
+from pymysqlreplication import utils
 
 try:
     from pymysql.constants.COMMAND import COM_BINLOG_DUMP_GTID
