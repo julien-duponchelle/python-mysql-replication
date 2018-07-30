@@ -18,7 +18,7 @@ from .event import (
 from .exceptions import BinLogNotEnabled
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
-from utils import Utils
+import utils
 
 try:
     from pymysql.constants.COMMAND import COM_BINLOG_DUMP_GTID
@@ -284,7 +284,7 @@ class BinLogStreamReader(object):
         # we support it too
         server_version = self.__get_server_version()
 
-        if Utils.is_checksum_supported(server_version):
+        if utils.is_checksum_supported(server_version):
             cur = self._stream_connection.cursor()
             cur.execute("set @master_binlog_checksum = 'CRC32'")
             cur.close()
