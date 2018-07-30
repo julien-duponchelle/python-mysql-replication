@@ -18,6 +18,7 @@ from .event import (
 from .exceptions import BinLogNotEnabled
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
+from pymysqlreplication import utils
 
 try:
     from pymysql.constants.COMMAND import COM_BINLOG_DUMP_GTID
@@ -282,8 +283,8 @@ class BinLogStreamReader(object):
         # If the server support checksum we need to inform it that
         # we support it too
         server_version = self.__get_server_version()
-        if "5.6.1" <= server_version or \
-                (("mariadb" in server_version) and ("5.3" <= server_version)):
+
+        if utils.is_checksum_supported(server_version):
             cur = self._stream_connection.cursor()
             cur.execute("set @master_binlog_checksum = 'CRC32'")
             cur.close()
