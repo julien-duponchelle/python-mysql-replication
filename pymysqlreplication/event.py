@@ -7,7 +7,7 @@ import datetime
 import chardet
 
 from pymysql.util import byte2int, int2byte
-
+from utils import Utils
 
 class BinLogEvent(object):
     def __init__(self, from_packet, event_size, table_map, ctl_connection,
@@ -112,8 +112,7 @@ class FormatDescriptionEvent(BinLogEvent):
         self.binlog_version = struct.unpack('<H', self.packet.read(2))[0]
         self.server_version = self.packet.read(50).rstrip(b'\x00').decode()
         self.has_checksum = False
-        if "5.6.1" <= self.server_version or \
-                (("mariadb" in self.server_version) and ("5.3" <= self.server_version)):
+        if Utils.is_checksum_supported(self.server_version):
             event_size_without_header = self.packet.event_size - 19
             # skip event types and stop reading before 5 last chars that
             # representing checksum algorithm (1) + checksum (4)
