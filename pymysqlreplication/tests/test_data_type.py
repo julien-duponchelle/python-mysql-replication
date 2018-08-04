@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import copy
+import json
 import platform
 import sys
 if sys.version_info < (2, 7):

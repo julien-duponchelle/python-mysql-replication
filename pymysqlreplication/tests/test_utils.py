@@ -1,11 +1,11 @@
 import unittest
-import pytest
+
 from pymysqlreplication import utils
 
 
-class TextUtils(unittest.TestCase):
-
-    def test_is_checksum_supported(self):
+class TestUtils(unittest.TestCase):
+    @staticmethod
+    def test_is_checksum_supported():
         # regular supported mysql version
         server_version = '5.7.17-log'
         assert utils.is_checksum_supported(server_version) is True
