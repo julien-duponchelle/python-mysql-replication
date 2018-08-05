@@ -1,22 +1,29 @@
 # -*- coding: utf-8 -*-
 
-import struct
-import decimal
 import datetime
-import json
+import decimal
+import struct
 
-from pymysql.util import byte2int
 from pymysql.charset import charset_to_encoding
+from pymysql.util import byte2int
 
+from .bitmap import BitCount, BitGet
+from .column import Column
+from .constants import BINLOG
+from .constants import FIELD_TYPE
 from .event import BinLogEvent
 from .exceptions import TableMetadataUnavailableError
-from .constants import FIELD_TYPE
-from .constants import BINLOG
-from .column import Column
 from .table import Table
-from .bitmap import BitCount, BitGet
+
 
 class RowsEvent(BinLogEvent):
+    __slots__ = (
+        '__rows', '__only_tables', '__ignored_tables', '__only_schemas',
+        '__ignored_schemas', 'table_id', 'primary_key', 'schema', 'table',
+        '_processed', 'flags', 'extra_data_length', 'extra_data',
+        'number_of_columns', 'columns'
+    )
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(RowsEvent, self).__init__(from_packet, event_size, table_map,
                                         ctl_connection, **kwargs)
@@ -423,11 +430,19 @@ class RowsEvent(BinLogEvent):
         while self.packet.read_bytes + 1 < self.event_size:
             self.__rows.append(self._fetch_one_row())
 
+    def _fetch_one_row(self):
+        raise NotImplementedError
+
     @property
     def rows(self):
         if self.__rows is None:
             self._fetch_rows()
         return self.__rows
+
+    @property
+    def rows_generator(self):
+        while self.packet.read_bytes + 1 < self.event_size:
+            yield self._fetch_one_row()
 
 
 class DeleteRowsEvent(RowsEvent):
@@ -444,9 +459,10 @@ class DeleteRowsEvent(RowsEvent):
                 (self.number_of_columns + 7) / 8)
 
     def _fetch_one_row(self):
-        row = {}
+        row = {
+            "values": self._read_column_data(self.columns_present_bitmap)
+        }
 
-        row["values"] = self._read_column_data(self.columns_present_bitmap)
         return row
 
     def _dump(self):
@@ -472,9 +488,10 @@ class WriteRowsEvent(RowsEvent):
                 (self.number_of_columns + 7) / 8)
 
     def _fetch_one_row(self):
-        row = {}
+        row = {
+            "values": self._read_column_data(self.columns_present_bitmap)
+        }
 
-        row["values"] = self._read_column_data(self.columns_present_bitmap)
         return row
 
     def _dump(self):
@@ -508,11 +525,13 @@ class UpdateRowsEvent(RowsEvent):
                 (self.number_of_columns + 7) / 8)
 
     def _fetch_one_row(self):
-        row = {}
+        row = {
+            "before_values": self._read_column_data(
+                self.columns_present_bitmap),
+            "after_values": self._read_column_data(
+                   self.columns_present_bitmap2)
+        }
 
-        row["before_values"] = self._read_column_data(self.columns_present_bitmap)
-
-        row["after_values"] = self._read_column_data(self.columns_present_bitmap2)
         return row
 
     def _dump(self):
@@ -616,7 +635,7 @@ class TableMapEvent(BinLogEvent):
 
     def _dump(self):
         super(TableMapEvent, self)._dump()
-        print("Table id: %d" % (self.table_id))
-        print("Schema: %s" % (self.schema))
-        print("Table: %s" % (self.table))
-        print("Columns: %s" % (self.column_count))
+        print("Table id: %d" % self.table_id)
+        print("Schema: %s" % self.schema)
+        print("Table: %s" % self.table)
+        print("Columns: %s" % self.column_count)
