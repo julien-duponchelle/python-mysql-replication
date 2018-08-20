@@ -623,6 +623,11 @@ class TableMapEvent(BinLogEvent):
                     }
                 col = Column(byte2int(column_type), column_schema, from_packet)
                 self.columns.append(col)
+        # If get table information returns no columns, means the table doesn't
+        # exist anymore - mark event to be ignored
+        else:
+            self._processed = False
+            return
 
         self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
                                self.table, self.columns)
