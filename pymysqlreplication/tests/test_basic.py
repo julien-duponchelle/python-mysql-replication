@@ -618,28 +618,28 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
     #
     #     self.assertEqual([], event.rows)
 
-    # def test_drop_table_tablemetadata_unavailable(self):
-    #     self.stream.close()
-    #     self.execute("CREATE TABLE test (id INTEGER(11))")
-    #     self.execute("INSERT INTO test VALUES (1)")
-    #     self.execute("DROP TABLE test")
-    #     self.execute("COMMIT")
-    #
-    #     self.stream = BinLogStreamReader(
-    #         self.database,
-    #         server_id=1024,
-    #         only_events=(WriteRowsEvent,),
-    #         fail_on_table_metadata_unavailable=True
-    #     )
-    #     had_error = False
-    #     try:
-    #         event = self.stream.fetchone()
-    #     except TableMetadataUnavailableError as e:
-    #         had_error = True
-    #         assert "test" in e.args[0]
-    #     finally:
-    #         self.resetBinLog()
-    #         assert had_error
+    def test_drop_table_tablemetadata_unavailable(self):
+        self.stream.close()
+        self.execute("CREATE TABLE test (id INTEGER(11))")
+        self.execute("INSERT INTO test VALUES (1)")
+        self.execute("DROP TABLE test")
+        self.execute("COMMIT")
+
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(WriteRowsEvent,),
+            fail_on_table_metadata_unavailable=True
+        )
+        had_error = False
+        try:
+            event = self.stream.fetchone()
+        except TableMetadataUnavailableError as e:
+            had_error = True
+            assert "test" in e.args[0]
+        finally:
+            self.resetBinLog()
+            assert had_error
 
     def test_drop_column(self):
         self.stream.close()
