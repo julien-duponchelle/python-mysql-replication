@@ -36,6 +36,12 @@ class RowsEvent(BinLogEvent):
         #Header
         self.table_id = self._read_table_id()
 
+        # If table ID marks as without data (table was deleted)
+        # mark event to be ignored
+        if self.table_id in table_map and table_map[self.table_id] is None:
+            self._processed = False
+            return
+
         # Additional information
         try:
             self.primary_key = table_map[self.table_id].data["primary_key"]
@@ -597,9 +603,16 @@ class TableMapEvent(BinLogEvent):
         self.columns = []
 
         if self.table_id in table_map:
-            self.column_schemas = table_map[self.table_id].column_schemas
+            if table_map[self.table_id] is not None:
+                self.column_schemas = table_map[self.table_id].column_schemas
+            else:
+                # When table mark as deleted - set column_schemas empty to
+                # avoid looking for its information again
+                self.column_schemas = ()
         else:
-            self.column_schemas = self._ctl_connection._get_table_information(self.schema, self.table)
+            self.column_schemas = self._ctl_connection._get_table_information(
+                self.schema, self.table
+            )
 
         if len(self.column_schemas) != 0:
             # Read columns meta data
@@ -623,14 +636,11 @@ class TableMapEvent(BinLogEvent):
                     }
                 col = Column(byte2int(column_type), column_schema, from_packet)
                 self.columns.append(col)
-        # If get table information returns no columns, means the table doesn't
-        # exist anymore - mark event to be ignored
-        else:
-            self._processed = False
-            return
 
-        self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
-                               self.table, self.columns)
+            self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
+                                   self.table, self.columns)
+        else:
+            self.table_obj = None
 
         # TODO: get this information instead of trashing data
         # n              NULL-bitmask, length: (column-length * 8) / 7
