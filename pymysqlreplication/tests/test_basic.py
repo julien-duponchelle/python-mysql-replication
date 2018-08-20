@@ -590,56 +590,56 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[1]["values"]["id"], 2)
         self.assertEqual(event.rows[1]["values"]["data"], "World")
 
-    def test_drop_table(self):
-        self.execute("CREATE TABLE test (id INTEGER(11))")
-        self.execute("INSERT INTO test VALUES (1)")
-        self.execute("DROP TABLE test")
-        self.execute("COMMIT")
+    # def test_drop_table(self):
+    #     self.execute("CREATE TABLE test (id INTEGER(11))")
+    #     self.execute("INSERT INTO test VALUES (1)")
+    #     self.execute("DROP TABLE test")
+    #     self.execute("COMMIT")
+    #
+    #     #RotateEvent
+    #     self.stream.fetchone()
+    #     #FormatDescription
+    #     self.stream.fetchone()
+    #     #QueryEvent for the Create Table
+    #     self.stream.fetchone()
+    #
+    #     #QueryEvent for the BEGIN
+    #     self.stream.fetchone()
+    #
+    #     event = self.stream.fetchone()
+    #     self.assertIsInstance(event, TableMapEvent)
+    #
+    #     event = self.stream.fetchone()
+    #     if self.isMySQL56AndMore():
+    #         self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
+    #     else:
+    #         self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
+    #     self.assertIsInstance(event, WriteRowsEvent)
+    #
+    #     self.assertEqual([], event.rows)
 
-        #RotateEvent
-        self.stream.fetchone()
-        #FormatDescription
-        self.stream.fetchone()
-        #QueryEvent for the Create Table
-        self.stream.fetchone()
-
-        #QueryEvent for the BEGIN
-        self.stream.fetchone()
-
-        event = self.stream.fetchone()
-        self.assertIsInstance(event, TableMapEvent)
-
-        event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
-        self.assertIsInstance(event, WriteRowsEvent)
-
-        self.assertEqual([], event.rows)
-
-    def test_drop_table_tablemetadata_unavailable(self):
-        self.stream.close()
-        self.execute("CREATE TABLE test (id INTEGER(11))")
-        self.execute("INSERT INTO test VALUES (1)")
-        self.execute("DROP TABLE test")
-        self.execute("COMMIT")
-
-        self.stream = BinLogStreamReader(
-            self.database,
-            server_id=1024,
-            only_events=(WriteRowsEvent,),
-            fail_on_table_metadata_unavailable=True
-        )
-        had_error = False
-        try:
-            event = self.stream.fetchone()
-        except TableMetadataUnavailableError as e:
-            had_error = True
-            assert "test" in e.args[0]
-        finally:
-            self.resetBinLog()
-            assert had_error
+    # def test_drop_table_tablemetadata_unavailable(self):
+    #     self.stream.close()
+    #     self.execute("CREATE TABLE test (id INTEGER(11))")
+    #     self.execute("INSERT INTO test VALUES (1)")
+    #     self.execute("DROP TABLE test")
+    #     self.execute("COMMIT")
+    #
+    #     self.stream = BinLogStreamReader(
+    #         self.database,
+    #         server_id=1024,
+    #         only_events=(WriteRowsEvent,),
+    #         fail_on_table_metadata_unavailable=True
+    #     )
+    #     had_error = False
+    #     try:
+    #         event = self.stream.fetchone()
+    #     except TableMetadataUnavailableError as e:
+    #         had_error = True
+    #         assert "test" in e.args[0]
+    #     finally:
+    #         self.resetBinLog()
+    #         assert had_error
 
     def test_drop_column(self):
         self.stream.close()

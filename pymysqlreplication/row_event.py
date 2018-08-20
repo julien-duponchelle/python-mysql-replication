@@ -37,10 +37,14 @@ class RowsEvent(BinLogEvent):
         self.table_id = self._read_table_id()
 
         # If table ID marks as without data (table was deleted)
-        # mark event to be ignored
+        # mark event to be ignored / raise exception
         if self.table_id in table_map and table_map[self.table_id] is None:
-            self._processed = False
-            return
+            self.complete = False
+            if self._fail_on_table_metadata_unavailable:
+                raise TableMetadataUnavailableError(self.table)
+            else:
+                self._processed = False
+                return
 
         # Additional information
         try:
@@ -78,11 +82,6 @@ class RowsEvent(BinLogEvent):
         #Body
         self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns = self.table_map[self.table_id].columns
-
-        if len(self.columns) == 0:  # could not read the table metadata, probably already dropped
-            self.complete = False
-            if self._fail_on_table_metadata_unavailable:
-                raise TableMetadataUnavailableError(self.table)
 
     def __is_null(self, null_bitmap, position):
         bit = null_bitmap[int(position / 8)]
