@@ -593,6 +593,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def test_drop_table(self):
         self.execute("CREATE TABLE test (id INTEGER(11))")
         self.execute("INSERT INTO test VALUES (1)")
+        self.execute("DROP TABLE test")
         self.execute("COMMIT")
 
         #RotateEvent
@@ -617,13 +618,11 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertEqual([], event.rows)
 
-        self.execute("DROP TABLE test")
-        self.execute("COMMIT")
-
     def test_drop_table_tablemetadata_unavailable(self):
         self.stream.close()
         self.execute("CREATE TABLE test (id INTEGER(11))")
         self.execute("INSERT INTO test VALUES (1)")
+        self.execute("DROP TABLE test")
         self.execute("COMMIT")
 
         self.stream = BinLogStreamReader(
@@ -641,9 +640,6 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         finally:
             self.resetBinLog()
             assert had_error
-
-        self.execute("DROP TABLE test")
-        self.execute("COMMIT")
 
     def test_drop_column(self):
         self.stream.close()
