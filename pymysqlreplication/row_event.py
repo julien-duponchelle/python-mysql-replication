@@ -38,8 +38,7 @@ class RowsEvent(BinLogEvent):
 
         # If table ID marks as without data (table was deleted)
         # mark event to be ignored / raise exception
-        if self.table_id in table_map and len(table_map[self.table_id]
-                                              .column_schemas) is 0:
+        if self.table_id in table_map and not table_map[self.table_id].column_schemas:
             self.complete = False
             if self._fail_on_table_metadata_unavailable:
                 raise TableMetadataUnavailableError(table_map[self.table_id]
