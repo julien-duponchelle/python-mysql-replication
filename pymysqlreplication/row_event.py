@@ -38,10 +38,12 @@ class RowsEvent(BinLogEvent):
 
         # If table ID marks as without data (table was deleted)
         # mark event to be ignored / raise exception
-        if self.table_id in table_map and table_map[self.table_id] is None:
+        if self.table_id in table_map and len(table_map[self.table_id]
+                                              .column_schemas) is 0:
             self.complete = False
             if self._fail_on_table_metadata_unavailable:
-                raise TableMetadataUnavailableError(self.table)
+                raise TableMetadataUnavailableError(table_map[self.table_id]
+                                                    .table)
             else:
                 self._processed = False
                 return
@@ -602,7 +604,7 @@ class TableMapEvent(BinLogEvent):
         self.columns = []
 
         if self.table_id in table_map:
-            if table_map[self.table_id] is not None:
+            if len(table_map[self.table_id].column_schemas) != 0:
                 self.column_schemas = table_map[self.table_id].column_schemas
             else:
                 # When table mark as deleted - set column_schemas empty to
@@ -636,10 +638,10 @@ class TableMapEvent(BinLogEvent):
                 col = Column(byte2int(column_type), column_schema, from_packet)
                 self.columns.append(col)
 
-            self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
-                                   self.table, self.columns)
-        else:
-            self.table_obj = None
+        self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
+                               self.table, self.columns)
+        # else:
+        #     self.table_obj = None
 
         # TODO: get this information instead of trashing data
         # n              NULL-bitmask, length: (column-length * 8) / 7
