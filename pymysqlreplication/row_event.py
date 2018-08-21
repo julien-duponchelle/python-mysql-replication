@@ -603,7 +603,7 @@ class TableMapEvent(BinLogEvent):
         self.columns = []
 
         if self.table_id in table_map:
-            if len(table_map[self.table_id].column_schemas) != 0:
+            if table_map[self.table_id].column_schemas:
                 self.column_schemas = table_map[self.table_id].column_schemas
             else:
                 # When table mark as deleted - set column_schemas empty to
