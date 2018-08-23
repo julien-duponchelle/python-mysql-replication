@@ -611,7 +611,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         # Verify no more events - means drop table's event are skipped
         event = self.stream.fetchone()
-        assert event is None
+        self.assertEqual(None, event)
         # if self.isMySQL56AndMore():
         #     self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
         # else:
