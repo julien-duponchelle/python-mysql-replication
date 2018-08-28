@@ -36,6 +36,17 @@ class RowsEvent(BinLogEvent):
         #Header
         self.table_id = self._read_table_id()
 
+        # If table ID marks as without data (table was deleted)
+        # mark event to be ignored / raise exception
+        if self.table_id in table_map and not table_map[self.table_id].column_schemas:
+            self.complete = False
+            if self._fail_on_table_metadata_unavailable:
+                raise TableMetadataUnavailableError(table_map[self.table_id]
+                                                    .table)
+            else:
+                self._processed = False
+                return
+
         # Additional information
         try:
             self.primary_key = table_map[self.table_id].data["primary_key"]
@@ -72,11 +83,6 @@ class RowsEvent(BinLogEvent):
         #Body
         self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns = self.table_map[self.table_id].columns
-
-        if len(self.columns) == 0:  # could not read the table metadata, probably already dropped
-            self.complete = False
-            if self._fail_on_table_metadata_unavailable:
-                raise TableMetadataUnavailableError(self.table)
 
     def __is_null(self, null_bitmap, position):
         bit = null_bitmap[int(position / 8)]
@@ -597,9 +603,16 @@ class TableMapEvent(BinLogEvent):
         self.columns = []
 
         if self.table_id in table_map:
-            self.column_schemas = table_map[self.table_id].column_schemas
+            if table_map[self.table_id].column_schemas:
+                self.column_schemas = table_map[self.table_id].column_schemas
+            else:
+                # When table mark as deleted - set column_schemas empty to
+                # avoid looking for its information again
+                self.column_schemas = ()
         else:
-            self.column_schemas = self._ctl_connection._get_table_information(self.schema, self.table)
+            self.column_schemas = self._ctl_connection._get_table_information(
+                self.schema, self.table
+            )
 
         if len(self.column_schemas) != 0:
             # Read columns meta data
@@ -626,7 +639,7 @@ class TableMapEvent(BinLogEvent):
 
         self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
                                self.table, self.columns)
-
+        
         # TODO: get this information instead of trashing data
         # n              NULL-bitmask, length: (column-length * 8) / 7
 

@@ -608,15 +608,14 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
+        #XidEvent
+        self.stream.fetchone()
+        #QueryEvent for the DROP
+        self.stream.fetchone()
 
+        # Verify no more events - means dropped table's event are skipped
         event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
-        self.assertIsInstance(event, WriteRowsEvent)
-
-        self.assertEqual([], event.rows)
+        self.assertEqual(None, event)
 
     def test_drop_table_tablemetadata_unavailable(self):
         self.stream.close()
