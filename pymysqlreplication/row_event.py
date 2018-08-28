@@ -639,9 +639,7 @@ class TableMapEvent(BinLogEvent):
 
         self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
                                self.table, self.columns)
-        # else:
-        #     self.table_obj = None
-
+        
         # TODO: get this information instead of trashing data
         # n              NULL-bitmask, length: (column-length * 8) / 7
 
