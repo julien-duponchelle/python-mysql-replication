@@ -2,6 +2,7 @@
 
 import pymysql
 import struct
+import threading
 
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE
 from pymysql.cursors import DictCursor
@@ -212,6 +213,11 @@ class BinLogStreamReader(object):
         else:
             self.pymysql_wrapper = pymysql.connect
 
+        self.__should_stop = threading.Event()
+
+    def stop(self):
+        self.__should_stop.set()
+
     def close(self):
         if self.__connected_stream:
             self._stream_connection.close()
@@ -399,7 +405,9 @@ class BinLogStreamReader(object):
         self.__connected_stream = True
 
     def fetchone(self):
-        while True:
+        self.__should_stop.clear()
+
+        while not self.__should_stop.is_set():
             if not self.__connected_stream:
                 self.__connect_to_stream()
 
@@ -489,7 +497,7 @@ class BinLogStreamReader(object):
             # we filter also not allowed events
             if binlog_event.event is None or (binlog_event.event.__class__ not in self.__allowed_events):
                 continue
-
+ 
             return binlog_event.event
 
     def _allowed_event_list(self, only_events, ignored_events,
