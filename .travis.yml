@@ -2,7 +2,6 @@ dist: trusty
 language: python
 python:
   - "2.7"
-  - "3.3"
   - "3.4"
   - "3.5"
   - "3.6"
@@ -13,7 +12,8 @@ env:
 install:
   # Needs a newer version of pip to do the pip installation line
   - pip install pip --upgrade
-  - pip install .[test] nose
+  - pip install -e '.[test]'
+  - pip install nose
 cache:
   apt: true
   pip: true
@@ -23,9 +23,8 @@ before_script:
   - env | grep DB
   - bash -c "if [ '$DB' = 'mysql57' ]; then sudo ./scripts/install_mysql57.sh; fi"
   - bash -c "if [ '$DB' = 'mysql56' ]; then sudo ./scripts/install_mysql56.sh; fi"
-  - which nosetests > ~/where-is-nosetests
 script:
-  - "sudo $(cat ~/where-is-nosetests) pymysqlreplication.tests.test_abnormal:TestAbnormalBinLogStreamReader.test_no_trailing_rotate_event"
+  - "sudo $(which nosetests) pymysqlreplication.tests.test_abnormal:TestAbnormalBinLogStreamReader.test_no_trailing_rotate_event"
   - "nosetests -e test_no_trailing_rotate_event"
 
 deploy:
