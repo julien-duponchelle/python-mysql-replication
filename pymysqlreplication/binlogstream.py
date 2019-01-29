@@ -127,9 +127,10 @@ class BinLogStreamReader(object):
     """
     report_slave = None
 
-    def __init__(self, connection_settings, server_id, ctl_connection_settings=None, resume_stream=False,
-                 blocking=False, only_events=None, log_file=None, log_pos=None,
-                 filter_non_implemented_events=True,
+    def __init__(self, connection_settings, server_id,
+                 ctl_connection_settings=None, resume_stream=False,
+                 blocking=False, only_events=None, log_file=None,
+                 log_pos=None, filter_non_implemented_events=True,
                  ignored_events=None, auto_position=None,
                  only_tables=None, ignored_tables=None,
                  only_schemas=None, ignored_schemas=None,
@@ -140,14 +141,17 @@ class BinLogStreamReader(object):
                  slave_heartbeat=None):
         """
         Attributes:
-            ctl_connection_settings: Connection settings for cluster holding schema information
+            ctl_connection_settings: Connection settings for cluster holding
+                                     schema information
             resume_stream: Start for event from position or the latest event of
                            binlog or from older available event
-            blocking: Read on stream is blocking
+            blocking: When master has finished reading/sending binlog it will
+                      send EOF instead of blocking connection.
             only_events: Array of allowed events
             ignored_events: Array of ignored events
             log_file: Set replication start log file
-            log_pos: Set replication start log pos (resume_stream should be true)
+            log_pos: Set replication start log pos (resume_stream should be
+                     true)
             auto_position: Use master_auto_position gtid to set position
             only_tables: An array with the tables you want to watch (only works
                          in binlog_format ROW)
@@ -155,15 +159,18 @@ class BinLogStreamReader(object):
             only_schemas: An array with the schemas you want to watch
             ignored_schemas: An array with the schemas you want to skip
             freeze_schema: If true do not support ALTER TABLE. It's faster.
-            skip_to_timestamp: Ignore all events until reaching specified timestamp.
+            skip_to_timestamp: Ignore all events until reaching specified
+                               timestamp.
             report_slave: Report slave in SHOW SLAVE HOSTS.
             slave_uuid: Report slave_uuid in SHOW SLAVE HOSTS.
-            fail_on_table_metadata_unavailable: Should raise exception if we can't get
-                                                table information on row_events
+            fail_on_table_metadata_unavailable: Should raise exception if we
+                                                can't get table information on
+                                                row_events
             slave_heartbeat: (seconds) Should master actively send heartbeat on
-                             connection. This also reduces traffic in GTID replication
-                             on replication resumption (in case many event to skip in
-                             binlog). See MASTER_HEARTBEAT_PERIOD in mysql documentation
+                             connection. This also reduces traffic in GTID
+                             replication on replication resumption (in case
+                             many event to skip in binlog). See
+                             MASTER_HEARTBEAT_PERIOD in mysql documentation
                              for semantics
         """
 
@@ -320,10 +327,10 @@ class BinLogStreamReader(object):
             else:
                 prelude += struct.pack('<I', 4)
 
-            if self.__blocking:
-                prelude += struct.pack('<h', 0)
-            else:
-                prelude += struct.pack('<h', 1)
+            flags = 0
+            if not self.__blocking:
+                flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
+            prelude += struct.pack('<H', flags)
 
             prelude += struct.pack('<I', self.__server_id)
             prelude += self.log_file.encode()
@@ -347,7 +354,8 @@ class BinLogStreamReader(object):
             # is sent to the master
             # n_sid           ulong  8bytes  == which size is the gtid_set
             # | sid           uuid   16bytes UUID as a binary
-            # | n_intervals   ulong  8bytes  == how many intervals are sent for this gtid
+            # | n_intervals   ulong  8bytes  == how many intervals are sent
+            # |                                 for this gtid
             # | | start       ulong  8bytes  Start position of this interval
             # | | stop        ulong  8bytes  Stop position of this interval
 
@@ -355,11 +363,12 @@ class BinLogStreamReader(object):
             #   19d69c1e-ae97-4b8c-a1ef-9e12ba966457:1-3:8-10,
             #   1c2aad49-ae92-409a-b4df-d05a03e4702e:42-47:80-100:130-140
             #
-            # In this particular gtid set, 19d69c1e-ae97-4b8c-a1ef-9e12ba966457:1-3:8-10
+            # In this particular gtid set,
+            # 19d69c1e-ae97-4b8c-a1ef-9e12ba966457:1-3:8-10
             # is the first member of the set, it is called a gtid.
             # In this gtid, 19d69c1e-ae97-4b8c-a1ef-9e12ba966457 is the sid
-            # and have two intervals, 1-3 and 8-10, 1 is the start position of the first interval
-            # 3 is the stop position of the first interval.
+            # and have two intervals, 1-3 and 8-10, 1 is the start position of
+            # the first interval 3 is the stop position of the first interval.
 
             gtid_set = GtidSet(self.auto_position)
             encoded_data_size = gtid_set.encoded_length
@@ -371,11 +380,19 @@ class BinLogStreamReader(object):
                            8 +  # binlog_pos_info_size
                            4)  # encoded_data_size
 
-            prelude = b'' + struct.pack('<i', header_size + encoded_data_size) \
+            prelude = b'' + struct.pack('<i', header_size + encoded_data_size)\
                 + int2byte(COM_BINLOG_DUMP_GTID)
 
-            # binlog_flags = 0 (2 bytes)
-            prelude += struct.pack('<H', 0)
+            flags = 0
+            if not self.__blocking:
+                flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
+            flags |= 0x04  # BINLOG_THROUGH_GTID
+
+            # binlog_flags (2 bytes)
+            # see:
+            #  https://dev.mysql.com/doc/internals/en/com-binlog-dump-gtid.html
+            prelude += struct.pack('<H', flags)
+
             # server_id (4 bytes)
             prelude += struct.pack('<I', self.__server_id)
             # binlog_name_info_size (4 bytes)
