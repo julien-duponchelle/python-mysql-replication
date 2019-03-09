@@ -78,6 +78,7 @@ Projects using this library
 * binlog2sql: a popular binlog parser that could convert raw binlog to sql and also could generate flashback sql from raw binlog (https://github.com/danfengcao/binlog2sql)
 * Streaming mysql binlog replication to Snowflake/Redshift/BigQuery (https://github.com/trainingrocket/mysql-binlog-replication)
 * MySQL to Kafka (https://github.com/scottpersinger/mysql-to-kafka/)
+* Aventri MySQL Monitor (https://github.com/aventri/mysql-monitor)
 
 MySQL server settings
 =========================
