@@ -169,6 +169,12 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(type(event.rows[0]["values"]["test"]), type(None))
         self.assertEqual(event.rows[0]["values"]["test"], None)
 
+    def test_tiny_maps_to_none_2(self):
+        create_query = "CREATE TABLE test (test BOOLEAN)"
+        insert_query = "INSERT INTO test VALUES(NULL)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], None)
+
     def test_short(self):
         create_query = "CREATE TABLE test (id SMALLINT UNSIGNED NOT NULL, test SMALLINT)"
         insert_query = "INSERT INTO test VALUES(65535, -32768)"

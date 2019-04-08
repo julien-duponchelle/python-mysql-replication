@@ -418,7 +418,7 @@ class RowsEvent(BinLogEvent):
         if not self.complete:
             return
 
-        while self.packet.read_bytes + 1 < self.event_size:
+        while self.packet.read_bytes < self.event_size:
             self.__rows.append(self._fetch_one_row())
 
     @property
