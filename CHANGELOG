@@ -125,3 +125,9 @@
 
 0.18 01/03/2018
 * bubble up protocol errors
+
+0.19 29/04/2019
+* Fix Insert NULL in a boolean column returns no rows #288
+* Added empty string support for enum 
+* Fix column order
+* Fix float problem about time fieldtype
