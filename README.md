@@ -60,6 +60,9 @@ https://python-mysql-replication.readthedocs.org/en/latest/limitations.html
 Projects using this library
 ===========================
 
+* pg_chameleon: Migration and replica from MySQL to PostgreSQL https://github.com/the4thdoctor/pg_chameleon
+* Yelp Data Pipeline: https://engineeringblog.yelp.com/2016/11/open-sourcing-yelps-data-pipeline.html
+* Singer.io Tap for MySQL (https://github.com/singer-io/tap-mysql)
 * MySQL River Plugin for ElasticSearch: https://github.com/scharron/elasticsearch-river-mysql
 * Ditto: MySQL to MemSQL replicator https://github.com/memsql/ditto
 * ElasticMage: Full Magento integration with ElasticSearch https://github.com/ElasticMage/elasticmage
@@ -70,11 +73,12 @@ Projects using this library
 * aiomysql_replication: Fork supporting asyncio https://github.com/jettify/aiomysql_replication
 * python-mysql-eventprocessor: Daemon interface for handling MySQL binary log events. https://github.com/jffifa/python-mysql-eventprocessor
 * mymongo: MySQL to mongo replication https://github.com/njordr/mymongo
-* pg_chameleon: Migration and replica from MySQL to PostgreSQL https://github.com/the4thdoctor/pg_chameleon
 * pg_ninja: The ninja elephant obfuscation and replica tool https://github.com/transferwise/pg_ninja/ (http://tech.transferwise.com/pg_ninja-replica-with-obfuscation/)
 * MySQLStreamer: MySQLStreamer is a database change data capture and publish system https://github.com/Yelp/mysql_streamer
-* Yelp Data Pipeline: https://engineeringblog.yelp.com/2016/11/open-sourcing-yelps-data-pipeline.html
 * binlog2sql: a popular binlog parser that could convert raw binlog to sql and also could generate flashback sql from raw binlog (https://github.com/danfengcao/binlog2sql)
+* Streaming mysql binlog replication to Snowflake/Redshift/BigQuery (https://github.com/trainingrocket/mysql-binlog-replication)
+* MySQL to Kafka (https://github.com/scottpersinger/mysql-to-kafka/)
+* Aventri MySQL Monitor (https://github.com/aventri/mysql-monitor)
 
 MySQL server settings
 =========================
