@@ -221,10 +221,8 @@ class RowsEvent(BinLogEvent):
         if read > 0:
             microsecond = self.packet.read_int_be_by_size(read)
             if column.fsp % 2:
-                return int(microsecond / 10)
-            else:
-                return microsecond
-
+                microsecond = int(microsecond / 10)
+            return microsecond * (10 ** (6-column.fsp))
         return 0
 
     def __read_string(self, size, column):
@@ -433,7 +431,7 @@ class RowsEvent(BinLogEvent):
         if not self.complete:
             return
 
-        while self.packet.read_bytes + 1 < self.event_size:
+        while self.packet.read_bytes < self.event_size:
             self.__rows.append(self._fetch_one_row())
 
     def _fetch_one_row(self):
