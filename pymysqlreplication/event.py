@@ -155,6 +155,8 @@ class HeartbeatLogEvent(BinLogEvent):
 
 
 class QueryEvent(BinLogEvent):
+    charset = 'utf-8'
+    on_errors = 'strict'
     '''This evenement is trigger when a query is run of the database.
     Only replicated queries are logged.'''
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
@@ -174,7 +176,8 @@ class QueryEvent(BinLogEvent):
         self.packet.advance(1)
 
         self.query = self.packet.read(event_size - 13 - self.status_vars_length
-                                      - self.schema_length - 1).decode("utf-8")
+                                      - self.schema_length - 1).decode(
+                                      encoding=self.charset, errors=self.on_errors)
         #string[EOF]    query
 
     def _dump(self):
