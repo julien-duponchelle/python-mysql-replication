@@ -716,7 +716,7 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
         super(TestCTLConnectionSettings, self).tearDown()
         self.ctl_conn_control.close()
 
-    def test_seperate_ctl_settings_table_metadata_unavailable(self):
+    def test_separate_ctl_settings_table_metadata_unavailable(self):
         self.execute("CREATE TABLE test (id INTEGER(11))")
         self.execute("INSERT INTO test VALUES (1)")
         self.execute("COMMIT")
@@ -731,7 +731,7 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
             self.resetBinLog()
             assert had_error
 
-    def test_seperate_ctl_settings_no_error(self):
+    def test_separate_ctl_settings_no_error(self):
         self.execute("CREATE TABLE test (id INTEGER(11))")
         self.execute("INSERT INTO test VALUES (1)")
         self.execute("DROP TABLE test")
