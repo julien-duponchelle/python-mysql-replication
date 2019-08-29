@@ -580,6 +580,8 @@ class TableMapEvent(BinLogEvent):
         else:
             self.column_schemas = self._ctl_connection._get_table_information(self.schema, self.table)
 
+        ordinal_pos_loc = 0
+
         if len(self.column_schemas) != 0:
             # Read columns meta data
             column_types = list(self.packet.read(self.column_count))
@@ -587,7 +589,16 @@ class TableMapEvent(BinLogEvent):
             for i in range(0, len(column_types)):
                 column_type = column_types[i]
                 try:
-                    column_schema = self.column_schemas[i]
+                    column_schema = self.column_schemas[ordinal_pos_loc]
+
+                    # only acknowledge the column definition if the iteration matches with ordinal position of
+                    # the column. this helps in maintaining support for restricted columnar access
+                    if i != (column_schema['ORDINAL_POSITION'] - 1):
+                        # raise IndexError to follow the workflow of dropping columns which are not matching the
+                        # underlying table schema
+                        raise IndexError
+
+                    ordinal_pos_loc += 1
                 except IndexError:
                     # this a dirty hack to prevent row events containing columns which have been dropped prior
                     # to pymysqlreplication start, but replayed from binlog from blowing up the service.
