@@ -136,3 +136,8 @@
 * Added support for limited columnar access in MySQL
 * Python3 fixes
 * Add gtidset comparison methods
+
+0.21 22/11/2019
+* fix ci configuration
+* Added support for limited columnar access in MySQL
+
