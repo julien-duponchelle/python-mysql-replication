@@ -131,3 +131,8 @@
 * Added empty string support for enum 
 * Fix column order
 * Fix float problem about time fieldtype
+
+0.20 22/11/2019
+* Added support for limited columnar access in MySQL
+* Python3 fixes
+* Add gtidset comparison methods
