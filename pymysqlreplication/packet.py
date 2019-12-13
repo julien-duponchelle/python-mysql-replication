@@ -43,9 +43,9 @@ def read_offset_or_inline(packet, large):
 
     if t in (JSONB_TYPE_LITERAL,
              JSONB_TYPE_INT16, JSONB_TYPE_UINT16):
-        return (t, None, packet.read_binary_json_type_inlined(t))
+        return (t, None, packet.read_binary_json_type_inlined(t, large))
     if large and t in (JSONB_TYPE_INT32, JSONB_TYPE_UINT32):
-        return (t, None, packet.read_binary_json_type_inlined(t))
+        return (t, None, packet.read_binary_json_type_inlined(t, large))
 
     if large:
         return (t, packet.read_uint32(), None)
@@ -255,7 +255,7 @@ class BinLogPacketWrapper(object):
     def read_variable_length_string(self):
         """Read a variable length string where the first 1-5 bytes stores the
         length of the string.
-        
+
         For each byte, the first bit being high indicates another byte must be
         read.
         """
@@ -384,9 +384,9 @@ class BinLogPacketWrapper(object):
 
         raise ValueError('Json type %d is not handled' % t)
 
-    def read_binary_json_type_inlined(self, t):
+    def read_binary_json_type_inlined(self, t, large):
         if t == JSONB_TYPE_LITERAL:
-            value = self.read_uint16()
+            value = self.read_uint32() if large else self.read_uint16()
             if value == JSONB_LITERAL_NULL:
                 return None
             elif value == JSONB_LITERAL_TRUE:
