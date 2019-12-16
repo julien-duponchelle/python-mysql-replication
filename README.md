@@ -280,6 +280,7 @@ Similar projects
 * Java: https://github.com/shyiko/mysql-binlog-connector-java
 * GO: https://github.com/siddontang/go-mysql
 * PHP: Based on this this project https://github.com/krowinski/php-mysql-replication and https://github.com/fengxiangyun/mysql-replication 
+* .NET: https://github.com/SciSharp/dotnet-mysql-replication
 
 Special thanks
 ================
