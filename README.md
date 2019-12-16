@@ -130,12 +130,12 @@ Output will be:
     Date: 1970-01-01T01:00:00
     Event size: 24
     Read bytes: 0
-    
+
     === FormatDescriptionEvent ===
     Date: 2012-10-07T15:03:06
     Event size: 84
     Read bytes: 0
-    
+
     === QueryEvent ===
     Date: 2012-10-07T15:03:16
     Event size: 64
@@ -143,7 +143,7 @@ Output will be:
     Schema: test
     Execution time: 0
     Query: CREATE DATABASE test
-    
+
     === QueryEvent ===
     Date: 2012-10-07T15:03:16
     Event size: 151
@@ -151,7 +151,7 @@ Output will be:
     Schema: test
     Execution time: 0
     Query: CREATE TABLE test4 (id int NOT NULL AUTO_INCREMENT, data VARCHAR(255), data2 VARCHAR(255), PRIMARY KEY(id))
-    
+
     === QueryEvent ===
     Date: 2012-10-07T15:03:16
     Event size: 49
@@ -159,7 +159,7 @@ Output will be:
     Schema: test
     Execution time: 0
     Query: BEGIN
-    
+
     === TableMapEvent ===
     Date: 2012-10-07T15:03:16
     Event size: 31
@@ -168,7 +168,7 @@ Output will be:
     Schema: test
     Table: test4
     Columns: 3
-    
+
     === WriteRowsEvent ===
     Date: 2012-10-07T15:03:16
     Event size: 27
@@ -181,13 +181,13 @@ Output will be:
     * data : Hello
     * id : 1
     * data2 : World
-    
+
     === XidEvent ===
     Date: 2012-10-07T15:03:16
     Event size: 8
     Read bytes: 8
     Transaction ID: 14097
-    
+
     === QueryEvent ===
     Date: 2012-10-07T15:03:17
     Event size: 49
@@ -195,7 +195,7 @@ Output will be:
     Schema: test
     Execution time: 0
     Query: BEGIN
-    
+
     === TableMapEvent ===
     Date: 2012-10-07T15:03:17
     Event size: 31
@@ -204,7 +204,7 @@ Output will be:
     Schema: test
     Table: test4
     Columns: 3
-    
+
     === UpdateRowsEvent ===
     Date: 2012-10-07T15:03:17
     Event size: 45
@@ -218,13 +218,13 @@ Output will be:
     * data : Hello => World
     * id : 1 => 1
     * data2 : World => Hello
-    
+
     === XidEvent ===
     Date: 2012-10-07T15:03:17
     Event size: 8
     Read bytes: 8
     Transaction ID: 14098
-    
+
     === QueryEvent ===
     Date: 2012-10-07T15:03:17
     Event size: 49
@@ -232,7 +232,7 @@ Output will be:
     Schema: test
     Execution time: 1
     Query: BEGIN
-    
+
     === TableMapEvent ===
     Date: 2012-10-07T15:03:17
     Event size: 31
@@ -241,7 +241,7 @@ Output will be:
     Schema: test
     Table: test4
     Columns: 3
-    
+
     === DeleteRowsEvent ===
     Date: 2012-10-07T15:03:17
     Event size: 27
@@ -254,7 +254,7 @@ Output will be:
     * data : World
     * id : 1
     * data2 : Hello
-    
+
     === XidEvent ===
     Date: 2012-10-07T15:03:17
     Event size: 8
