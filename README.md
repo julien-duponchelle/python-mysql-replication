@@ -281,6 +281,7 @@ Similar projects
 * GO: https://github.com/siddontang/go-mysql
 * PHP: Based on this this project https://github.com/krowinski/php-mysql-replication and https://github.com/fengxiangyun/mysql-replication 
 * .NET: https://github.com/SciSharp/dotnet-mysql-replication
+* .NET Core: https://github.com/rusuly/MySqlCdc
 
 Special thanks
 ================
