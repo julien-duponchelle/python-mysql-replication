@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import struct
+import binascii
 
 from pymysql.util import byte2int
 
@@ -349,7 +350,13 @@ class BinLogPacketWrapper(object):
         self.unread(payload)
         t = self.read_uint8()
 
-        return self.read_binary_json_type(t, length)
+        # return self.read_binary_json_type(t, length)
+        try:
+            return self.read_binary_json_type(t, length)
+        except:
+            print(length)
+            print(binascii.hexlify(payload))
+            raise
 
     def read_binary_json_type(self, t, length):
         large = (t in (JSONB_TYPE_LARGE_OBJECT, JSONB_TYPE_LARGE_ARRAY))
