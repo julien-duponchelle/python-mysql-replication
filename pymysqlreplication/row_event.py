@@ -178,6 +178,8 @@ class RowsEvent(BinLogEvent):
                 values[name] = self.packet.read_length_coded_pascal_string(
                     column.length_size)
             elif column.type == FIELD_TYPE.JSON:
+                print("oli column length_size")
+                print(column.length_size)
                 values[name] = self.packet.read_binary_json(column.length_size)
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" %
