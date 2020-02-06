@@ -388,6 +388,8 @@ class BinLogPacketWrapper(object):
             return self.read_int64()
         elif t == JSONB_TYPE_UINT64:
             return self.read_uint64()
+        elif t == JSONB_TYPE_OPAQUE:
+            return None
 
         raise ValueError('Json type %d is not handled' % t)
 
