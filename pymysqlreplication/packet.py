@@ -396,7 +396,7 @@ class BinLogPacketWrapper(object):
 
     def read_opaque(self, length):
         t = self.read_uint8()
-        if (t == 146)
+        if t == 146:
             return self.read_new_decimal()
 
         raise ValueError('Json Opaque type %d is not handled' % t)
