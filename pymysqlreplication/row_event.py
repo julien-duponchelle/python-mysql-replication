@@ -99,7 +99,7 @@ class RowsEvent(BinLogEvent):
             if BitGet(cols_bitmap, i) == 0:
                 values[name] = None
                 continue
-
+            print("column %d bytes %d" %(i, self.packet.read_bytes))
             if self.__is_null(null_bitmap, nullBitmapIndex):
                 values[name] = None
             elif column.type == FIELD_TYPE.TINY:
