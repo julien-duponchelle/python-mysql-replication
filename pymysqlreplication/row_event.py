@@ -180,7 +180,7 @@ class RowsEvent(BinLogEvent):
                     column.length_size)
             elif column.type == FIELD_TYPE.JSON:
                 print(">> Packet contains JSON:")
-                print(binascii.hexlify(self.packet.packet))
+                print(binascii.hexlify(self.packet.packet._data))
                 values[name] = self.packet.read_binary_json(column.length_size)
             else:
                 raise NotImplementedError("Unknown MySQL column type: %d" %
