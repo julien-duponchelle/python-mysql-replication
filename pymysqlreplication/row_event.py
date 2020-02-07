@@ -5,6 +5,7 @@ import decimal
 import datetime
 import json
 import binascii
+from pprint import pprint
 
 from pymysql.util import byte2int
 from pymysql.charset import charset_by_name
@@ -180,7 +181,7 @@ class RowsEvent(BinLogEvent):
                     column.length_size)
             elif column.type == FIELD_TYPE.JSON:
                 print(">> Packet contains JSON:")
-                print(json.dumps(self.table_map, indent = 2))
+                pprint(self.table_map[self.table_id])
                 print(binascii.hexlify(self.packet.packet._data))
                 values[name] = self.packet.read_binary_json(column.length_size)
             else:
