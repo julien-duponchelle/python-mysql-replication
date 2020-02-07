@@ -181,7 +181,7 @@ class RowsEvent(BinLogEvent):
                     column.length_size)
             elif column.type == FIELD_TYPE.JSON:
                 print(">> Packet contains JSON:")
-                pprint(values.__dict__)
+                pprint(values)
                 pprint(self.table_map[self.table_id].__dict__)
                 print(binascii.hexlify(self.packet.packet._data))
                 values[name] = self.packet.read_binary_json(column.length_size)
