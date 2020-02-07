@@ -355,6 +355,7 @@ class BinLogPacketWrapper(object):
         try:
             return self.read_binary_json_type(t, length)
         except:
+            print(t)
             print(length)
             print(binascii.hexlify(payload))
             raise
