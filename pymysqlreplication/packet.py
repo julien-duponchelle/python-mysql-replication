@@ -42,7 +42,7 @@ JSONB_LITERAL_FALSE = 0x2
 
 def read_offset_or_inline(packet, large):
     t = packet.read_uint8()
-
+    print("some T: %d", %(t))
     if t in (JSONB_TYPE_LITERAL,
              JSONB_TYPE_INT16, JSONB_TYPE_UINT16):
         return (t, None, packet.read_binary_json_type_inlined(t, large))
@@ -467,7 +467,8 @@ class BinLogPacketWrapper(object):
         values_type_offset_inline = [
             read_offset_or_inline(self, large)
             for _ in range(elements)]
-
+        print(values_type_offset_inline)
+        print("elements: %d, size: %d" %(elements, size))
         def _read(x):
             if x[1] is None:
                 return x[2]
