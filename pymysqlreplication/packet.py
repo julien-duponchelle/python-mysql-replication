@@ -412,11 +412,11 @@ class BinLogPacketWrapper(object):
 
         digits_per_integer = 9
         compressed_bytes = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4]
-        integral = (column.precision - column.decimals)
+        integral = (precision - decimals)
         uncomp_integral = int(integral / digits_per_integer)
-        uncomp_fractional = int(column.decimals / digits_per_integer)
+        uncomp_fractional = int(decimals / digits_per_integer)
         comp_integral = integral - (uncomp_integral * digits_per_integer)
-        comp_fractional = column.decimals - (uncomp_fractional
+        comp_fractional = decimals - (uncomp_fractional
                                              * digits_per_integer)
 
         # Support negative
