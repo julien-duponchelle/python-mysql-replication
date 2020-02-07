@@ -456,7 +456,7 @@ class BinLogPacketWrapper(object):
     def read_binary_json_array(self, length, large):
         if large:
             elements = self.read_uint32()
-            size = self.read_uint32()
+            size = self.read_uint16()
         else:
             elements = self.read_uint16()
             size = self.read_uint16()
