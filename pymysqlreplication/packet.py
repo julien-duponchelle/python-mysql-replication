@@ -42,7 +42,6 @@ JSONB_LITERAL_FALSE = 0x2
 
 def read_offset_or_inline(packet, large):
     t = packet.read_uint8()
-    print("some T: %d" %(t))
     if t in (JSONB_TYPE_LITERAL,
              JSONB_TYPE_INT16, JSONB_TYPE_UINT16):
         return (t, None, packet.read_binary_json_type_inlined(t, large))
@@ -390,10 +389,69 @@ class BinLogPacketWrapper(object):
             return self.read_int64()
         elif t == JSONB_TYPE_UINT64:
             return self.read_uint64()
-        # elif t == JSONB_TYPE_OPAQUE:
-        #     return self.read_opaque()
+        elif t == JSONB_TYPE_OPAQUE:
+            return self.read_opaque(length)
 
         raise ValueError('Json type %d is not handled' % t)
+
+    def read_opaque(self, length):
+        t = self.read_uint8()
+        if (t == 146)
+            return self.read_new_decimal()
+
+        raise ValueError('Json Opaque type %d is not handled' % t)
+
+    def read_new_decimal():
+        precision = self.read_uint8()
+        decimals = self.read_uint8()
+        """Read MySQL's new decimal format introduced in MySQL 5"""
+
+        # This project was a great source of inspiration for
+        # understanding this storage format.
+        # https://github.com/jeremycole/mysql_binlog
+
+        digits_per_integer = 9
+        compressed_bytes = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4]
+        integral = (column.precision - column.decimals)
+        uncomp_integral = int(integral / digits_per_integer)
+        uncomp_fractional = int(column.decimals / digits_per_integer)
+        comp_integral = integral - (uncomp_integral * digits_per_integer)
+        comp_fractional = column.decimals - (uncomp_fractional
+                                             * digits_per_integer)
+
+        # Support negative
+        # The sign is encoded in the high bit of the the byte
+        # But this bit can also be used in the value
+        value = self.read_uint8()
+        if value & 0x80 != 0:
+            res = ""
+            mask = 0
+        else:
+            mask = -1
+            res = "-"
+        self.unread(struct.pack('<B', value ^ 0x80))
+
+        size = compressed_bytes[comp_integral]
+        if size > 0:
+            value = self.read_int_be_by_size(size) ^ mask
+            res += str(value)
+
+        for i in range(0, uncomp_integral):
+            value = struct.unpack('>i', self.read(4))[0] ^ mask
+            res += '%09d' % value
+
+        res += "."
+
+        for i in range(0, uncomp_fractional):
+            value = struct.unpack('>i', self.read(4))[0] ^ mask
+            res += '%09d' % value
+
+        size = compressed_bytes[comp_fractional]
+        if size > 0:
+            value = self.read_int_be_by_size(size) ^ mask
+            res += '%0*d' % (comp_fractional, value)
+
+        return decimal.Decimal(res)
 
     def read_binary_json_type_inlined(self, t, large):
         if t == JSONB_TYPE_LITERAL:
