@@ -2,6 +2,7 @@
 
 import struct
 import binascii
+import decimal
 import json
 
 from pymysql.util import byte2int
