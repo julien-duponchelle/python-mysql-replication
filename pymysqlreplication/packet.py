@@ -401,7 +401,7 @@ class BinLogPacketWrapper(object):
 
         raise ValueError('Json Opaque type %d is not handled' % t)
 
-    def read_new_decimal():
+    def read_new_decimal(self):
         precision = self.read_uint8()
         decimals = self.read_uint8()
         """Read MySQL's new decimal format introduced in MySQL 5"""
