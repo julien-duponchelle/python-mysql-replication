@@ -456,7 +456,7 @@ class BinLogPacketWrapper(object):
     def read_binary_json_array(self, length, large):
         if large:
             elements = self.read_uint32()
-            size = self.read_uint16()
+            size = self.read_uint32()
         else:
             elements = self.read_uint16()
             size = self.read_uint16()
@@ -468,7 +468,7 @@ class BinLogPacketWrapper(object):
             read_offset_or_inline(self, large)
             for _ in range(elements)]
         print(values_type_offset_inline)
-        print("elements: %d, size: %d" %(elements, size))
+        print("elements: %d, size: %d, large: %d" %(elements, size, large))
         def _read(x):
             if x[1] is None:
                 return x[2]
