@@ -118,7 +118,7 @@ class BinLogPacketWrapper(object):
         self.log_pos = unpack[5]
         self.flags = unpack[6]
 
-        # MySQL 5.6 and more if binlog-checksum = CRC32
+        # MySQL 5.6 and more if binlog file contains checksum
         if use_checksum:
             event_size_without_header = self.event_size - 23
         else:
