@@ -138,7 +138,10 @@ class BinLogStreamReader(object):
                  report_slave=None, slave_uuid=None,
                  pymysql_wrapper=None,
                  fail_on_table_metadata_unavailable=False,
-                 slave_heartbeat=None):
+                 slave_heartbeat=None,
+                 callback_table_info=None,
+                 table_info_name=None
+    ):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -218,6 +221,10 @@ class BinLogStreamReader(object):
             self.pymysql_wrapper = pymysql_wrapper
         else:
             self.pymysql_wrapper = pymysql.connect
+
+        self.callback_table_info = callback_table_info
+        self.table_info_name = "information_schema.columns" if table_info_name is None else table_info_name
+
 
     def close(self):
         if self.__connected_stream:
@@ -541,6 +548,8 @@ class BinLogStreamReader(object):
         return frozenset(events)
 
     def __get_table_information(self, schema, table):
+        if self.callback_table_info is not None:
+            return self.callback_table_info(schema, table)
         for i in range(1, 3):
             try:
                 if not self.__connected_ctl:
@@ -552,7 +561,7 @@ class BinLogStreamReader(object):
                         COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME,
                         COLUMN_COMMENT, COLUMN_TYPE, COLUMN_KEY, ORDINAL_POSITION
                     FROM
-                        information_schema.columns
+                       """ + self.table_info_name + """
                     WHERE
                         table_schema = %s AND table_name = %s
                     ORDER BY ORDINAL_POSITION
