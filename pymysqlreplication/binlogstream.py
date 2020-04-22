@@ -138,7 +138,8 @@ class BinLogStreamReader(object):
                  report_slave=None, slave_uuid=None,
                  pymysql_wrapper=None,
                  fail_on_table_metadata_unavailable=False,
-                 slave_heartbeat=None):
+                 slave_heartbeat=None,
+                 connect_queries=None):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -213,6 +214,7 @@ class BinLogStreamReader(object):
             self.report_slave = ReportSlave(report_slave)
         self.slave_uuid = slave_uuid
         self.slave_heartbeat = slave_heartbeat
+        self.connect_queries = None if connect_queries is None else ([connect_queries] if not isinstance(connect_queries, list) else connect_queries)
 
         if pymysql_wrapper:
             self.pymysql_wrapper = pymysql_wrapper
@@ -413,6 +415,10 @@ class BinLogStreamReader(object):
         else:
             self._stream_connection._write_bytes(prelude)
             self._stream_connection._next_seq_id = 1
+        if self.connect_queries is not None:
+            cur = self._stream_connection.cursor()
+            for i in self.connect_queries:
+                cur.execute(i)
         self.__connected_stream = True
 
     def fetchone(self):
