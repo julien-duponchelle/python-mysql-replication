@@ -424,7 +424,7 @@ class BinLogStreamReader(object):
         while True:
             if self.clientside_heartbeat is not None:
                 if time.time() - last_time > self.clientside_heartbeat:
-                    return new ClientSideHeartBeat()
+                    return ClientSideHeartBeat()
             if not self.__connected_stream:
                 self.__connect_to_stream()
 
