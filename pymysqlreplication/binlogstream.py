@@ -2,6 +2,7 @@
 
 import pymysql
 import struct
+import time
 
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE
 from pymysql.cursors import DictCursor
@@ -138,7 +139,7 @@ class BinLogStreamReader(object):
                  report_slave=None, slave_uuid=None,
                  pymysql_wrapper=None,
                  fail_on_table_metadata_unavailable=False,
-                 slave_heartbeat=None):
+                 slave_heartbeat=None,clientside_heartbeat=None):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -172,6 +173,8 @@ class BinLogStreamReader(object):
                              many event to skip in binlog). See
                              MASTER_HEARTBEAT_PERIOD in mysql documentation
                              for semantics
+            clientside_heartbeat: (seconds) Create a client side event when 
+                             reading stream to avoid stalled iterations.
         """
 
         self.__connection_settings = connection_settings
@@ -213,6 +216,7 @@ class BinLogStreamReader(object):
             self.report_slave = ReportSlave(report_slave)
         self.slave_uuid = slave_uuid
         self.slave_heartbeat = slave_heartbeat
+        self.clientside_heartbeat = clientside_heartbeat
 
         if pymysql_wrapper:
             self.pymysql_wrapper = pymysql_wrapper
@@ -416,7 +420,11 @@ class BinLogStreamReader(object):
         self.__connected_stream = True
 
     def fetchone(self):
+        last_time = time.time()
         while True:
+            if self.clientside_heartbeat is not None:
+                if time.time() - last_time > self.clientside_heartbeat:
+                    return ClientSideHeartBeat()
             if not self.__connected_stream:
                 self.__connect_to_stream()
 
