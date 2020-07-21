@@ -3,6 +3,7 @@
 import pymysql
 import struct
 
+from pkg_resources import parse_version
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE
 from pymysql.cursors import DictCursor
 from pymysql.util import int2byte
@@ -259,7 +260,7 @@ class BinLogStreamReader(object):
 
         packet = self.report_slave.encoded(self.__server_id)
 
-        if pymysql.__version__ < "0.6":
+        if parse_version(pymysql.__version__) < parse_version("0.6"):
             self._stream_connection.wfile.write(packet)
             self._stream_connection.wfile.flush()
             self._stream_connection.read_packet()
@@ -407,7 +408,7 @@ class BinLogStreamReader(object):
             # encoded_data
             prelude += gtid_set.encoded()
 
-        if pymysql.__version__ < "0.6":
+        if parse_version(pymysql.__version__) < parse_version("0.6"):
             self._stream_connection.wfile.write(prelude)
             self._stream_connection.wfile.flush()
         else:
@@ -424,7 +425,7 @@ class BinLogStreamReader(object):
                 self.__connect_to_ctl()
 
             try:
-                if pymysql.__version__ < "0.6":
+                if parse_version(pymysql.__version__) < parse_version("0.6"):
                     pkt = self._stream_connection.read_packet()
                 else:
                     pkt = self._stream_connection._read_packet()
