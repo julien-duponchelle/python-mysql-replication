@@ -50,5 +50,5 @@ setup(
               "pymysqlreplication.tests"],
     cmdclass={"test": TestCommand},
     extras_require={'test': tests_require},
-    install_requires=['pymysql'],
+    install_requires=['pymysql>=0.6'],
 )
