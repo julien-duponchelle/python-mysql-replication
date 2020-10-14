@@ -394,13 +394,13 @@ class BinLogPacketWrapper(object):
             elif value == JSONB_LITERAL_FALSE:
                 return False
         elif t == JSONB_TYPE_INT16:
-            return self.read_int16()
+            return self.read_int32() if large else self.read_int16()
         elif t == JSONB_TYPE_UINT16:
-            return self.read_uint16()
+            return self.read_uint32() if large else self.read_uint16()
         elif t == JSONB_TYPE_INT32:
-            return self.read_int32()
+            return self.read_int64() if large else self.read_int32()
         elif t == JSONB_TYPE_UINT32:
-            return self.read_uint32()
+            return self.read_uint64() if large else self.read_uint32()
 
         raise ValueError('Json type %d is not handled' % t)
 
