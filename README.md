@@ -324,6 +324,8 @@ Other contributors:
 * Keegan Parker: secondary database for reference schema https://github.com/kdparker
 * Troy J. Farrell Clear table_map if RotateEvent has timestamp of 0 https://github.com/troyjfarrell
 * Zhanwei Wang Fail to get table informations https://github.com/wangzw
+* Alexander Ignatov Fix the JSON literal 
+* Garen Chan Support PyMysql with a version greater than 0.9.3  https://github.com/garenchan
 
 Thanks to GetResponse for their support
 

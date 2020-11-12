@@ -34,7 +34,7 @@ class TestCommand(Command):
         unittest.main(tests, argv=sys.argv[:1])
 
 
-version = "0.21"
+version = "0.22"
 
 setup(
     name="mysql-replication",
@@ -50,5 +50,5 @@ setup(
               "pymysqlreplication.tests"],
     cmdclass={"test": TestCommand},
     extras_require={'test': tests_require},
-    install_requires=['pymysql'],
+    install_requires=['pymysql>=0.6'],
 )

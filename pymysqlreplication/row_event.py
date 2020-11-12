@@ -8,7 +8,7 @@ import binascii
 from pprint import pprint
 
 from pymysql.util import byte2int
-from pymysql.charset import charset_to_encoding
+from pymysql.charset import charset_by_name
 
 from .event import BinLogEvent
 from .exceptions import TableMetadataUnavailableError
@@ -218,10 +218,16 @@ class RowsEvent(BinLogEvent):
             return microsecond * (10 ** (6-column.fsp))
         return 0
 
+    @staticmethod
+    def charset_to_encoding(name):
+        charset = charset_by_name(name)
+        return charset.encoding if charset else name
+
     def __read_string(self, size, column):
         string = self.packet.read_length_coded_pascal_string(size)
         if column.character_set_name is not None:
-            string = string.decode(charset_to_encoding(column.character_set_name))
+            encoding = self.charset_to_encoding(column.character_set_name)
+            string = string.decode(encoding)
         return string
 
     def __read_bit(self, column):
