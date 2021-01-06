@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 
-import datetime
-import decimal
 import struct
+import decimal
+import datetime
+import json
 
-from pymysql.charset import charset_to_encoding
 from pymysql.util import byte2int
+from pymysql.charset import charset_by_name
 
-from .bitmap import BitCount, BitGet
-from .column import Column
-from .constants import BINLOG
-from .constants import FIELD_TYPE
 from .event import BinLogEvent
 from .exceptions import TableMetadataUnavailableError
+from .constants import FIELD_TYPE
+from .constants import BINLOG
+from .column import Column
 from .table import Table
-
+from .bitmap import BitCount, BitGet
 
 class RowsEvent(BinLogEvent):
     __slots__ = (
@@ -83,6 +83,11 @@ class RowsEvent(BinLogEvent):
         #Body
         self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns = self.table_map[self.table_id].columns
+
+        if len(self.columns) == 0:  # could not read the table metadata, probably already dropped
+            self.complete = False
+            if self._fail_on_table_metadata_unavailable:
+                raise TableMetadataUnavailableError(self.table)
 
     def __is_null(self, null_bitmap, position):
         bit = null_bitmap[int(position / 8)]
@@ -225,10 +230,16 @@ class RowsEvent(BinLogEvent):
             return microsecond * (10 ** (6-column.fsp))
         return 0
 
+    @staticmethod
+    def charset_to_encoding(name):
+        charset = charset_by_name(name)
+        return charset.encoding if charset else name
+
     def __read_string(self, size, column):
         string = self.packet.read_length_coded_pascal_string(size)
         if column.character_set_name is not None:
-            string = string.decode(charset_to_encoding(column.character_set_name))
+            encoding = self.charset_to_encoding(column.character_set_name)
+            string = string.decode(encoding)
         return string
 
     def __read_bit(self, column):
@@ -463,10 +474,9 @@ class DeleteRowsEvent(RowsEvent):
                 (self.number_of_columns + 7) / 8)
 
     def _fetch_one_row(self):
-        row = {
-            "values": self._read_column_data(self.columns_present_bitmap)
-        }
+        row = {}
 
+        row["values"] = self._read_column_data(self.columns_present_bitmap)
         return row
 
     def _dump(self):
@@ -492,10 +502,9 @@ class WriteRowsEvent(RowsEvent):
                 (self.number_of_columns + 7) / 8)
 
     def _fetch_one_row(self):
-        row = {
-            "values": self._read_column_data(self.columns_present_bitmap)
-        }
+        row = {}
 
+        row["values"] = self._read_column_data(self.columns_present_bitmap)
         return row
 
     def _dump(self):
@@ -529,13 +538,11 @@ class UpdateRowsEvent(RowsEvent):
                 (self.number_of_columns + 7) / 8)
 
     def _fetch_one_row(self):
-        row = {
-            "before_values": self._read_column_data(
-                self.columns_present_bitmap),
-            "after_values": self._read_column_data(
-                   self.columns_present_bitmap2)
-        }
+        row = {}
 
+        row["before_values"] = self._read_column_data(self.columns_present_bitmap)
+
+        row["after_values"] = self._read_column_data(self.columns_present_bitmap2)
         return row
 
     def _dump(self):
@@ -608,9 +615,9 @@ class TableMapEvent(BinLogEvent):
                 # avoid looking for its information again
                 self.column_schemas = ()
         else:
-            self.column_schemas = self._ctl_connection._get_table_information(
-                self.schema, self.table
-            )
+            self.column_schemas = self._ctl_connection._get_table_information(self.schema, self.table)
+
+        ordinal_pos_loc = 0
 
         if len(self.column_schemas) != 0:
             # Read columns meta data
@@ -619,7 +626,16 @@ class TableMapEvent(BinLogEvent):
             for i in range(0, len(column_types)):
                 column_type = column_types[i]
                 try:
-                    column_schema = self.column_schemas[i]
+                    column_schema = self.column_schemas[ordinal_pos_loc]
+
+                    # only acknowledge the column definition if the iteration matches with ordinal position of
+                    # the column. this helps in maintaining support for restricted columnar access
+                    if i != (column_schema['ORDINAL_POSITION'] - 1):
+                        # raise IndexError to follow the workflow of dropping columns which are not matching the
+                        # underlying table schema
+                        raise IndexError
+
+                    ordinal_pos_loc += 1
                 except IndexError:
                     # this a dirty hack to prevent row events containing columns which have been dropped prior
                     # to pymysqlreplication start, but replayed from binlog from blowing up the service.
@@ -637,7 +653,7 @@ class TableMapEvent(BinLogEvent):
 
         self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
                                self.table, self.columns)
-        
+
         # TODO: get this information instead of trashing data
         # n              NULL-bitmask, length: (column-length * 8) / 7
 
@@ -646,7 +662,7 @@ class TableMapEvent(BinLogEvent):
 
     def _dump(self):
         super(TableMapEvent, self)._dump()
-        print("Table id: %d" % self.table_id)
-        print("Schema: %s" % self.schema)
-        print("Table: %s" % self.table)
-        print("Columns: %s" % self.column_count)
+        print("Table id: %d" % (self.table_id))
+        print("Schema: %s" % (self.schema))
+        print("Table: %s" % (self.table))
+        print("Columns: %s" % (self.column_count))

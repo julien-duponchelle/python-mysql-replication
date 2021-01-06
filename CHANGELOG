@@ -131,3 +131,16 @@
 * Added empty string support for enum 
 * Fix column order
 * Fix float problem about time fieldtype
+
+0.20 22/11/2019
+* Added support for limited columnar access in MySQL
+* Python3 fixes
+* Add gtidset comparison methods
+
+0.21 22/11/2019
+* fix ci configuration
+* Added support for limited columnar access in MySQL
+
+0.22 20/09/2020
+* Support PyMysql with a version greater than 0.9.3
+* Fix handling of JSON literal values

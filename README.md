@@ -280,6 +280,8 @@ Similar projects
 * Java: https://github.com/shyiko/mysql-binlog-connector-java
 * GO: https://github.com/siddontang/go-mysql
 * PHP: Based on this this project https://github.com/krowinski/php-mysql-replication and https://github.com/fengxiangyun/mysql-replication 
+* .NET: https://github.com/SciSharp/dotnet-mysql-replication
+* .NET Core: https://github.com/rusuly/MySqlCdc
 
 Special thanks
 ================
@@ -322,6 +324,8 @@ Other contributors:
 * Keegan Parker: secondary database for reference schema https://github.com/kdparker
 * Troy J. Farrell Clear table_map if RotateEvent has timestamp of 0 https://github.com/troyjfarrell
 * Zhanwei Wang Fail to get table informations https://github.com/wangzw
+* Alexander Ignatov Fix the JSON literal 
+* Garen Chan Support PyMysql with a version greater than 0.9.3  https://github.com/garenchan
 
 Thanks to GetResponse for their support
 

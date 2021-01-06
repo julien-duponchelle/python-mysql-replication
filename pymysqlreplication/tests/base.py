@@ -31,8 +31,6 @@ class PyMySQLReplicationTestCase(base):
             "charset": "utf8",
             "db": "pymysqlreplication_test"
         }
-        if os.getenv("TRAVIS") is not None and db == "mysql56":
-            self.database["user"] = "travis"
 
         self.conn_control = None
         db = copy.copy(self.database)

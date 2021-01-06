@@ -169,11 +169,6 @@ class Gtid(object):
 
         return result
 
-    def __cmp__(self, other):
-        if other.sid != self.sid:
-            return cmp(self.sid, other.sid)
-        return cmp(self.intervals, other.intervals)
-
     def __str__(self):
         """We represent the human value here - a single number
         for one transaction, or a closed interval (decrementing b)"""
@@ -235,6 +230,36 @@ class Gtid(object):
             else '%d' % x
             for x in intervals])))
 
+    def __cmp__(self, other):
+        if other.sid != self.sid:
+            return cmp(self.sid, other.sid)
+        return cmp(self.intervals, other.intervals)
+
+    def __eq__(self, other):
+        if other.sid != self.sid:
+            return False
+        return self.intervals == other.intervals
+
+    def __lt__(self, other):
+        if other.sid != self.sid:
+            return self.sid < other.sid
+        return self.intervals < other.intervals
+
+    def __le__(self, other):
+        if other.sid != self.sid:
+            return self.sid <= other.sid
+        return self.intervals <= other.intervals
+
+    def __gt__(self, other):
+        if other.sid != self.sid:
+            return self.sid > other.sid
+        return self.intervals > other.intervals
+
+    def __ge__(self, other):
+        if other.sid != self.sid:
+            return self.sid >= other.sid
+        return self.intervals >= other.intervals
+
 
 class GtidSet(object):
     def __init__(self, gtid_set):
@@ -262,6 +287,8 @@ class GtidSet(object):
         self.gtids = new_gtids
 
     def __contains__(self, other):
+        if isinstance(other, GtidSet):
+            return all(other_gtid in self.gtids for other_gtid in other.gtids)
         if isinstance(other, Gtid):
             return any(other in x for x in self.gtids)
         raise NotImplementedError
@@ -271,6 +298,13 @@ class GtidSet(object):
             new = GtidSet(self.gtids)
             new.merge_gtid(other)
             return new
+
+        if isinstance(other, GtidSet):
+            new = GtidSet(self.gtids)
+            for gtid in other.gtids:
+                new.merge_gtid(gtid)
+            return new
+
         raise NotImplementedError
 
     def __str__(self):
@@ -297,3 +331,6 @@ class GtidSet(object):
         (n_sid,) = struct.unpack('<Q', payload.read(8))
 
         return cls([Gtid.decode(payload) for _ in range(0, n_sid)])
+
+    def __eq__(self, other):
+        return self.gtids == other.gtids

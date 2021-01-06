@@ -470,6 +470,16 @@ class TestDataType(base.PyMySQLReplicationTestCase):
 
         self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict(data))
 
+    def test_json_large_with_literal(self):
+        if not self.isMySQL57():
+            self.skipTest("Json is only supported in mysql 5.7")
+        data = dict([('foooo%i'%i, 'baaaaar%i'%i) for i in range(2560)], literal=True)  # Make it large with literal
+        create_query = "CREATE TABLE test (id int, value json);"
+        insert_query = """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
+        event = self.create_and_insert_value(create_query, insert_query)
+
+        self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict(data))
+
     def test_json_types(self):
         if not self.isMySQL57():
             self.skipTest("Json is only supported in mysql 5.7")
