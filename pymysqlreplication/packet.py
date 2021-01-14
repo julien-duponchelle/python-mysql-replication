@@ -2,8 +2,6 @@
 
 import struct
 
-from pymysql.util import byte2int
-
 from pymysqlreplication import constants, event, row_event
 
 # Constants from PyMYSQL source code
@@ -111,7 +109,7 @@ class BinLogPacketWrapper(object):
 
         # Header
         self.timestamp = unpack[1]
-        self.event_type = byte2int(unpack[2])
+        self.event_type = unpack[2]
         self.server_id = unpack[3]
         self.event_size = unpack[4]
         # position of the next event
@@ -178,7 +176,7 @@ class BinLogPacketWrapper(object):
 
         From PyMYSQL source code
         """
-        c = byte2int(self.read(1))
+        c = self.read(1)[0]
         if c == NULL_COLUMN:
             return None
         if c < UNSIGNED_CHAR_COLUMN:
@@ -263,7 +261,7 @@ class BinLogPacketWrapper(object):
         length = 0
         bits_read = 0
         while byte & 0x80 != 0:
-            byte = byte2int(self.read(1))
+            byte = self.read(1)[0]
             length = length | ((byte & 0x7f) << bits_read)
             bits_read = bits_read + 7
         return self.read(length)

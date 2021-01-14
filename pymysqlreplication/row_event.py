@@ -5,7 +5,6 @@ import decimal
 import datetime
 import json
 
-from pymysql.util import byte2int
 from pymysql.charset import charset_by_name
 
 from .event import BinLogEvent
@@ -556,10 +555,10 @@ class TableMapEvent(BinLogEvent):
         self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
         # Payload
-        self.schema_length = byte2int(self.packet.read(1))
+        self.schema_length = self.packet.read(1)[0]
         self.schema = self.packet.read(self.schema_length).decode()
         self.packet.advance(1)
-        self.table_length = byte2int(self.packet.read(1))
+        self.table_length = self.packet.read(1)[0]
         self.table = self.packet.read(self.table_length).decode()
 
         if self.__only_tables is not None and self.table not in self.__only_tables:
@@ -617,7 +616,7 @@ class TableMapEvent(BinLogEvent):
                         'COLUMN_TYPE': 'BLOB',  # we don't know what it is, so let's not do anything with it.
                         'COLUMN_KEY': '',
                     }
-                col = Column(byte2int(column_type), column_schema, from_packet)
+                col = Column(column_type, column_schema, from_packet)
                 self.columns.append(col)
 
         self.table_obj = Table(self.column_schemas, self.table_id, self.schema,

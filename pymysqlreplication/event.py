@@ -4,8 +4,6 @@ import binascii
 import struct
 import datetime
 
-from pymysql.util import byte2int, int2byte
-
 
 class BinLogEvent(object):
     def __init__(self, from_packet, event_size, table_map, ctl_connection,
@@ -30,7 +28,7 @@ class BinLogEvent(object):
     def _read_table_id(self):
         # Table ID is 6 byte
         # pad little-endian number
-        table_id = self.packet.read(6) + int2byte(0) + int2byte(0)
+        table_id = self.packet.read(6) + b'\0' + b'\0'
         return struct.unpack('<Q', table_id)[0]
 
     def dump(self):
@@ -55,7 +53,7 @@ class GtidEvent(BinLogEvent):
         super(GtidEvent, self).__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
 
-        self.commit_flag = byte2int(self.packet.read(1)) == 1
+        self.commit_flag = self.packet.read(1)[0] == 1
         self.sid = self.packet.read(16)
         self.gno = struct.unpack('<Q', self.packet.read(8))[0]
 
@@ -164,7 +162,7 @@ class QueryEvent(BinLogEvent):
         # Post-header
         self.slave_proxy_id = self.packet.read_uint32()
         self.execution_time = self.packet.read_uint32()
-        self.schema_length = byte2int(self.packet.read(1))
+        self.schema_length = self.packet.read(1)[0]
         self.error_code = self.packet.read_uint16()
         self.status_vars_length = self.packet.read_uint16()
 
