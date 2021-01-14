@@ -112,7 +112,7 @@ class SimpleBinLogEvent(object):
         '''Initialize the Event with the event header'''
         unpacked = struct.unpack('<IcIIIH', header)
         self.timestamp = unpacked[0]
-        self.event_type = unpacked[1]
+        self.event_type = unpacked[1][0]
         self.server_id = unpacked[2]
         self.event_size = unpacked[3]
         self.log_pos = unpacked[4]
