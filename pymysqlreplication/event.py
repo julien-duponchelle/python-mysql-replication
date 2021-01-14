@@ -14,7 +14,8 @@ class BinLogEvent(object):
                  only_schemas=None,
                  ignored_schemas=None,
                  freeze_schema=False,
-                 fail_on_table_metadata_unavailable=False):
+                 fail_on_table_metadata_unavailable=False,
+                 mysql_version=None):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
@@ -26,6 +27,7 @@ class BinLogEvent(object):
         # the event will be skipped
         self._processed = True
         self.complete = True
+        self.mysql_version = mysql_version
 
     def _read_table_id(self):
         # Table ID is 6 byte
@@ -58,6 +60,11 @@ class GtidEvent(BinLogEvent):
         self.commit_flag = byte2int(self.packet.read(1)) == 1
         self.sid = self.packet.read(16)
         self.gno = struct.unpack('<Q', self.packet.read(8))[0]
+        self.lt_type = byte2int(self.packet.read(1))
+        # exclude mariadb
+        if (5, 7) <= self.mysql_version < (10, 0):
+            self.last_committed = struct.unpack('<Q', self.packet.read(8))[0]
+            self.sequence_number = struct.unpack('<Q', self.packet.read(8))[0]
 
     @property
     def gtid(self):
@@ -73,6 +80,9 @@ class GtidEvent(BinLogEvent):
     def _dump(self):
         print("Commit: %s" % self.commit_flag)
         print("GTID_NEXT: %s" % self.gtid)
+        if hasattr(self, "last_committed"):
+            print("last_committed: %d" % self.last_committed)
+            print("sequence_number: %d" % self.sequence_number)
 
     def __repr__(self):
         return '<GtidEvent "%s">' % self.gtid

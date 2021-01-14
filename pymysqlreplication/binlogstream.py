@@ -202,6 +202,7 @@ class BinLogStreamReader(object):
 
         self.__server_id = server_id
         self.__use_checksum = False
+        self.__mysql_version = (0, 0)
 
         # Store table meta information
         self.table_map = {}
@@ -269,6 +270,15 @@ class BinLogStreamReader(object):
             self._stream_connection._next_seq_id = 1
             self._stream_connection._read_packet()
 
+    def __check_mysql_version(self):
+        """Return mysql version formatted (x, y), for compality with mariadb"""
+        cur = self._stream_connection.cursor()
+        cur.execute("select version()")
+        result = cur.fetchone()
+        cur.close()
+        self.__mysql_version = tuple(int(i) for i in result[0].split('.')[:2])
+        return self.__mysql_version
+
     def __connect_to_stream(self):
         # log_pos (4) -- position in the binlog-file to start the stream with
         # flags (2) BINLOG_DUMP_NON_BLOCK (0 or 1)
@@ -277,6 +287,7 @@ class BinLogStreamReader(object):
         self._stream_connection = self.pymysql_wrapper(**self.__connection_settings)
 
         self.__use_checksum = self.__checksum_enabled()
+        self.__mysql_version = self.__check_mysql_version()
 
         # If checksum is enabled we need to inform the server about the that
         # we support it
@@ -453,7 +464,8 @@ class BinLogStreamReader(object):
                                                self.__only_schemas,
                                                self.__ignored_schemas,
                                                self.__freeze_schema,
-                                               self.__fail_on_table_metadata_unavailable)
+                                               self.__fail_on_table_metadata_unavailable,
+                                               self.__mysql_version)
 
             if binlog_event.event_type == ROTATE_EVENT:
                 self.log_pos = binlog_event.event.position
