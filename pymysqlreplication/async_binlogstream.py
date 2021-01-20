@@ -1,5 +1,20 @@
-# -*- coding: utf-8 -*-
+#! /usr/bin/env python3
+# -*- coding:utf-8 -*-
 
+"""
+# Description:
+#     xxx
+#
+# Version:
+#     1.0 created by wl_lw at 2021-01-20
+# Usage:
+#       xxx
+#
+# Note:
+#    add an argument "parse_queue" to AsyncBinLogStreamReamder, parse_queue is an QQueue object.
+# Requirement:
+#    quick-queue
+"""
 import pymysql
 import struct
 from distutils.version import LooseVersion
@@ -8,17 +23,19 @@ from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE
 from pymysql.cursors import DictCursor
 from pymysql.util import int2byte
 
-from .packet import BinLogPacketWrapper
-from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
-from .gtid import GtidSet
-from .event import (
+from pymysqlreplication.packet import BinLogPacketWrapper
+from pymysqlreplication.constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
+from pymysqlreplication.gtid import GtidSet
+from pymysqlreplication.event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
     XidEvent, GtidEvent, StopEvent,
     BeginLoadQueryEvent, ExecuteLoadQueryEvent,
     HeartbeatLogEvent, NotImplementedEvent)
-from .exceptions import BinLogNotEnabled
-from .row_event import (
+from pymysqlreplication.exceptions import BinLogNotEnabled
+from pymysqlreplication.row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
+from pymysqlreplication import BinLogStreamReader
+
 
 try:
     from pymysql.constants.COMMAND import COM_BINLOG_DUMP_GTID
@@ -122,10 +139,7 @@ class ReportSlave(object):
                 struct.pack('<l', master_id))
 
 
-class BinLogStreamReader(object):
-
-    """Connect to replication stream and read event
-    """
+class AsyncBinLogStreamReader(BinLogStreamReader):
     report_slave = None
 
     def __init__(self, connection_settings, server_id,
@@ -139,41 +153,8 @@ class BinLogStreamReader(object):
                  report_slave=None, slave_uuid=None,
                  pymysql_wrapper=None,
                  fail_on_table_metadata_unavailable=False,
-                 slave_heartbeat=None):
-        """
-        Attributes:
-            ctl_connection_settings: Connection settings for cluster holding
-                                     schema information
-            resume_stream: Start for event from position or the latest event of
-                           binlog or from older available event
-            blocking: When master has finished reading/sending binlog it will
-                      send EOF instead of blocking connection.
-            only_events: Array of allowed events
-            ignored_events: Array of ignored events
-            log_file: Set replication start log file
-            log_pos: Set replication start log pos (resume_stream should be
-                     true)
-            auto_position: Use master_auto_position gtid to set position
-            only_tables: An array with the tables you want to watch (only works
-                         in binlog_format ROW)
-            ignored_tables: An array with the tables you want to skip
-            only_schemas: An array with the schemas you want to watch
-            ignored_schemas: An array with the schemas you want to skip
-            freeze_schema: If true do not support ALTER TABLE. It's faster.
-            skip_to_timestamp: Ignore all events until reaching specified
-                               timestamp.
-            report_slave: Report slave in SHOW SLAVE HOSTS.
-            slave_uuid: Report slave_uuid in SHOW SLAVE HOSTS.
-            fail_on_table_metadata_unavailable: Should raise exception if we
-                                                can't get table information on
-                                                row_events
-            slave_heartbeat: (seconds) Should master actively send heartbeat on
-                             connection. This also reduces traffic in GTID
-                             replication on replication resumption (in case
-                             many event to skip in binlog). See
-                             MASTER_HEARTBEAT_PERIOD in mysql documentation
-                             for semantics
-        """
+                 slave_heartbeat=None,
+                 parse_queue=None):
 
         self.__connection_settings = connection_settings
         self.__connection_settings.setdefault("charset", "utf8")
@@ -203,6 +184,7 @@ class BinLogStreamReader(object):
         self.__server_id = server_id
         self.__use_checksum = False
         self.__mysql_version = (0, 0)
+        self.parse_queue = parse_queue
 
         # Store table meta information
         self.table_map = {}
@@ -256,6 +238,15 @@ class BinLogStreamReader(object):
             return False
         return True
 
+    def __check_mysql_version(self):
+        """Return mysql version formatted (x, y), for compality with mariadb"""
+        cur = self._ctl_connection.cursor()
+        cur.execute("select version()")
+        result = cur.fetchone()
+        cur.close()
+        self.__mysql_version = tuple(int(i) for i in result.get('version()').split('.')[:2])
+        return self.__mysql_version
+
     def _register_slave(self):
         if not self.report_slave:
             return
@@ -270,15 +261,6 @@ class BinLogStreamReader(object):
             self._stream_connection._write_bytes(packet)
             self._stream_connection._next_seq_id = 1
             self._stream_connection._read_packet()
-
-    def __check_mysql_version(self):
-        """Return mysql version formatted (x, y), for compality with mariadb"""
-        cur = self._ctl_connection.cursor()
-        cur.execute("select version()")
-        result = cur.fetchone()
-        cur.close()
-        self.__mysql_version = tuple(int(i) for i in result.get('version()').split('.')[:2])
-        return self.__mysql_version
 
     def __connect_to_stream(self):
         # log_pos (4) -- position in the binlog-file to start the stream with
@@ -307,7 +289,7 @@ class BinLogStreamReader(object):
                                                                4294967))
             # If heartbeat is too low, the connection will disconnect before,
             # this is also the behavior in mysql
-            heartbeat = float(min(net_timeout/2., self.slave_heartbeat))
+            heartbeat = float(min(net_timeout / 2., self.slave_heartbeat))
             if heartbeat > 4294967:
                 heartbeat = 4294967
 
@@ -332,7 +314,7 @@ class BinLogStreamReader(object):
                 cur.close()
 
             prelude = struct.pack('<i', len(self.log_file) + 11) \
-                + int2byte(COM_BINLOG_DUMP)
+                      + int2byte(COM_BINLOG_DUMP)
 
             if self.__resume_stream:
                 prelude += struct.pack('<I', self.log_pos)
@@ -392,8 +374,8 @@ class BinLogStreamReader(object):
                            8 +  # binlog_pos_info_size
                            4)  # encoded_data_size
 
-            prelude = b'' + struct.pack('<i', header_size + encoded_data_size)\
-                + int2byte(COM_BINLOG_DUMP_GTID)
+            prelude = b'' + struct.pack('<i', header_size + encoded_data_size) \
+                      + int2byte(COM_BINLOG_DUMP_GTID)
 
             flags = 0
             if not self.__blocking:
@@ -426,101 +408,6 @@ class BinLogStreamReader(object):
             self._stream_connection._write_bytes(prelude)
             self._stream_connection._next_seq_id = 1
         self.__connected_stream = True
-
-    def fetchone(self):
-        while True:
-            if not self.__connected_stream:
-                self.__connect_to_stream()
-
-            if not self.__connected_ctl:
-                self.__connect_to_ctl()
-
-            try:
-                if pymysql.__version__ < LooseVersion("0.6"):
-                    pkt = self._stream_connection.read_packet()
-                else:
-                    pkt = self._stream_connection._read_packet()
-            except pymysql.OperationalError as error:
-                code, message = error.args
-                if code in MYSQL_EXPECTED_ERROR_CODES:
-                    self._stream_connection.close()
-                    self.__connected_stream = False
-                    continue
-                raise
-
-            if pkt.is_eof_packet():
-                self.close()
-                return None
-
-            if not pkt.is_ok_packet():
-                continue
-
-            binlog_event = BinLogPacketWrapper(pkt, self.table_map,
-                                               self._ctl_connection,
-                                               self.__use_checksum,
-                                               self.__allowed_events_in_packet,
-                                               self.__only_tables,
-                                               self.__ignored_tables,
-                                               self.__only_schemas,
-                                               self.__ignored_schemas,
-                                               self.__freeze_schema,
-                                               self.__fail_on_table_metadata_unavailable,
-                                               self.__mysql_version)
-
-            if binlog_event.event_type == ROTATE_EVENT:
-                self.log_pos = binlog_event.event.position
-                self.log_file = binlog_event.event.next_binlog
-                # Table Id in binlog are NOT persistent in MySQL - they are in-memory identifiers
-                # that means that when MySQL master restarts, it will reuse same table id for different tables
-                # which will cause errors for us since our in-memory map will try to decode row data with
-                # wrong table schema.
-                # The fix is to rely on the fact that MySQL will also rotate to a new binlog file every time it
-                # restarts. That means every rotation we see *could* be a sign of restart and so potentially
-                # invalidates all our cached table id to schema mappings. This means we have to load them all
-                # again for each logfile which is potentially wasted effort but we can't really do much better
-                # without being broken in restart case
-                self.table_map = {}
-            elif binlog_event.log_pos:
-                self.log_pos = binlog_event.log_pos
-
-            # This check must not occur before clearing the ``table_map`` as a
-            # result of a RotateEvent.
-            #
-            # The first RotateEvent in a binlog file has a timestamp of
-            # zero.  If the server has moved to a new log and not written a
-            # timestamped RotateEvent at the end of the previous log, the
-            # RotateEvent at the beginning of the new log will be ignored
-            # if the caller provided a positive ``skip_to_timestamp``
-            # value.  This will result in the ``table_map`` becoming
-            # corrupt.
-            #
-            # https://dev.mysql.com/doc/internals/en/event-data-for-specific-event-types.html
-            # From the MySQL Internals Manual:
-            #
-            #   ROTATE_EVENT is generated locally and written to the binary
-            #   log on the master. It is written to the relay log on the
-            #   slave when FLUSH LOGS occurs, and when receiving a
-            #   ROTATE_EVENT from the master. In the latter case, there
-            #   will be two rotate events in total originating on different
-            #   servers.
-            #
-            #   There are conditions under which the terminating
-            #   log-rotation event does not occur. For example, the server
-            #   might crash.
-            if self.skip_to_timestamp and binlog_event.timestamp < self.skip_to_timestamp:
-                continue
-
-            if binlog_event.event_type == TABLE_MAP_EVENT and \
-                    binlog_event.event is not None:
-                self.table_map[binlog_event.event.table_id] = \
-                    binlog_event.event.get_table()
-
-            # event is none if we have filter it on packet level
-            # we filter also not allowed events
-            if binlog_event.event is None or (binlog_event.event.__class__ not in self.__allowed_events):
-                continue
-
-            return binlog_event.event
 
     def _allowed_event_list(self, only_events, ignored_events,
                             filter_non_implemented_events):
@@ -580,5 +467,77 @@ class BinLogStreamReader(object):
                 else:
                     raise error
 
+    def fetch_one_event(self):
+        self.parse_queue.enqueue_background()
+        while True:
+            if not self.__connected_stream:
+                self.__connect_to_stream()
+
+            try:
+                if pymysql.__version__ < LooseVersion("0.6"):
+                    pkt = self._stream_connection.read_packet()
+                else:
+                    pkt = self._stream_connection._read_packet()
+            except pymysql.OperationalError as error:
+                code, message = error.args
+                if code in MYSQL_EXPECTED_ERROR_CODES:
+                    self._stream_connection.close()
+                    self.__connected_stream = False
+                    continue
+                raise
+
+            if pkt.is_eof_packet():
+                self.close()
+                pkt = None
+
+            if not pkt.is_ok_packet():
+                continue
+
+            self.parse_queue.put(pkt)
+
+    def parse_binlog_event(self):
+        parse_queue = self.parse_queue
+        while True:
+            pkt = parse_queue.get()
+            if not pkt:
+                continue
+
+            if not self.__connected_ctl:
+                self.__connect_to_ctl()
+
+            binlog_event = BinLogPacketWrapper(pkt, self.table_map,
+                                               self._ctl_connection,
+                                               self.__use_checksum,
+                                               self.__allowed_events_in_packet,
+                                               self.__only_tables,
+                                               self.__ignored_tables,
+                                               self.__only_schemas,
+                                               self.__ignored_schemas,
+                                               self.__freeze_schema,
+                                               self.__fail_on_table_metadata_unavailable,
+                                               self.__mysql_version)
+
+            if binlog_event.event_type == ROTATE_EVENT:
+                self.log_pos = binlog_event.event.position
+                self.log_file = binlog_event.event.next_binlog
+                self.table_map = {}
+            elif binlog_event.log_pos:
+                self.log_pos = binlog_event.log_pos
+
+            if self.skip_to_timestamp and binlog_event.timestamp < self.skip_to_timestamp:
+                continue
+
+            if binlog_event.event_type == TABLE_MAP_EVENT and \
+                    binlog_event.event is not None:
+                self.table_map[binlog_event.event.table_id] = \
+                    binlog_event.event.get_table()
+
+            # event is none if we have filter it on packet level
+            # we filter also not allowed events
+            if binlog_event.event is None or (binlog_event.event.__class__ not in self.__allowed_events):
+                continue
+
+            return binlog_event.event
+
     def __iter__(self):
-        return iter(self.fetchone, None)
+        return iter(self.parse_binlog_event, None)
