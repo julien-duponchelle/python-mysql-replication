@@ -144,3 +144,6 @@
 0.22 20/09/2020
 * Support PyMysql with a version greater than 0.9.3
 * Fix handling of JSON literal values
+
+0.23 25/01/2021
+* Add logic to handle inlined ints in large json documents
