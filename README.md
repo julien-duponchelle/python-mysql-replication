@@ -326,6 +326,7 @@ Other contributors:
 * Zhanwei Wang Fail to get table informations https://github.com/wangzw
 * Alexander Ignatov Fix the JSON literal 
 * Garen Chan Support PyMysql with a version greater than 0.9.3  https://github.com/garenchan
+* Mike Ascah: Add logic to handle inlined ints in large json documents ttps://github.com/mascah 
 
 Thanks to GetResponse for their support
 
