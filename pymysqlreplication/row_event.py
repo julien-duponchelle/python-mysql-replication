@@ -532,7 +532,7 @@ class UpdateRowsEvent(RowsEvent):
 
 
 class TableMapEvent(BinLogEvent):
-    """This evenement describe the structure of a table.
+    """This event describes the structure of a table.
     It's sent before a change happens on a table.
     An end user of the lib should have no usage of this
     """
