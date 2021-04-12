@@ -6,7 +6,7 @@ from distutils.version import LooseVersion
 
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE
 from pymysql.cursors import DictCursor
-from pymysql.util import int2byte
+from six import int2byte
 
 from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT

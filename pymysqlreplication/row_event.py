@@ -3,9 +3,9 @@
 import struct
 import decimal
 import datetime
-import json
+# import json
 
-from pymysql.util import byte2int
+from six import byte2int
 from pymysql.charset import charset_by_name
 
 from .event import BinLogEvent
@@ -617,7 +617,7 @@ class TableMapEvent(BinLogEvent):
                         'COLUMN_TYPE': 'BLOB',  # we don't know what it is, so let's not do anything with it.
                         'COLUMN_KEY': '',
                     }
-                col = Column(byte2int(column_type), column_schema, from_packet)
+                col = Column(column_type, column_schema, from_packet)
                 self.columns.append(col)
 
         self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
