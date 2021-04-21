@@ -32,6 +32,9 @@ except ImportError:
 MYSQL_EXPECTED_ERROR_CODES = [2013, 2006]
 
 
+loose_version = LooseVersion("0.6")
+
+
 class ReportSlave(object):
 
     """Represent the values that you may report when connecting as a slave
@@ -260,7 +263,7 @@ class BinLogStreamReader(object):
 
         packet = self.report_slave.encoded(self.__server_id)
 
-        if pymysql.__version__ < LooseVersion("0.6"):
+        if pymysql.__version__ < loose_version:
             self._stream_connection.wfile.write(packet)
             self._stream_connection.wfile.flush()
             self._stream_connection.read_packet()
@@ -408,7 +411,7 @@ class BinLogStreamReader(object):
             # encoded_data
             prelude += gtid_set.encoded()
 
-        if pymysql.__version__ < LooseVersion("0.6"):
+        if pymysql.__version__ < loose_version:
             self._stream_connection.wfile.write(prelude)
             self._stream_connection.wfile.flush()
         else:
@@ -425,7 +428,7 @@ class BinLogStreamReader(object):
                 self.__connect_to_ctl()
 
             try:
-                if pymysql.__version__ < LooseVersion("0.6"):
+                if pymysql.__version__ < loose_version:
                     pkt = self._stream_connection.read_packet()
                 else:
                     pkt = self._stream_connection._read_packet()
