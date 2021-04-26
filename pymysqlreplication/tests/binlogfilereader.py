@@ -1,7 +1,7 @@
 '''Read binlog files'''
 import struct
 
-from pymysql.util import byte2int
+from six import byte2int
 from pymysqlreplication import constants
 from pymysqlreplication.event import FormatDescriptionEvent
 from pymysqlreplication.event import QueryEvent
