@@ -6,7 +6,7 @@ from distutils.version import LooseVersion
 
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE
 from pymysql.cursors import DictCursor
-from pymysql.util import int2byte
+from six import int2byte
 
 from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
@@ -30,6 +30,9 @@ except ImportError:
 # 2013 Connection Lost
 # 2006 MySQL server has gone away
 MYSQL_EXPECTED_ERROR_CODES = [2013, 2006]
+
+
+loose_version = LooseVersion("0.6")
 
 
 class ReportSlave(object):
@@ -260,7 +263,7 @@ class BinLogStreamReader(object):
 
         packet = self.report_slave.encoded(self.__server_id)
 
-        if pymysql.__version__ < LooseVersion("0.6"):
+        if pymysql.__version__ < loose_version:
             self._stream_connection.wfile.write(packet)
             self._stream_connection.wfile.flush()
             self._stream_connection.read_packet()
@@ -408,7 +411,7 @@ class BinLogStreamReader(object):
             # encoded_data
             prelude += gtid_set.encoded()
 
-        if pymysql.__version__ < LooseVersion("0.6"):
+        if pymysql.__version__ < loose_version:
             self._stream_connection.wfile.write(prelude)
             self._stream_connection.wfile.flush()
         else:
@@ -425,7 +428,7 @@ class BinLogStreamReader(object):
                 self.__connect_to_ctl()
 
             try:
-                if pymysql.__version__ < LooseVersion("0.6"):
+                if pymysql.__version__ < loose_version:
                     pkt = self._stream_connection.read_packet()
                 else:
                     pkt = self._stream_connection._read_packet()

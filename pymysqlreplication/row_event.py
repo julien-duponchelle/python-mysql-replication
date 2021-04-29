@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import sys
 import struct
 import decimal
 import datetime
-import json
+# import json
 
-from pymysql.util import byte2int
+from six import byte2int
 from pymysql.charset import charset_by_name
 
 from .event import BinLogEvent
@@ -531,6 +532,12 @@ class UpdateRowsEvent(RowsEvent):
                                       row["after_values"][key]))
 
 
+
+_need_byte2int = False
+if sys.version.startswith('2') or sys.version.startswith('3.4'):
+    _need_byte2int = True
+
+
 class TableMapEvent(BinLogEvent):
     """This event describes the structure of a table.
     It's sent before a change happens on a table.
@@ -594,6 +601,9 @@ class TableMapEvent(BinLogEvent):
             self.packet.read_length_coded_binary()
             for i in range(0, len(column_types)):
                 column_type = column_types[i]
+                if _need_byte2int:
+                    column_type = byte2int(column_types[i])
+
                 try:
                     column_schema = self.column_schemas[ordinal_pos_loc]
 
@@ -617,7 +627,7 @@ class TableMapEvent(BinLogEvent):
                         'COLUMN_TYPE': 'BLOB',  # we don't know what it is, so let's not do anything with it.
                         'COLUMN_KEY': '',
                     }
-                col = Column(byte2int(column_type), column_schema, from_packet)
+                col = Column(column_type, column_schema, from_packet)
                 self.columns.append(col)
 
         self.table_obj = Table(self.column_schemas, self.table_id, self.schema,

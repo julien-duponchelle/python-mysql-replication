@@ -2,7 +2,7 @@
 
 import struct
 
-from pymysql.util import byte2int
+from six import byte2int
 
 from pymysqlreplication import constants, event, row_event
 
