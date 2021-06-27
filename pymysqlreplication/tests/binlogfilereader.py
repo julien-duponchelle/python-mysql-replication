@@ -1,7 +1,6 @@
 '''Read binlog files'''
 import struct
 
-from pymysql.util import byte2int
 from pymysqlreplication import constants
 from pymysqlreplication.event import FormatDescriptionEvent
 from pymysqlreplication.event import QueryEvent
@@ -111,9 +110,9 @@ class SimpleBinLogEvent(object):
 
     def __init__(self, header):
         '''Initialize the Event with the event header'''
-        unpacked = struct.unpack('<IcIIIH', header)
+        unpacked = struct.unpack('<IBIIIH', header)
         self.timestamp = unpacked[0]
-        self.event_type = byte2int(unpacked[1])
+        self.event_type = unpacked[1]
         self.server_id = unpacked[2]
         self.event_size = unpacked[3]
         self.log_pos = unpacked[4]
