@@ -147,3 +147,6 @@
 
 0.23 25/01/2021
 * Add logic to handle inlined ints in large json documents
+
+0.24 27/06/2021
+* Support PyMySQL 1.0
