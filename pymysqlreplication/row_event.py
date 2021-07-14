@@ -92,6 +92,7 @@ class RowsEvent(BinLogEvent):
             column = self.columns[i]
             name = self.table_map[self.table_id].columns[i].name
             unsigned = self.table_map[self.table_id].columns[i].unsigned
+            zerofill = self.table_map[self.table_id].columns[i].zerofill
 
             if BitGet(cols_bitmap, i) == 0:
                 values[name] = None
@@ -102,21 +103,29 @@ class RowsEvent(BinLogEvent):
             elif column.type == FIELD_TYPE.TINY:
                 if unsigned:
                     values[name] = struct.unpack("<B", self.packet.read(1))[0]
+                    if zerofill:
+                        values[name] = format(values[name], '03d')
                 else:
                     values[name] = struct.unpack("<b", self.packet.read(1))[0]
             elif column.type == FIELD_TYPE.SHORT:
                 if unsigned:
                     values[name] = struct.unpack("<H", self.packet.read(2))[0]
+                    if zerofill:
+                        values[name] = format(values[name], '05d')
                 else:
                     values[name] = struct.unpack("<h", self.packet.read(2))[0]
             elif column.type == FIELD_TYPE.LONG:
                 if unsigned:
                     values[name] = struct.unpack("<I", self.packet.read(4))[0]
+                    if zerofill:
+                        values[name] = format(values[name], '010d')
                 else:
                     values[name] = struct.unpack("<i", self.packet.read(4))[0]
             elif column.type == FIELD_TYPE.INT24:
                 if unsigned:
                     values[name] = self.packet.read_uint24()
+                    if zerofill:
+                        values[name] = format(values[name], '08d')
                 else:
                     values[name] = self.packet.read_int24()
             elif column.type == FIELD_TYPE.FLOAT:
@@ -155,6 +164,8 @@ class RowsEvent(BinLogEvent):
             elif column.type == FIELD_TYPE.LONGLONG:
                 if unsigned:
                     values[name] = self.packet.read_uint64()
+                    if zerofill:
+                        values[name] = format(values[name], '020d')
                 else:
                     values[name] = self.packet.read_int64()
             elif column.type == FIELD_TYPE.YEAR:

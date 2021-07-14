@@ -56,6 +56,7 @@ class TestDataObjects(base.PyMySQLReplicationTestCase):
         self.assertIn("character_set_name", serialized)
         self.assertIn("comment", serialized)
         self.assertIn("unsigned", serialized)
+        self.assertIn("zerofill", serialized)
         self.assertIn("type_is_bool", serialized)
         self.assertIn("is_primary", serialized)
 

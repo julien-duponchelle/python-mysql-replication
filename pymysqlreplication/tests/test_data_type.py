@@ -609,6 +609,21 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertMultiLineEqual(event.rows[0]["values"]["test"], string)
 
+    def test_zerofill(self):
+        create_query = "CREATE TABLE test ( \
+            test TINYINT UNSIGNED ZEROFILL DEFAULT NULL, \
+            test2 SMALLINT UNSIGNED ZEROFILL DEFAULT NULL, \
+            test3 MEDIUMINT UNSIGNED ZEROFILL DEFAULT NULL, \
+            test4 INT UNSIGNED ZEROFILL DEFAULT NULL, \
+            test5 BIGINT UNSIGNED ZEROFILL DEFAULT NULL \
+            )"
+        insert_query = "INSERT INTO test (test, test2, test3, test4, test5) VALUES(1, 1, 1, 1, 1)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], '001')
+        self.assertEqual(event.rows[0]["values"]["test2"], '00001')
+        self.assertEqual(event.rows[0]["values"]["test3"], '00000001')
+        self.assertEqual(event.rows[0]["values"]["test4"], '0000000001')
+        self.assertEqual(event.rows[0]["values"]["test5"], '00000000000000000001')
 
 if __name__ == "__main__":
     unittest.main()
