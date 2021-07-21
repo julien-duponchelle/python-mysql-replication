@@ -150,3 +150,6 @@
 
 0.24 27/06/2021
 * Support PyMySQL 1.0
+
+0.25 21/07/2021
+* Support 'ZEROFILL' attribute for numeric datatypes

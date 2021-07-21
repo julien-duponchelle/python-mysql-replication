@@ -328,6 +328,7 @@ Other contributors:
 * Garen Chan Support PyMysql with a version greater than 0.9.3  https://github.com/garenchan
 * Mike Ascah: Add logic to handle inlined ints in large json documents ttps://github.com/mascah 
 * Hiroaki Kawai: PyMySQL 1.0 support (https://github.com/hkwi)
+* Dongwook Chan: Support for ZEROFILL (https://github.com/dongwook-chan)
 
 Thanks to GetResponse for their support
 
