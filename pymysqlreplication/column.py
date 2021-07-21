@@ -22,6 +22,7 @@ class Column(object):
         self.character_set_name = column_schema["CHARACTER_SET_NAME"]
         self.comment = column_schema["COLUMN_COMMENT"]
         self.unsigned = column_schema["COLUMN_TYPE"].find("unsigned") != -1
+        self.zerofill = column_schema["COLUMN_TYPE"].find("zerofill") != -1
         self.type_is_bool = False
         self.is_primary = column_schema["COLUMN_KEY"] == "PRI"
 
