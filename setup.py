@@ -34,7 +34,7 @@ class TestCommand(Command):
         unittest.main(tests, argv=sys.argv[:1])
 
 
-version = "0.24"
+version = "0.25"
 
 setup(
     name="mysql-replication",
