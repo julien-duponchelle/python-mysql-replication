@@ -285,11 +285,11 @@ class RowsEvent(BinLogEvent):
             data = ~data + 1
 
         t = datetime.timedelta(
-            hours=sign*self.__read_binary_slice(data, 2, 10, 24),
+            hours=self.__read_binary_slice(data, 2, 10, 24),
             minutes=self.__read_binary_slice(data, 12, 6, 24),
             seconds=self.__read_binary_slice(data, 18, 6, 24),
             microseconds=self.__read_fsp(column)
-        )
+        ) * sign
         return t
 
     def __read_date(self):

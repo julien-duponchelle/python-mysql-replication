@@ -291,7 +291,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             microseconds=(((838*60) + 59)*60 + 59)*1000000
         ))
         self.assertEqual(event.rows[0]["values"]["test2"], datetime.timedelta(
-            microseconds=(((-838*60) + 59)*60 + 59)*1000000
+            microseconds=-(((838*60) + 59)*60 + 59)*1000000
         ))
 
     def test_time2(self):
@@ -306,7 +306,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             microseconds=(((838*60) + 59)*60 + 59)*1000000 + 0
         ))
         self.assertEqual(event.rows[0]["values"]["test2"], datetime.timedelta(
-            microseconds=(((-838*60) + 59)*60 + 59)*1000000 + 0
+            microseconds=-(((838*60) + 59)*60 + 59)*1000000 + 0
         ))
 
     def test_zero_time(self):
