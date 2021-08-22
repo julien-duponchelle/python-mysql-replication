@@ -57,7 +57,17 @@ class RowsEvent(BinLogEvent):
                 self.event_type == BINLOG.DELETE_ROWS_EVENT_V2 or \
                 self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2:
                 self.flags, self.extra_data_length = struct.unpack('<HH', self.packet.read(4))
-                self.extra_data = self.packet.read(self.extra_data_length / 8)
+                if self.extra_data_length > 2:
+                    self.extra_data_type = struct.unpack('<B', self.packet.read(1))[0]
+                    # partition information
+                    if self.extra_data_type == 1:
+                        if self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2:
+                            self.partition_id, self.source_partition_id = struct.unpack('<HH', self.packet.read(4))
+                        else:
+                            self.partition_id = struct.unpack('<H', self.packet.read(2))[0]
+                    # NDB information etc.
+                    else:
+                        self.extra_data = self.packet.read(self.extra_data_length - 3)
         else:
             self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
