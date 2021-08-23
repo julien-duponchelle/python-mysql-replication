@@ -625,7 +625,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test4"], '0000000001')
         self.assertEqual(event.rows[0]["values"]["test5"], '00000000000000000001')
 
-    def test_extra_data(self):
+    def test_partition_id(self):
         if not self.isMySQL80AndMore():
             self.skipTest("Not supported in this version of MySQL")
         create_query = "CREATE TABLE test (id INTEGER) \
