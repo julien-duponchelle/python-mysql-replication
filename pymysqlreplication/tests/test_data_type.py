@@ -634,7 +634,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
                 PARTITION p1 VALUES LESS THAN (2),   \
                 PARTITION p2 VALUES LESS THAN (3),   \
                 PARTITION p3 VALUES LESS THAN (4),   \
-                PARTITION p4 VALUES LESS THAN (5),   \
+                PARTITION p4 VALUES LESS THAN (5)    \
             )"
         insert_query = "INSERT INTO test (id) VALUES(3)"
         event = self.create_and_insert_value(create_query, insert_query)
