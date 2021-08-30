@@ -153,3 +153,6 @@
 
 0.25 21/07/2021
 * Support 'ZEROFILL' attribute for numeric datatypes
+
+0.26 30/08/2021
+* Correct timedelta value for negative MySQL TIME datatype
