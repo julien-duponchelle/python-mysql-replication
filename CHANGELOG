@@ -156,3 +156,4 @@
 
 0.26 30/08/2021
 * Correct timedelta value for negative MySQL TIME datatype
+* Fix parsing of row events for MySQL8 partitioned table
