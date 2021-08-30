@@ -60,6 +60,10 @@ class PyMySQLReplicationTestCase(base):
         version = float(self.getMySQLVersion().rsplit('.', 1)[0])
         return version == 5.7
 
+    def isMySQL80AndMore(self):
+        version = float(self.getMySQLVersion().rsplit('.', 1)[0])
+        return version >= 8.0
+
     @property
     def supportsGTID(self):
         if not self.isMySQL56AndMore():

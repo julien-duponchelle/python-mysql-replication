@@ -625,5 +625,21 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test4"], '0000000001')
         self.assertEqual(event.rows[0]["values"]["test5"], '00000000000000000001')
 
+    def test_partition_id(self):
+        if not self.isMySQL80AndMore():
+            self.skipTest("Not supported in this version of MySQL")
+        create_query = "CREATE TABLE test (id INTEGER) \
+            PARTITION BY RANGE (id) ( \
+                PARTITION p0 VALUES LESS THAN (1),   \
+                PARTITION p1 VALUES LESS THAN (2),   \
+                PARTITION p2 VALUES LESS THAN (3),   \
+                PARTITION p3 VALUES LESS THAN (4),   \
+                PARTITION p4 VALUES LESS THAN (5)    \
+            )"
+        insert_query = "INSERT INTO test (id) VALUES(3)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.extra_data_type, 1)
+        self.assertEqual(event.partition_id, 3)
+
 if __name__ == "__main__":
     unittest.main()
