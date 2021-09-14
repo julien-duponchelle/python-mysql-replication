@@ -421,9 +421,6 @@ class BinLogStreamReader(object):
     def fetchone(self):
         should_continue = True
         while should_continue:
-            if past_end_position:
-                return None
-
             if not self.__connected_stream:
                 self.__connect_to_stream()
 
