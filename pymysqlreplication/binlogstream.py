@@ -130,7 +130,8 @@ class BinLogStreamReader(object):
     def __init__(self, connection_settings, server_id,
                  ctl_connection_settings=None, resume_stream=False,
                  blocking=False, only_events=None, log_file=None,
-                 log_pos=None, filter_non_implemented_events=True,
+                 log_pos=None, end_log_pos=None,
+                 filter_non_implemented_events=True,
                  ignored_events=None, auto_position=None,
                  only_tables=None, ignored_tables=None,
                  only_schemas=None, ignored_schemas=None,
@@ -152,6 +153,7 @@ class BinLogStreamReader(object):
             log_file: Set replication start log file
             log_pos: Set replication start log pos (resume_stream should be
                      true)
+            end_log_pos: Set replication end log pos
             auto_position: Use master_auto_position gtid to set position
             only_tables: An array with the tables you want to watch (only works
                          in binlog_format ROW)
@@ -205,6 +207,7 @@ class BinLogStreamReader(object):
         # Store table meta information
         self.table_map = {}
         self.log_pos = log_pos
+        self.end_log_pos = end_log_pos
         self.log_file = log_file
         self.auto_position = auto_position
         self.skip_to_timestamp = skip_to_timestamp
@@ -235,7 +238,8 @@ class BinLogStreamReader(object):
             self._ctl_connection_settings = dict(self.__connection_settings)
         self._ctl_connection_settings["db"] = "information_schema"
         self._ctl_connection_settings["cursorclass"] = DictCursor
-        self._ctl_connection = self.pymysql_wrapper(**self._ctl_connection_settings)
+        self._ctl_connection = self.pymysql_wrapper(
+            **self._ctl_connection_settings)
         self._ctl_connection._get_table_information = self.__get_table_information
         self.__connected_ctl = True
 
@@ -273,7 +277,8 @@ class BinLogStreamReader(object):
         # flags (2) BINLOG_DUMP_NON_BLOCK (0 or 1)
         # server_id (4) -- server id of this slave
         # log_file (string.EOF) -- filename of the binlog on the master
-        self._stream_connection = self.pymysql_wrapper(**self.__connection_settings)
+        self._stream_connection = self.pymysql_wrapper(
+            **self.__connection_settings)
 
         self.__use_checksum = self.__checksum_enabled()
 
@@ -281,7 +286,8 @@ class BinLogStreamReader(object):
         # we support it
         if self.__use_checksum:
             cur = self._stream_connection.cursor()
-            cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")
+            cur.execute(
+                "set @master_binlog_checksum= @@global.binlog_checksum")
             cur.close()
 
         if self.slave_uuid:
@@ -295,7 +301,7 @@ class BinLogStreamReader(object):
                                                                4294967))
             # If heartbeat is too low, the connection will disconnect before,
             # this is also the behavior in mysql
-            heartbeat = float(min(net_timeout/2., self.slave_heartbeat))
+            heartbeat = float(min(net_timeout / 2., self.slave_heartbeat))
             if heartbeat > 4294967:
                 heartbeat = 4294967
 
@@ -416,7 +422,11 @@ class BinLogStreamReader(object):
         self.__connected_stream = True
 
     def fetchone(self):
-        while True:
+        should_continue = True
+        while should_continue:
+            if past_end_position:
+                return None
+
             if not self.__connected_stream:
                 self.__connect_to_stream()
 
@@ -443,16 +453,18 @@ class BinLogStreamReader(object):
             if not pkt.is_ok_packet():
                 continue
 
-            binlog_event = BinLogPacketWrapper(pkt, self.table_map,
-                                               self._ctl_connection,
-                                               self.__use_checksum,
-                                               self.__allowed_events_in_packet,
-                                               self.__only_tables,
-                                               self.__ignored_tables,
-                                               self.__only_schemas,
-                                               self.__ignored_schemas,
-                                               self.__freeze_schema,
-                                               self.__fail_on_table_metadata_unavailable)
+            binlog_event = BinLogPacketWrapper(
+                pkt,
+                self.table_map,
+                self._ctl_connection,
+                self.__use_checksum,
+                self.__allowed_events_in_packet,
+                self.__only_tables,
+                self.__ignored_tables,
+                self.__only_schemas,
+                self.__ignored_schemas,
+                self.__freeze_schema,
+                self.__fail_on_table_metadata_unavailable)
 
             if binlog_event.event_type == ROTATE_EVENT:
                 self.log_pos = binlog_event.event.position
@@ -469,6 +481,10 @@ class BinLogStreamReader(object):
                 self.table_map = {}
             elif binlog_event.log_pos:
                 self.log_pos = binlog_event.log_pos
+
+            if self.end_log_pos and self.log_pos >= self.end_log_pos:
+                # We're currently at, or past, the specified end log position.
+                should_continue = False
 
             # This check must not occur before clearing the ``table_map`` as a
             # result of a RotateEvent.
@@ -504,7 +520,8 @@ class BinLogStreamReader(object):
 
             # event is none if we have filter it on packet level
             # we filter also not allowed events
-            if binlog_event.event is None or (binlog_event.event.__class__ not in self.__allowed_events):
+            if binlog_event.event is None or (
+                    binlog_event.event.__class__ not in self.__allowed_events):
                 continue
 
             return binlog_event.event
@@ -529,7 +546,7 @@ class BinLogStreamReader(object):
                 TableMapEvent,
                 HeartbeatLogEvent,
                 NotImplementedEvent,
-                ))
+            ))
         if ignored_events is not None:
             for e in ignored_events:
                 events.remove(e)
