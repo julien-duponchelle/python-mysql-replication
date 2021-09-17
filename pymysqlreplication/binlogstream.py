@@ -6,7 +6,6 @@ from distutils.version import LooseVersion
 
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE
 from pymysql.cursors import DictCursor
-from pymysql.util import int2byte
 
 from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT
@@ -109,7 +108,7 @@ class ReportSlave(object):
         MAX_STRING_LEN = 257  # one byte for length + 256 chars
 
         return (struct.pack('<i', packet_len) +
-                int2byte(COM_REGISTER_SLAVE) +
+                bytes(bytearray([COM_REGISTER_SLAVE])) +
                 struct.pack('<L', server_id) +
                 struct.pack('<%dp' % min(MAX_STRING_LEN, lhostname + 1),
                             self.hostname.encode()) +
@@ -321,7 +320,7 @@ class BinLogStreamReader(object):
                 cur.close()
 
             prelude = struct.pack('<i', len(self.log_file) + 11) \
-                + int2byte(COM_BINLOG_DUMP)
+                + bytes(bytearray([COM_BINLOG_DUMP]))
 
             if self.__resume_stream:
                 prelude += struct.pack('<I', self.log_pos)
@@ -382,7 +381,7 @@ class BinLogStreamReader(object):
                            4)  # encoded_data_size
 
             prelude = b'' + struct.pack('<i', header_size + encoded_data_size)\
-                + int2byte(COM_BINLOG_DUMP_GTID)
+                + bytes(bytearray([COM_BINLOG_DUMP_GTID]))
 
             flags = 0
             if not self.__blocking:

@@ -7,7 +7,6 @@ import json
 import binascii
 from pprint import pprint
 
-from pymysql.util import byte2int
 from pymysql.charset import charset_by_name
 
 from .event import BinLogEvent
@@ -60,7 +59,22 @@ class RowsEvent(BinLogEvent):
                 self.event_type == BINLOG.DELETE_ROWS_EVENT_V2 or \
                 self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2:
                 self.flags, self.extra_data_length = struct.unpack('<HH', self.packet.read(4))
-                self.extra_data = self.packet.read(self.extra_data_length / 8)
+                if self.extra_data_length > 2:
+                    self.extra_data_type = struct.unpack('<B', self.packet.read(1))[0]
+
+                    # ndb information
+                    if self.extra_data_type == 0:
+                        self.nbd_info_length, self.nbd_info_format = struct.unpack('<BB', self.packet.read(1))
+                        self.nbd_info = self.packet.read(self.nbd_info_length - 2)
+                    # partition information
+                    elif self.extra_data_type == 1:
+                        if self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2:
+                            self.partition_id, self.source_partition_id = struct.unpack('<HH', self.packet.read(4))
+                        else:
+                            self.partition_id = struct.unpack('<H', self.packet.read(2))[0]
+                    # etc
+                    else:
+                        self.extra_data = self.packet.read(self.extra_info_length - 3)
         else:
             self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
@@ -95,6 +109,7 @@ class RowsEvent(BinLogEvent):
             column = self.columns[i]
             name = self.table_map[self.table_id].columns[i].name
             unsigned = self.table_map[self.table_id].columns[i].unsigned
+            zerofill = self.table_map[self.table_id].columns[i].zerofill
 
             if BitGet(cols_bitmap, i) == 0:
                 values[name] = None
@@ -105,21 +120,29 @@ class RowsEvent(BinLogEvent):
             elif column.type == FIELD_TYPE.TINY:
                 if unsigned:
                     values[name] = struct.unpack("<B", self.packet.read(1))[0]
+                    if zerofill:
+                        values[name] = format(values[name], '03d')
                 else:
                     values[name] = struct.unpack("<b", self.packet.read(1))[0]
             elif column.type == FIELD_TYPE.SHORT:
                 if unsigned:
                     values[name] = struct.unpack("<H", self.packet.read(2))[0]
+                    if zerofill:
+                        values[name] = format(values[name], '05d')
                 else:
                     values[name] = struct.unpack("<h", self.packet.read(2))[0]
             elif column.type == FIELD_TYPE.LONG:
                 if unsigned:
                     values[name] = struct.unpack("<I", self.packet.read(4))[0]
+                    if zerofill:
+                        values[name] = format(values[name], '010d')
                 else:
                     values[name] = struct.unpack("<i", self.packet.read(4))[0]
             elif column.type == FIELD_TYPE.INT24:
                 if unsigned:
                     values[name] = self.packet.read_uint24()
+                    if zerofill:
+                        values[name] = format(values[name], '08d')
                 else:
                     values[name] = self.packet.read_int24()
             elif column.type == FIELD_TYPE.FLOAT:
@@ -158,6 +181,8 @@ class RowsEvent(BinLogEvent):
             elif column.type == FIELD_TYPE.LONGLONG:
                 if unsigned:
                     values[name] = self.packet.read_uint64()
+                    if zerofill:
+                        values[name] = format(values[name], '020d')
                 else:
                     values[name] = self.packet.read_int64()
             elif column.type == FIELD_TYPE.YEAR:
@@ -281,11 +306,11 @@ class RowsEvent(BinLogEvent):
             data = ~data + 1
 
         t = datetime.timedelta(
-            hours=sign*self.__read_binary_slice(data, 2, 10, 24),
+            hours=self.__read_binary_slice(data, 2, 10, 24),
             minutes=self.__read_binary_slice(data, 12, 6, 24),
             seconds=self.__read_binary_slice(data, 18, 6, 24),
             microseconds=self.__read_fsp(column)
-        )
+        ) * sign
         return t
 
     def __read_date(self):
@@ -538,7 +563,7 @@ class UpdateRowsEvent(RowsEvent):
 
 
 class TableMapEvent(BinLogEvent):
-    """This evenement describe the structure of a table.
+    """This event describes the structure of a table.
     It's sent before a change happens on a table.
     An end user of the lib should have no usage of this
     """
@@ -562,10 +587,10 @@ class TableMapEvent(BinLogEvent):
         self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
         # Payload
-        self.schema_length = byte2int(self.packet.read(1))
+        self.schema_length = struct.unpack("!B", self.packet.read(1))[0]
         self.schema = self.packet.read(self.schema_length).decode()
         self.packet.advance(1)
-        self.table_length = byte2int(self.packet.read(1))
+        self.table_length = struct.unpack("!B", self.packet.read(1))[0]
         self.table = self.packet.read(self.table_length).decode()
 
         if self.__only_tables is not None and self.table not in self.__only_tables:
@@ -596,7 +621,7 @@ class TableMapEvent(BinLogEvent):
 
         if len(self.column_schemas) != 0:
             # Read columns meta data
-            column_types = list(self.packet.read(self.column_count))
+            column_types = bytearray(self.packet.read(self.column_count))
             self.packet.read_length_coded_binary()
             for i in range(0, len(column_types)):
                 column_type = column_types[i]
@@ -623,7 +648,7 @@ class TableMapEvent(BinLogEvent):
                         'COLUMN_TYPE': 'BLOB',  # we don't know what it is, so let's not do anything with it.
                         'COLUMN_KEY': '',
                     }
-                col = Column(byte2int(column_type), column_schema, from_packet)
+                col = Column(column_type, column_schema, from_packet)
                 self.columns.append(col)
 
         self.table_obj = Table(self.column_schemas, self.table_id, self.schema,

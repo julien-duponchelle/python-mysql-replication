@@ -5,8 +5,6 @@ import binascii
 import decimal
 import json
 
-from pymysql.util import byte2int
-
 from pymysqlreplication import constants, event, row_event
 
 # Constants from PyMYSQL source code
@@ -109,11 +107,11 @@ class BinLogPacketWrapper(object):
         # server_id
         # log_pos
         # flags
-        unpack = struct.unpack('<cIcIIIH', self.packet.read(20))
+        unpack = struct.unpack('<cIBIIIH', self.packet.read(20))
 
         # Header
         self.timestamp = unpack[1]
-        self.event_type = byte2int(unpack[2])
+        self.event_type = unpack[2]
         self.server_id = unpack[3]
         self.event_size = unpack[4]
         # position of the next event
@@ -180,7 +178,7 @@ class BinLogPacketWrapper(object):
 
         From PyMYSQL source code
         """
-        c = byte2int(self.read(1))
+        c = struct.unpack("!B", self.read(1))[0]
         if c == NULL_COLUMN:
             return None
         if c < UNSIGNED_CHAR_COLUMN:
@@ -265,7 +263,7 @@ class BinLogPacketWrapper(object):
         length = 0
         bits_read = 0
         while byte & 0x80 != 0:
-            byte = byte2int(self.read(1))
+            byte = struct.unpack("!B", self.read(1))[0]
             length = length | ((byte & 0x7f) << bits_read)
             bits_read = bits_read + 7
         return self.read(length)
@@ -464,13 +462,13 @@ class BinLogPacketWrapper(object):
             elif value == JSONB_LITERAL_FALSE:
                 return False
         elif t == JSONB_TYPE_INT16:
-            return self.read_int16()
+            return self.read_int32() if large else self.read_int16()
         elif t == JSONB_TYPE_UINT16:
-            return self.read_uint16()
+            return self.read_uint32() if large else self.read_uint16()
         elif t == JSONB_TYPE_INT32:
-            return self.read_int32()
+            return self.read_int64() if large else self.read_int32()
         elif t == JSONB_TYPE_UINT32:
-            return self.read_uint32()
+            return self.read_uint64() if large else self.read_uint32()
 
         raise ValueError('Json type %d is not handled' % t)
 

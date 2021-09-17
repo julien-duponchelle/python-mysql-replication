@@ -68,7 +68,7 @@ Projects using this library
 * ElasticMage: Full Magento integration with ElasticSearch https://github.com/ElasticMage/elasticmage
 * Cache buster: an automatic cache invalidation system https://github.com/rackerlabs/cache-busters
 * Zabbix collector for OpenTSDB https://github.com/OpenTSDB/tcollector/blob/master/collectors/0/zabbix_bridge.py
-* Meepo: Event sourcing and event broadcasting for datebases. https://github.com/eleme/meepo
+* Meepo: Event sourcing and event broadcasting for databases. https://github.com/eleme/meepo
 * Python MySQL Replication Blinker: This package read events from MySQL binlog and send to blinker's signal. https://github.com/tarzanjw/python-mysql-replication-blinker
 * aiomysql_replication: Fork supporting asyncio https://github.com/jettify/aiomysql_replication
 * python-mysql-eventprocessor: Daemon interface for handling MySQL binary log events. https://github.com/jffifa/python-mysql-eventprocessor
@@ -326,6 +326,9 @@ Other contributors:
 * Zhanwei Wang Fail to get table informations https://github.com/wangzw
 * Alexander Ignatov Fix the JSON literal 
 * Garen Chan Support PyMysql with a version greater than 0.9.3  https://github.com/garenchan
+* Mike Ascah: Add logic to handle inlined ints in large json documents ttps://github.com/mascah 
+* Hiroaki Kawai: PyMySQL 1.0 support (https://github.com/hkwi)
+* Dongwook Chan: Support for ZEROFILL, Correct timedelta value for negative MySQL TIME datatype, Fix parsing of row events for MySQL8 partitioned table (https://github.com/dongwook-chan)
 
 Thanks to GetResponse for their support
 
