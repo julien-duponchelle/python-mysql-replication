@@ -641,5 +641,12 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.extra_data_type, 1)
         self.assertEqual(event.partition_id, 3)
 
+    def test_status_vars(self):
+        create_query = "CREATE TABLE test (id INTEGER)"
+        insert_query = "SELECT null"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.catalog_nz_code, b'std')
+        self.assertEqual(event.mts_accessed_db_names, [b'pymysqlreplication_test'])
+
 if __name__ == "__main__":
     unittest.main()

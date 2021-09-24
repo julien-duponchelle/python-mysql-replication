@@ -461,3 +461,32 @@ class BinLogPacketWrapper(object):
             return self.read_binary_json_type(x[0], length)
 
         return [_read(x) for x in values_type_offset_inline]
+
+    def read_string(self):
+        """Read a 'Length Coded String' from the data buffer.
+
+        A 'Length Coded String' consists first of a length coded
+        (unsigned, positive) integer represented in 1-9 bytes followed by
+        that many bytes of binary data.  (For example "cat" would be "3cat".)
+
+        From PyMYSQL source code edited by dongwook-chan
+        """
+        string = b''
+        while True:
+            char = self.read(1)
+            if char == b'\0':
+                break
+            string += char
+
+        return string
+
+        """
+        #self.buf = __data_buffer #@
+        end_pos = self.__data_buffer.find(b"\0")
+        self.read_bytes += end_pos + 1
+        if end_pos < 0:
+            return None
+        result = self.__data_buffer[ : end_pos]
+        self.__data_buffer = self.__data_buffer[end_pos + 1 : ]
+        return result
+        """
