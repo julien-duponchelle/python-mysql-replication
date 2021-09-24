@@ -465,7 +465,10 @@ class BinLogPacketWrapper(object):
     def read_string(self):
         """Read a 'Length Coded String' from the data buffer.
 
-        
+        Read __data_buffer until NULL character (0 = \0 = \x00)
+
+        Returns:
+            Binary string parsed from __data_buffer
         """
         string = b''
         while True:

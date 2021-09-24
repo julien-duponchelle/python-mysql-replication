@@ -58,6 +58,14 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         return event
 
     def create_table(self, create_query):
+        """Create table 
+
+        Create table in db and return query event.
+
+        Returns:
+            Query event
+        """
+
         self.execute(create_query)
 
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
@@ -654,6 +662,19 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.partition_id, 3)
 
     def test_status_vars(self):
+        """Test parse of status variables in query events
+
+        Majority of status variables available depends on the settings of db.
+        Therefore, this test only tests system variable values independent from settings of db.
+        Note that if you change default db name 'pymysqlreplication_test',
+        event.mts_accessed_db_names MUST be asserted against the changed db name.
+
+        Returns:
+            binary string parsed from __data_buffer
+
+        Raises:
+            AssertionError: if no 
+        """
         create_query = "CREATE TABLE test (id INTEGER)"
         event = self.create_table(create_query)
         self.assertEqual(event.catalog_nz_code, b'std')

@@ -11,7 +11,7 @@
     mysql-server: https://github.com/mysql/mysql-server/blob/beb865a960b9a8a16cf999c323e46c5b0c67f21f/libbinlogevents/include/statement_events.h#L463-L532
     MySQL Documentation: https://dev.mysql.com/doc/internals/en/query-event.html
 
-    From mysql-server source code, edited buy dongwook-chan
+    Status variable key names From mysql-server source code, edited by dongwook-chan
 """
 
 # KEY

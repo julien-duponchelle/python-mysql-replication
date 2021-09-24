@@ -169,11 +169,9 @@ class QueryEvent(BinLogEvent):
 
         # Payload
         status_vars_end_pos = self.packet.read_bytes + self.status_vars_length
-        self.keys = [] #@
         while self.packet.read_bytes < status_vars_end_pos: # while 남은 data length가 얼마만큼? OR read_bytes
             # read KEY for status variable
             status_vars_key = self.packet.read_uint8()
-            self.keys.append(status_vars_key) #@
             # read VALUE for status variable
             self._read_status_vars_value_for_key(status_vars_key)
 
@@ -196,19 +194,21 @@ class QueryEvent(BinLogEvent):
     # TODO: does length need to be remembered?
     # TODO: ref(mysql doc. and mysql-server) for each hunk
     def _read_status_vars_value_for_key(self, key):
-        """
+        """parse status variable VALUE for given KEY
+
+        A status variable in query events is a sequence of status KEY-VALUE pairs.
+        Parsing logic from mysql-server source code edited by dongwook-chan
         https://github.com/mysql/mysql-server/blob/beb865a960b9a8a16cf999c323e46c5b0c67f21f/libbinlogevents/src/statement_events.cpp#L181-L336
 
-        From mysql-server source code edited by dongwook-chan
+        Args:
+            key: key for status variable
         """
         if key == Q_FLAGS2_CODE:                      # 0x00
             self.flags2 = self.packet.read_uint32()
         elif key == Q_SQL_MODE_CODE:                   # 0x01
             self.sql_mode = self.packet.read_uint64()
-        elif key == Q_CATALOG_CODE:                   # 0x02
-            catalog_len = self.packet.read_uint8()
-            if catalog_len:
-                self.catalog_nz_code = self.packet.read(catalog_len + 1)
+        elif key == Q_CATALOG_CODE:                   # 0x02 for MySQL 5.0.x
+            pass
         elif key == Q_AUTO_INCREMENT:                 # 0x03
             self.auto_increment_increment = self.packet.read_uint16()
             self.auto_increment_offset = self.packet.read_uint16()
@@ -226,7 +226,7 @@ class QueryEvent(BinLogEvent):
                 self.catalog_nz_code = self.packet.read(catalog_len)
         elif key == Q_LC_TIME_NAMES_CODE:             # 0x07
             self.lc_time_names_number = self.packet.read_uint16()
-        elif key == Q_CHARSET_DATABASE_CODE:           # 0x08
+        elif key == Q_CHARSET_DATABASE_CODE:          # 0x08
             self.charset_database_number = self.packet.read_uint16()
         elif key == Q_TABLE_MAP_FOR_UPDATE_CODE:      # 0x09
             self.table_map_for_update = self.packet.read_uint64()
