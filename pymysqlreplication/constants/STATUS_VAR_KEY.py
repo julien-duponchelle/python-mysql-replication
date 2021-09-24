@@ -36,33 +36,3 @@ Q_DDL_LOGGED_WITH_XID = 0X11
 Q_DEFAULT_COLLATION_FOR_UTF8MB4 = 0X12
 Q_SQL_REQUIRE_PRIMARY_KEY = 0X13
 Q_DEFAULT_TABLE_ENCRYPTION = 0X14
-
-"""
-    is_fixed_length_value = [
-        True,
-        True,
-        False,
-        True,
-        True,
-        
-    ]
-
-    # length for VALUE
-    value_length_fixed_for_key = [
-
-    ]
-
-    value_length_multiplier_for_key = [
-
-    ]
-
-    value_length_remainder_for_key = [
-
-    ]
-"""
-"""
-    #@classmethod
-    @staticmethod
-    def value_length_for_key():
-        pass
-"""

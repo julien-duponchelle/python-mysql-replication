@@ -465,11 +465,7 @@ class BinLogPacketWrapper(object):
     def read_string(self):
         """Read a 'Length Coded String' from the data buffer.
 
-        A 'Length Coded String' consists first of a length coded
-        (unsigned, positive) integer represented in 1-9 bytes followed by
-        that many bytes of binary data.  (For example "cat" would be "3cat".)
-
-        From PyMYSQL source code edited by dongwook-chan
+        
         """
         string = b''
         while True:
@@ -479,14 +475,3 @@ class BinLogPacketWrapper(object):
             string += char
 
         return string
-
-        """
-        #self.buf = __data_buffer #@
-        end_pos = self.__data_buffer.find(b"\0")
-        self.read_bytes += end_pos + 1
-        if end_pos < 0:
-            return None
-        result = self.__data_buffer[ : end_pos]
-        self.__data_buffer = self.__data_buffer[end_pos + 1 : ]
-        return result
-        """

@@ -3,7 +3,6 @@
 import binascii
 import struct
 import datetime
-#from .constants import STATUS_VAR_KEY
 from pymysqlreplication.constants.STATUS_VAR_KEY import *
 
 
