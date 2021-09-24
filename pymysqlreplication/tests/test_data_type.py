@@ -643,7 +643,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
 
     def test_status_vars(self):
         create_query = "CREATE TABLE test (id INTEGER)"
-        insert_query = "SELECT null"
+        insert_query = "insert into test values (1)"    # not necessary
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertEqual(event.catalog_nz_code, b'std')
         self.assertEqual(event.mts_accessed_db_names, [b'pymysqlreplication_test'])
