@@ -65,7 +65,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
 
-        self.assertEqual(event.event_type, QueryEvent)
+        self.assertEqual(event.event_type, QUERY_EVENT)
 
         return event
 
