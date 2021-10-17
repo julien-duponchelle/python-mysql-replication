@@ -419,8 +419,7 @@ class BinLogStreamReader(object):
         self.__connected_stream = True
 
     def fetchone(self):
-        should_continue = True
-        while should_continue:
+        while True:
             if not self.__connected_stream:
                 self.__connect_to_stream()
 
@@ -474,9 +473,9 @@ class BinLogStreamReader(object):
             elif binlog_event.log_pos:
                 self.log_pos = binlog_event.log_pos
 
-            if self.end_log_pos and self.log_pos >= self.end_log_pos:
+            if self.end_log_pos and self.log_pos > self.end_log_pos:
                 # We're currently at, or past, the specified end log position.
-                should_continue = False
+                return None
 
             # This check must not occur before clearing the ``table_map`` as a
             # result of a RotateEvent.
