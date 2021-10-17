@@ -72,3 +72,4 @@ class TestAbnormalBinLogStreamReader(base.PyMySQLReplicationTestCase):
         for _ in reader:
             reader.truncatebinlog()
             break
+
