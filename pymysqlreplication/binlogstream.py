@@ -212,6 +212,9 @@ class BinLogStreamReader(object):
         self.auto_position = auto_position
         self.skip_to_timestamp = skip_to_timestamp
 
+        if end_log_pos:
+            self.is_past_end_log_pos = False
+
         if report_slave:
             self.report_slave = ReportSlave(report_slave)
         self.slave_uuid = slave_uuid
@@ -420,6 +423,9 @@ class BinLogStreamReader(object):
 
     def fetchone(self):
         while True:
+            if self.end_log_pos and self.is_past_end_log_pos:
+                return None
+
             if not self.__connected_stream:
                 self.__connect_to_stream()
 
@@ -473,9 +479,9 @@ class BinLogStreamReader(object):
             elif binlog_event.log_pos:
                 self.log_pos = binlog_event.log_pos
 
-            if self.end_log_pos and self.log_pos > self.end_log_pos:
+            if self.end_log_pos and self.log_pos >= self.end_log_pos:
                 # We're currently at, or past, the specified end log position.
-                return None
+                self.is_past_end_log_pos = True
 
             # This check must not occur before clearing the ``table_map`` as a
             # result of a RotateEvent.
