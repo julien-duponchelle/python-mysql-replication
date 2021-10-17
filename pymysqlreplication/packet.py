@@ -461,3 +461,20 @@ class BinLogPacketWrapper(object):
             return self.read_binary_json_type(x[0], length)
 
         return [_read(x) for x in values_type_offset_inline]
+
+    def read_string(self):
+        """Read a 'Length Coded String' from the data buffer.
+
+        Read __data_buffer until NULL character (0 = \0 = \x00)
+
+        Returns:
+            Binary string parsed from __data_buffer
+        """
+        string = b''
+        while True:
+            char = self.read(1)
+            if char == b'\0':
+                break
+            string += char
+
+        return string
