@@ -158,3 +158,8 @@
 * Correct timedelta value for negative MySQL TIME datatype
 * Fix parsing of row events for MySQL8 partitioned table
 * Set PyMySql version minimum to 0.10
+
+0.27 18/10/2021
+* Parse NULL-bitmask in table map event
+* Add support for specifying an end log_pos
+* Parse status variables in query event
