@@ -188,11 +188,6 @@ class QueryEvent(BinLogEvent):
         print("Execution time: %d" % (self.execution_time))
         print("Query: %s" % (self.query))
 
-    
-    # TODO: check if instance attribute with the same name already exists
-    # TODO: put all the instace attribute in separate class? called status_vars
-    # TODO: does length need to be remembered?
-    # TODO: ref(mysql doc. and mysql-server) for each hunk
     def _read_status_vars_value_for_key(self, key):
         """parse status variable VALUE for given KEY
 

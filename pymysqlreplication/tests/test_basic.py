@@ -482,6 +482,43 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, QueryEvent)
         self.assertEqual(event.query, query2)
 
+    def test_end_log_pos(self):
+        """Test end_log_pos parameter for BinLogStreamReader
+
+        MUST BE TESTED IN DEFAULT SYSTEM VARIABLES SETTING
+
+        Raises:
+            AssertionError: if null_bitmask isn't set as specified in 'bit_mask' variable
+        """
+
+        self.execute('CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, PRIMARY KEY(id))')
+        self.execute('INSERT INTO test values (NULL)')
+        self.execute('INSERT INTO test values (NULL)')
+        self.execute('INSERT INTO test values (NULL)')
+        self.execute('INSERT INTO test values (NULL)')
+        self.execute('INSERT INTO test values (NULL)')
+        self.execute('COMMIT')
+        #import os
+        #os._exit(1)
+
+        binlog = self.execute("SHOW BINARY LOGS").fetchone()[0]
+
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            log_pos=0,
+            log_file=binlog,
+            end_log_pos=888)
+
+        last_log_pos = 0
+        last_event_type = 0
+        for event in self.stream:
+            last_log_pos = self.stream.log_pos
+            last_event_type = event.event_type
+
+        self.assertEqual(last_log_pos, 888)
+        self.assertEqual(last_event_type, TABLE_MAP_EVENT)
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def ignoredEvents(self):
