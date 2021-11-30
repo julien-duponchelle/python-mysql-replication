@@ -508,8 +508,22 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.database,
             server_id=1024,
             log_pos=0,
+            log_file=binlog)
+        # fetch several events then get the end position of
+        # the last event
+        # do not use a fixed int as end position, cause that
+        # may be an invalid position
+        for i in range(13):
+            _ = self.stream.fetchone()
+        binlog = self.stream.log_file
+        end_position = self.stream.log_pos
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            log_pos=0,
             log_file=binlog,
-            end_log_pos=888)
+            end_log_pos=end_position)
 
         last_log_pos = 0
         last_event_type = 0
@@ -517,7 +531,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             last_log_pos = self.stream.log_pos
             last_event_type = event.event_type
 
-        self.assertEqual(last_log_pos, 888)
+        self.assertEqual(last_log_pos, end_position)
         self.assertEqual(last_event_type, TABLE_MAP_EVENT)
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
