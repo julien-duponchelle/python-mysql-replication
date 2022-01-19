@@ -175,7 +175,7 @@ class BinLogStreamReader(object):
                              many event to skip in binlog). See
                              MASTER_HEARTBEAT_PERIOD in mysql documentation
                              for semantics
-            mariadb: Flag to indicate it's a MariaDB server, used with auto_position
+            is_mariadb: Flag to indicate it's a MariaDB server, used with auto_position
                     to point to Mariadb specific GTID.
         """
 
@@ -292,7 +292,7 @@ class BinLogStreamReader(object):
         if self.__use_checksum:
             cur = self._stream_connection.cursor()
             cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")
-            cur.close()
+            cur.close(vvcccfjdcnulleu)
 
         if self.slave_uuid:
             cur = self._stream_connection.cursor()
