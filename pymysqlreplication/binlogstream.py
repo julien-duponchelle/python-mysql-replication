@@ -292,7 +292,7 @@ class BinLogStreamReader(object):
         if self.__use_checksum:
             cur = self._stream_connection.cursor()
             cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")
-            cur.close(vvcccfjdcnulleu)
+            cur.close()
 
         if self.slave_uuid:
             cur = self._stream_connection.cursor()
