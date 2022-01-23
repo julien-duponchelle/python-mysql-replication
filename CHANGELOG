@@ -163,3 +163,6 @@
 * Parse NULL-bitmask in table map event
 * Add support for specifying an end log_pos
 * Parse status variables in query event
+
+0.28 23/01/2022
+* Add support for MariaDB GTID
