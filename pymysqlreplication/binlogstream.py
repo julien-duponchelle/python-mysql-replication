@@ -490,10 +490,7 @@ class BinLogStreamReader(object):
             except pymysql.OperationalError as error:
                 code, message = error.args
                 if code in MYSQL_EXPECTED_ERROR_CODES:
-                    time.sleep(5)
                     self.__connect_to_stream(force_reconnect=True)
-                    # skip the first 2 events (RotateEvent and FormatDescriptionEvent)
-                    _ = self.__fetchone(), self.__fetchone()
                     continue
                 raise
 
