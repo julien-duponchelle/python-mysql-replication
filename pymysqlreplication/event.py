@@ -257,6 +257,17 @@ class QueryEvent(BinLogEvent):
                 self.host = self.packet.read(host_len)
         elif key == Q_UPDATED_DB_NAMES:               # 0x0C
             mts_accessed_dbs = self.packet.read_uint8()
+            """
+            mts_accessed_dbs < 254:
+                `mts_accessed_dbs` is equal to the number of dbs
+                acessed by the query event.
+            mts_accessed_dbs == 254:
+                This is the case where the number of dbs accessed
+                is 1 and the name of the only db is ""
+                Since no further parsing required(empty name), return.
+            """
+            if mts_accessed_dbs == 254:
+                return
             dbs = []
             for i in range(mts_accessed_dbs):
                 db = self.packet.read_string()
