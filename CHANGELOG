@@ -166,3 +166,6 @@
 
 0.28 23/01/2022
 * Add support for MariaDB GTID
+
+0.29 08/04/2022
+* Skip db name parsing if mts_accessed_dbs == 254 
