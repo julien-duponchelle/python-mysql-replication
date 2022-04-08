@@ -77,6 +77,27 @@ class GtidEvent(BinLogEvent):
         return '<GtidEvent "%s">' % self.gtid
 
 
+class MariadbGtidEvent(BinLogEvent):
+    """
+    GTID change in binlog event in MariaDB
+    https://mariadb.com/kb/en/gtid_event/
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+
+        super(MariadbGtidEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+
+        self.server_id = self.packet.server_id
+        self.gtid_seq_no = self.packet.read_uint64()
+        self.domain_id = self.packet.read_uint32()
+        self.flags = self.packet.read_uint8()
+        self.gtid = "%d-%d-%d" % (self.domain_id, self.server_id, self.gtid_seq_no)
+
+    def _dump(self):
+        super(MariadbGtidEvent, self)._dump()
+        print("Flags:", self.flags)
+        print('GTID:', self.gtid)
+
+
 class RotateEvent(BinLogEvent):
     """Change MySQL bin log file
 
@@ -154,7 +175,7 @@ class HeartbeatLogEvent(BinLogEvent):
 
 
 class QueryEvent(BinLogEvent):
-    '''This evenement is trigger when a query is run of the database.
+    '''This event is trigger when a query is run of the database.
     Only replicated queries are logged.'''
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(QueryEvent, self).__init__(from_packet, event_size, table_map,
@@ -236,6 +257,17 @@ class QueryEvent(BinLogEvent):
                 self.host = self.packet.read(host_len)
         elif key == Q_UPDATED_DB_NAMES:               # 0x0C
             mts_accessed_dbs = self.packet.read_uint8()
+            """
+            mts_accessed_dbs < 254:
+                `mts_accessed_dbs` is equal to the number of dbs
+                acessed by the query event.
+            mts_accessed_dbs == 254:
+                This is the case where the number of dbs accessed
+                is 1 and the name of the only db is ""
+                Since no further parsing required(empty name), return.
+            """
+            if mts_accessed_dbs == 254:
+                return
             dbs = []
             for i in range(mts_accessed_dbs):
                 db = self.packet.read_string()

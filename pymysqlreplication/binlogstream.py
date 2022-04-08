@@ -14,7 +14,7 @@ from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
     XidEvent, GtidEvent, StopEvent,
     BeginLoadQueryEvent, ExecuteLoadQueryEvent,
-    HeartbeatLogEvent, NotImplementedEvent)
+    HeartbeatLogEvent, NotImplementedEvent, MariadbGtidEvent)
 from .exceptions import BinLogNotEnabled
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
@@ -139,7 +139,8 @@ class BinLogStreamReader(object):
                  report_slave=None, slave_uuid=None,
                  pymysql_wrapper=None,
                  fail_on_table_metadata_unavailable=False,
-                 slave_heartbeat=None):
+                 slave_heartbeat=None,
+                 is_mariadb=False):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -174,6 +175,8 @@ class BinLogStreamReader(object):
                              many event to skip in binlog). See
                              MASTER_HEARTBEAT_PERIOD in mysql documentation
                              for semantics
+            is_mariadb: Flag to indicate it's a MariaDB server, used with auto_position
+                    to point to Mariadb specific GTID.
         """
 
         self.__connection_settings = connection_settings
@@ -211,6 +214,7 @@ class BinLogStreamReader(object):
         self.log_file = log_file
         self.auto_position = auto_position
         self.skip_to_timestamp = skip_to_timestamp
+        self.is_mariadb = is_mariadb
 
         if end_log_pos:
             self.is_past_end_log_pos = False
@@ -341,77 +345,114 @@ class BinLogStreamReader(object):
             prelude += struct.pack('<I', self.__server_id)
             prelude += self.log_file.encode()
         else:
-            # Format for mysql packet master_auto_position
-            #
-            # All fields are little endian
-            # All fields are unsigned
+            if self.is_mariadb:
+                # https://mariadb.com/kb/en/5-slave-registration/
+                cur = self._stream_connection.cursor()
 
-            # Packet length   uint   4bytes
-            # Packet type     byte   1byte   == 0x1e
-            # Binlog flags    ushort 2bytes  == 0 (for retrocompatibilty)
-            # Server id       uint   4bytes
-            # binlognamesize  uint   4bytes
-            # binlogname      str    Nbytes  N = binlognamesize
-            #                                Zeroified
-            # binlog position uint   4bytes  == 4
-            # payload_size    uint   4bytes
+                cur.execute("SET @mariadb_slave_capability=4")
+                cur.execute("SET @slave_connect_state='%s'" % self.auto_position)
+                cur.execute("SET @slave_gtid_strict_mode=1")
+                cur.execute("SET @slave_gtid_ignore_duplicates=0")
+                cur.close()
 
-            # What come next, is the payload, where the slave gtid_executed
-            # is sent to the master
-            # n_sid           ulong  8bytes  == which size is the gtid_set
-            # | sid           uuid   16bytes UUID as a binary
-            # | n_intervals   ulong  8bytes  == how many intervals are sent
-            # |                                 for this gtid
-            # | | start       ulong  8bytes  Start position of this interval
-            # | | stop        ulong  8bytes  Stop position of this interval
+                # https://mariadb.com/kb/en/com_binlog_dump/
+                header_size = (
+                        4 +  # binlog pos
+                        2 +  # binlog flags
+                        4 +  # slave server_id,
+                        4    # requested binlog file name , set it to empty
+                )
 
-            # A gtid set looks like:
-            #   19d69c1e-ae97-4b8c-a1ef-9e12ba966457:1-3:8-10,
-            #   1c2aad49-ae92-409a-b4df-d05a03e4702e:42-47:80-100:130-140
-            #
-            # In this particular gtid set,
-            # 19d69c1e-ae97-4b8c-a1ef-9e12ba966457:1-3:8-10
-            # is the first member of the set, it is called a gtid.
-            # In this gtid, 19d69c1e-ae97-4b8c-a1ef-9e12ba966457 is the sid
-            # and have two intervals, 1-3 and 8-10, 1 is the start position of
-            # the first interval 3 is the stop position of the first interval.
+                prelude = struct.pack('<i', header_size) + bytes(bytearray([COM_BINLOG_DUMP]))
 
-            gtid_set = GtidSet(self.auto_position)
-            encoded_data_size = gtid_set.encoded_length
+                # binlog pos
+                prelude += struct.pack('<i', 4)
 
-            header_size = (2 +  # binlog_flags
-                           4 +  # server_id
-                           4 +  # binlog_name_info_size
-                           4 +  # empty binlog name
-                           8 +  # binlog_pos_info_size
-                           4)  # encoded_data_size
+                flags = 0
+                if not self.__blocking:
+                    flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
+                
+                # binlog flags
+                prelude += struct.pack('<H', flags)
 
-            prelude = b'' + struct.pack('<i', header_size + encoded_data_size)\
-                + bytes(bytearray([COM_BINLOG_DUMP_GTID]))
+                # server id (4 bytes)
+                prelude += struct.pack('<I', self.__server_id)
 
-            flags = 0
-            if not self.__blocking:
-                flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
-            flags |= 0x04  # BINLOG_THROUGH_GTID
+                # empty_binlog_name (4 bytes)
+                prelude += b'\0\0\0\0'
+                
+            else:
+                # Format for mysql packet master_auto_position
+                #
+                # All fields are little endian
+                # All fields are unsigned
 
-            # binlog_flags (2 bytes)
-            # see:
-            #  https://dev.mysql.com/doc/internals/en/com-binlog-dump-gtid.html
-            prelude += struct.pack('<H', flags)
+                # Packet length   uint   4bytes
+                # Packet type     byte   1byte   == 0x1e
+                # Binlog flags    ushort 2bytes  == 0 (for retrocompatibilty)
+                # Server id       uint   4bytes
+                # binlognamesize  uint   4bytes
+                # binlogname      str    Nbytes  N = binlognamesize
+                #                                Zeroified
+                # binlog position uint   4bytes  == 4
+                # payload_size    uint   4bytes
 
-            # server_id (4 bytes)
-            prelude += struct.pack('<I', self.__server_id)
-            # binlog_name_info_size (4 bytes)
-            prelude += struct.pack('<I', 3)
-            # empty_binlog_name (4 bytes)
-            prelude += b'\0\0\0'
-            # binlog_pos_info (8 bytes)
-            prelude += struct.pack('<Q', 4)
+                # What come next, is the payload, where the slave gtid_executed
+                # is sent to the master
+                # n_sid           ulong  8bytes  == which size is the gtid_set
+                # | sid           uuid   16bytes UUID as a binary
+                # | n_intervals   ulong  8bytes  == how many intervals are sent
+                # |                                 for this gtid
+                # | | start       ulong  8bytes  Start position of this interval
+                # | | stop        ulong  8bytes  Stop position of this interval
 
-            # encoded_data_size (4 bytes)
-            prelude += struct.pack('<I', gtid_set.encoded_length)
-            # encoded_data
-            prelude += gtid_set.encoded()
+                # A gtid set looks like:
+                #   19d69c1e-ae97-4b8c-a1ef-9e12ba966457:1-3:8-10,
+                #   1c2aad49-ae92-409a-b4df-d05a03e4702e:42-47:80-100:130-140
+                #
+                # In this particular gtid set,
+                # 19d69c1e-ae97-4b8c-a1ef-9e12ba966457:1-3:8-10
+                # is the first member of the set, it is called a gtid.
+                # In this gtid, 19d69c1e-ae97-4b8c-a1ef-9e12ba966457 is the sid
+                # and have two intervals, 1-3 and 8-10, 1 is the start position of
+                # the first interval 3 is the stop position of the first interval.
+
+                gtid_set = GtidSet(self.auto_position)
+                encoded_data_size = gtid_set.encoded_length
+
+                header_size = (2 +  # binlog_flags
+                               4 +  # server_id
+                               4 +  # binlog_name_info_size
+                               4 +  # empty binlog name
+                               8 +  # binlog_pos_info_size
+                               4)  # encoded_data_size
+
+                prelude = b'' + struct.pack('<i', header_size + encoded_data_size)\
+                    + bytes(bytearray([COM_BINLOG_DUMP_GTID]))
+
+                flags = 0
+                if not self.__blocking:
+                    flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
+                flags |= 0x04  # BINLOG_THROUGH_GTID
+
+                # binlog_flags (2 bytes)
+                # see:
+                #  https://dev.mysql.com/doc/internals/en/com-binlog-dump-gtid.html
+                prelude += struct.pack('<H', flags)
+
+                # server_id (4 bytes)
+                prelude += struct.pack('<I', self.__server_id)
+                # binlog_name_info_size (4 bytes)
+                prelude += struct.pack('<I', 3)
+                # empty_binlog_namapprovale (4 bytes)
+                prelude += b'\0\0\0'
+                # binlog_pos_info (8 bytes)
+                prelude += struct.pack('<Q', 4)
+
+                # encoded_data_size (4 bytes)
+                prelude += struct.pack('<I', gtid_set.encoded_length)
+                # encoded_data
+                prelude += gtid_set.encoded()
 
         if pymysql.__version__ < LooseVersion("0.6"):
             self._stream_connection.wfile.write(prelude)
@@ -542,6 +583,7 @@ class BinLogStreamReader(object):
                 TableMapEvent,
                 HeartbeatLogEvent,
                 NotImplementedEvent,
+                MariadbGtidEvent
                 ))
         if ignored_events is not None:
             for e in ignored_events:

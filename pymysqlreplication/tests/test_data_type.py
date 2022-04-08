@@ -701,7 +701,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.catalog_nz_code, b'std')
         self.assertEqual(event.mts_accessed_db_names, [b'pymysqlreplication_test'])
 
-    def test_null_bitmask(self)
+    def test_null_bitmask(self):
         """Test parse of null-bitmask in table map events
 
         Create table with 16 columns with nullability specified by 'bit_mask' variable
@@ -744,7 +744,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         for i in range(16):
             values.append('0')
         
-        insert_query += f' ({",".join(values)})')
+        insert_query += f' ({",".join(values)})'
 
         self.execute(create_query)
         self.execute(insert_query)
