@@ -730,7 +730,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             column_type = "INT"
             column_definition.append(column_type)
 
-            nullability = "NOT NULL" if not RowsEvent.__is_null(bit_mask, i) else ""
+            nullability = "NOT NULL" if not RowsEvent._RowsEvent__is_null(None, bit_mask, i) else ""
             column_definition.append(nullability)
 
             columns.append(" ".join(column_definition))
