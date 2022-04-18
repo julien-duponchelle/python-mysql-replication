@@ -513,6 +513,16 @@ class TestDataType(base.PyMySQLReplicationTestCase):
 
         self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict(data))
 
+    def test_json_large_array(self):
+        "Test json array larger than 64k bytes"
+        if not self.isMySQL57():
+            self.skipTest("Json is only supported in mysql 5.7")
+        create_query = "CREATE TABLE test (id int, value json);"
+        large_array = dict(my_key=[i for i in range(100000)])
+        insert_query = "INSERT INTO test (id, value) VALUES (1, '%s');" % (json.dumps(large_array),)
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict(large_array))
+
     def test_json_large_with_literal(self):
         if not self.isMySQL57():
             self.skipTest("Json is only supported in mysql 5.7")
