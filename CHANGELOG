@@ -169,3 +169,7 @@
 
 0.29 08/04/2022
 * Skip db name parsing if mts_accessed_dbs == 254 
+
+0.30 28/04/2022
+* Fix decoding large json arrays
+* Handle null json

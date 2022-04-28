@@ -332,6 +332,8 @@ Other contributors:
 * Dongwook Chan: Support for ZEROFILL, Correct timedelta value for negative MySQL TIME datatype, Fix parsing of row events for MySQL8 partitioned table, Parse status variables in query event, Parse status variables in query event (https://github.com/dongwook-chan)
 * Paul Vickers: Add support for specifying an end log_pos (https://github.com/paulvic)
 * Samira El Aabidi: Add support for MariaDB GTID (https://github.com/Samira-El)
+* Oliver Seemann: Handle large json, github actions (https://github.com/oseemann)
+* Mahadir Ahmad: Handle null json payload (https://github.com/mahadirz)
 
 Thanks to GetResponse for their support
 
