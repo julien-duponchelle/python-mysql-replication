@@ -1,0 +1,33 @@
+name: PyTest
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.7"
+
+      - name: Run database server in docker
+        run: |
+          docker compose create
+          docker compose start
+          # Wait for the services to accept connections,
+          # TODO: do that smarter, poll connection attempt until it succeeds
+          sleep 30
+
+      - name: Install dependencies
+        run: |
+          pip install .
+          pip install pytest
+
+      - name: Run test suite
+        run: |
+          pytest -k "not test_no_trailing_rotate_event and not test_end_log_pos"

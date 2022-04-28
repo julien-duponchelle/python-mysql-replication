@@ -349,6 +349,9 @@ class BinLogPacketWrapper(object):
 
     def read_binary_json(self, size):
         length = self.read_uint_by_size(size)
+        if length == 0:
+            # handle NULL value
+            return None
         payload = self.read(length)
         self.unread(payload)
         t = self.read_uint8()
@@ -402,9 +405,9 @@ class BinLogPacketWrapper(object):
         elif t == JSONB_TYPE_UINT16:
             return self.read_uint32() if large else self.read_uint16()
         elif t == JSONB_TYPE_INT32:
-            return self.read_int64() if large else self.read_int32()
+            return self.read_int32()
         elif t == JSONB_TYPE_UINT32:
-            return self.read_uint64() if large else self.read_uint32()
+            return self.read_uint32()
 
         raise ValueError('Json type %d is not handled' % t)
 
