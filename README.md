@@ -79,6 +79,7 @@ Projects using this library
 * Streaming mysql binlog replication to Snowflake/Redshift/BigQuery (https://github.com/trainingrocket/mysql-binlog-replication)
 * MySQL to Kafka (https://github.com/scottpersinger/mysql-to-kafka/)
 * Aventri MySQL Monitor (https://github.com/aventri/mysql-monitor)
+* BitSwanPump: A real-time stream processor  (https://github.com/LibertyAces/BitSwanPump)
 
 MySQL server settings
 =========================
@@ -326,12 +327,19 @@ Other contributors:
 * Zhanwei Wang Fail to get table informations https://github.com/wangzw
 * Alexander Ignatov Fix the JSON literal 
 * Garen Chan Support PyMysql with a version greater than 0.9.3  https://github.com/garenchan
+* Mike Ascah: Add logic to handle inlined ints in large json documents ttps://github.com/mascah 
+* Hiroaki Kawai: PyMySQL 1.0 support (https://github.com/hkwi)
+* Dongwook Chan: Support for ZEROFILL, Correct timedelta value for negative MySQL TIME datatype, Fix parsing of row events for MySQL8 partitioned table, Parse status variables in query event, Parse status variables in query event (https://github.com/dongwook-chan)
+* Paul Vickers: Add support for specifying an end log_pos (https://github.com/paulvic)
+* Samira El Aabidi: Add support for MariaDB GTID (https://github.com/Samira-El)
+* Oliver Seemann: Handle large json, github actions (https://github.com/oseemann)
+* Mahadir Ahmad: Handle null json payload (https://github.com/mahadirz)
 
 Thanks to GetResponse for their support
 
 Licence
 =======
-Copyright 2012-2017 Julien Duponchelle
+Copyright 2012-2022 Julien Duponchelle
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

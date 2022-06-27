@@ -3,8 +3,7 @@
 import binascii
 import struct
 import datetime
-
-from pymysql.util import byte2int, int2byte
+from pymysqlreplication.constants.STATUS_VAR_KEY import *
 
 
 class BinLogEvent(object):
@@ -32,7 +31,7 @@ class BinLogEvent(object):
     def _read_table_id(self):
         # Table ID is 6 byte
         # pad little-endian number
-        table_id = self.packet.read(6) + int2byte(0) + int2byte(0)
+        table_id = self.packet.read(6) + b"\x00\x00"
         return struct.unpack('<Q', table_id)[0]
 
     def dump(self):
@@ -57,7 +56,7 @@ class GtidEvent(BinLogEvent):
         super(GtidEvent, self).__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
 
-        self.commit_flag = byte2int(self.packet.read(1)) == 1
+        self.commit_flag = struct.unpack("!B", self.packet.read(1))[0] == 1
         self.sid = self.packet.read(16)
         self.gno = struct.unpack('<Q', self.packet.read(8))[0]
         self.lt_type = byte2int(self.packet.read(1))
@@ -86,6 +85,27 @@ class GtidEvent(BinLogEvent):
 
     def __repr__(self):
         return '<GtidEvent "%s">' % self.gtid
+
+
+class MariadbGtidEvent(BinLogEvent):
+    """
+    GTID change in binlog event in MariaDB
+    https://mariadb.com/kb/en/gtid_event/
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+
+        super(MariadbGtidEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+
+        self.server_id = self.packet.server_id
+        self.gtid_seq_no = self.packet.read_uint64()
+        self.domain_id = self.packet.read_uint32()
+        self.flags = self.packet.read_uint8()
+        self.gtid = "%d-%d-%d" % (self.domain_id, self.server_id, self.gtid_seq_no)
+
+    def _dump(self):
+        super(MariadbGtidEvent, self)._dump()
+        print("Flags:", self.flags)
+        print('GTID:', self.gtid)
 
 
 class RotateEvent(BinLogEvent):
@@ -165,7 +185,7 @@ class HeartbeatLogEvent(BinLogEvent):
 
 
 class QueryEvent(BinLogEvent):
-    '''This evenement is trigger when a query is run of the database.
+    '''This event is trigger when a query is run of the database.
     Only replicated queries are logged.'''
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(QueryEvent, self).__init__(from_packet, event_size, table_map,
@@ -174,12 +194,18 @@ class QueryEvent(BinLogEvent):
         # Post-header
         self.slave_proxy_id = self.packet.read_uint32()
         self.execution_time = self.packet.read_uint32()
-        self.schema_length = byte2int(self.packet.read(1))
+        self.schema_length = struct.unpack("!B", self.packet.read(1))[0]
         self.error_code = self.packet.read_uint16()
         self.status_vars_length = self.packet.read_uint16()
 
         # Payload
-        self.status_vars = self.packet.read(self.status_vars_length)
+        status_vars_end_pos = self.packet.read_bytes + self.status_vars_length
+        while self.packet.read_bytes < status_vars_end_pos: # while 남은 data length가 얼마만큼? OR read_bytes
+            # read KEY for status variable
+            status_vars_key = self.packet.read_uint8()
+            # read VALUE for status variable
+            self._read_status_vars_value_for_key(status_vars_key)
+
         self.schema = self.packet.read(self.schema_length)
         self.packet.advance(1)
 
@@ -193,6 +219,86 @@ class QueryEvent(BinLogEvent):
         print("Execution time: %d" % (self.execution_time))
         print("Query: %s" % (self.query))
 
+    def _read_status_vars_value_for_key(self, key):
+        """parse status variable VALUE for given KEY
+
+        A status variable in query events is a sequence of status KEY-VALUE pairs.
+        Parsing logic from mysql-server source code edited by dongwook-chan
+        https://github.com/mysql/mysql-server/blob/beb865a960b9a8a16cf999c323e46c5b0c67f21f/libbinlogevents/src/statement_events.cpp#L181-L336
+
+        Args:
+            key: key for status variable
+        """
+        if key == Q_FLAGS2_CODE:                      # 0x00
+            self.flags2 = self.packet.read_uint32()
+        elif key == Q_SQL_MODE_CODE:                   # 0x01
+            self.sql_mode = self.packet.read_uint64()
+        elif key == Q_CATALOG_CODE:                   # 0x02 for MySQL 5.0.x
+            pass
+        elif key == Q_AUTO_INCREMENT:                 # 0x03
+            self.auto_increment_increment = self.packet.read_uint16()
+            self.auto_increment_offset = self.packet.read_uint16()
+        elif key == Q_CHARSET_CODE:                   # 0x04
+            self.character_set_client = self.packet.read_uint16()
+            self.collation_connection = self.packet.read_uint16()
+            self.collation_server = self.packet.read_uint16()
+        elif key == Q_TIME_ZONE_CODE:                 # 0x05
+            time_zone_len = self.packet.read_uint8()
+            if time_zone_len:
+                self.time_zone = self.packet.read(time_zone_len) 
+        elif key == Q_CATALOG_NZ_CODE:                # 0x06
+            catalog_len = self.packet.read_uint8()
+            if catalog_len:
+                self.catalog_nz_code = self.packet.read(catalog_len)
+        elif key == Q_LC_TIME_NAMES_CODE:             # 0x07
+            self.lc_time_names_number = self.packet.read_uint16()
+        elif key == Q_CHARSET_DATABASE_CODE:          # 0x08
+            self.charset_database_number = self.packet.read_uint16()
+        elif key == Q_TABLE_MAP_FOR_UPDATE_CODE:      # 0x09
+            self.table_map_for_update = self.packet.read_uint64()
+        elif key == Q_MASTER_DATA_WRITTEN_CODE:       # 0x0A
+            pass
+        elif key == Q_INVOKER:                        # 0x0B
+            user_len = self.packet.read_uint8()
+            if user_len:
+                self.user = self.packet.read(user_len)
+            host_len = self.packet.read_uint8()
+            if host_len:
+                self.host = self.packet.read(host_len)
+        elif key == Q_UPDATED_DB_NAMES:               # 0x0C
+            mts_accessed_dbs = self.packet.read_uint8()
+            """
+            mts_accessed_dbs < 254:
+                `mts_accessed_dbs` is equal to the number of dbs
+                acessed by the query event.
+            mts_accessed_dbs == 254:
+                This is the case where the number of dbs accessed
+                is 1 and the name of the only db is ""
+                Since no further parsing required(empty name), return.
+            """
+            if mts_accessed_dbs == 254:
+                return
+            dbs = []
+            for i in range(mts_accessed_dbs):
+                db = self.packet.read_string()
+                dbs.append(db)
+            self.mts_accessed_db_names = dbs
+        elif key == Q_MICROSECONDS:                   # 0x0D
+            self.microseconds = self.packet.read_uint24()
+        elif key == Q_COMMIT_TS:                      # 0x0E
+            pass
+        elif key == Q_COMMIT_TS2:                     # 0x0F
+            pass
+        elif key == Q_EXPLICIT_DEFAULTS_FOR_TIMESTAMP:# 0x10
+            self.explicit_defaults_ts = self.packet.read_uint8()
+        elif key == Q_DDL_LOGGED_WITH_XID:            # 0x11
+            self.ddl_xid = self.packet.read_uint64()
+        elif key == Q_DEFAULT_COLLATION_FOR_UTF8MB4:  # 0x12
+            self.default_collation_for_utf8mb4_number = self.packet.read_uint16()
+        elif key == Q_SQL_REQUIRE_PRIMARY_KEY:        # 0x13
+            self.sql_require_primary_key = self.packet.read_uint8()
+        elif key == Q_DEFAULT_TABLE_ENCRYPTION:       # 0x14
+            self.default_table_encryption = self.packet.read_uint8()
 
 class BeginLoadQueryEvent(BinLogEvent):
     """
