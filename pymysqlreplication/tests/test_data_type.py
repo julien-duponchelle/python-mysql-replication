@@ -57,6 +57,50 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, WriteRowsEvent)
         return event
 
+    def create_table(self, create_query):
+        """Create table 
+
+        Create table in db and return query event.
+
+        Returns:
+            Query event
+        """
+
+        self.execute(create_query)
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+
+        event = self.stream.fetchone()
+
+        self.assertEqual(event.event_type, QUERY_EVENT)
+
+        return event
+
+    def create_and_get_tablemap_event(self, bit):
+        """Create table and return tablemap event
+
+        Returns:
+            Table map event
+        """
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        #QueryEvent for the Create Table
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        #QueryEvent for the BEGIN
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        event = self.stream.fetchone()
+
+        self.assertEqual(event.event_type, TABLE_MAP_EVENT)
+
+        return event
+
     def test_decimal(self):
         create_query = "CREATE TABLE test (test DECIMAL(2,1))"
         insert_query = "INSERT INTO test VALUES(4.2)"
@@ -291,7 +335,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             microseconds=(((838*60) + 59)*60 + 59)*1000000
         ))
         self.assertEqual(event.rows[0]["values"]["test2"], datetime.timedelta(
-            microseconds=(((-838*60) + 59)*60 + 59)*1000000
+            microseconds=-(((838*60) + 59)*60 + 59)*1000000
         ))
 
     def test_time2(self):
@@ -306,7 +350,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             microseconds=(((838*60) + 59)*60 + 59)*1000000 + 0
         ))
         self.assertEqual(event.rows[0]["values"]["test2"], datetime.timedelta(
-            microseconds=(((-838*60) + 59)*60 + 59)*1000000 + 0
+            microseconds=-(((838*60) + 59)*60 + 59)*1000000 + 0
         ))
 
     def test_zero_time(self):
@@ -469,6 +513,16 @@ class TestDataType(base.PyMySQLReplicationTestCase):
 
         self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict(data))
 
+    def test_json_large_array(self):
+        "Test json array larger than 64k bytes"
+        if not self.isMySQL57():
+            self.skipTest("Json is only supported in mysql 5.7")
+        create_query = "CREATE TABLE test (id int, value json);"
+        large_array = dict(my_key=[i for i in range(100000)])
+        insert_query = "INSERT INTO test (id, value) VALUES (1, '%s');" % (json.dumps(large_array),)
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict(large_array))
+
     def test_json_large_with_literal(self):
         if not self.isMySQL57():
             self.skipTest("Json is only supported in mysql 5.7")
@@ -609,6 +663,115 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         event = self.create_and_insert_value(create_query, insert_query)
         self.assertMultiLineEqual(event.rows[0]["values"]["test"], string)
 
+    def test_zerofill(self):
+        create_query = "CREATE TABLE test ( \
+            test TINYINT UNSIGNED ZEROFILL DEFAULT NULL, \
+            test2 SMALLINT UNSIGNED ZEROFILL DEFAULT NULL, \
+            test3 MEDIUMINT UNSIGNED ZEROFILL DEFAULT NULL, \
+            test4 INT UNSIGNED ZEROFILL DEFAULT NULL, \
+            test5 BIGINT UNSIGNED ZEROFILL DEFAULT NULL \
+            )"
+        insert_query = "INSERT INTO test (test, test2, test3, test4, test5) VALUES(1, 1, 1, 1, 1)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["test"], '001')
+        self.assertEqual(event.rows[0]["values"]["test2"], '00001')
+        self.assertEqual(event.rows[0]["values"]["test3"], '00000001')
+        self.assertEqual(event.rows[0]["values"]["test4"], '0000000001')
+        self.assertEqual(event.rows[0]["values"]["test5"], '00000000000000000001')
+
+    def test_partition_id(self):
+        if not self.isMySQL80AndMore():
+            self.skipTest("Not supported in this version of MySQL")
+        create_query = "CREATE TABLE test (id INTEGER) \
+            PARTITION BY RANGE (id) ( \
+                PARTITION p0 VALUES LESS THAN (1),   \
+                PARTITION p1 VALUES LESS THAN (2),   \
+                PARTITION p2 VALUES LESS THAN (3),   \
+                PARTITION p3 VALUES LESS THAN (4),   \
+                PARTITION p4 VALUES LESS THAN (5)    \
+            )"
+        insert_query = "INSERT INTO test (id) VALUES(3)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.extra_data_type, 1)
+        self.assertEqual(event.partition_id, 3)
+
+    def test_status_vars(self):
+        """Test parse of status variables in query events
+
+        Majority of status variables available depends on the settings of db.
+        Therefore, this test only tests system variable values independent from settings of db.
+        Note that if you change default db name 'pymysqlreplication_test',
+        event.mts_accessed_db_names MUST be asserted against the changed db name.
+
+        Raises:
+            AssertionError: if status variables not set correctly
+        """
+        create_query = "CREATE TABLE test (id INTEGER)"
+        event = self.create_table(create_query)
+        self.assertEqual(event.catalog_nz_code, b'std')
+        self.assertEqual(event.mts_accessed_db_names, [b'pymysqlreplication_test'])
+
+    def test_null_bitmask(self):
+        """Test parse of null-bitmask in table map events
+
+        Create table with 16 columns with nullability specified by 'bit_mask' variable
+        'bit_mask' variable is asserted against null_bitmask attribute in table map event.
+
+        Raises:
+            AssertionError: if null_bitmask isn't set as specified in 'bit_mask' variable
+        """ 
+
+        # any 2-byte bitmask in little-endian hex bytes format (b'a\x03')
+        ## b'a\x03' = 1101100001(2)
+        bit_mask = b'a\x03'
+
+        # Prepare create_query
+        create_query = "CREATE TABLE test"
+
+        columns = []
+        for i in range(16):
+            # column_definition consists of...
+            ## column name, column type, nullability
+            column_definition = []
+
+            column_name = chr(ord('a') + i)
+            column_definition.append(column_name)
+
+            column_type = "INT"
+            column_definition.append(column_type)
+
+            nullability = "NOT NULL" if not RowsEvent._is_null(bit_mask, i) else ""
+            column_definition.append(nullability)
+
+            columns.append(" ".join(column_definition))
+
+        create_query += f' ({", ".join(columns)})'
+
+        # Prepare insert_query
+        insert_query = "INSERT into test values"
+
+        values = []
+        for i in range(16):
+            values.append('0')
+        
+        insert_query += f' ({",".join(values)})'
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        #QueryEvent for the Create Table
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        #QueryEvent for the BEGIN
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        event = self.stream.fetchone()
+
+        self.assertEqual(event.event_type, TABLE_MAP_EVENT)
+        self.assertEqual(event.null_bitmask, bit_mask)
 
 if __name__ == "__main__":
     unittest.main()

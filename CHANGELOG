@@ -144,3 +144,32 @@
 0.22 20/09/2020
 * Support PyMysql with a version greater than 0.9.3
 * Fix handling of JSON literal values
+
+0.23 25/01/2021
+* Add logic to handle inlined ints in large json documents
+
+0.24 27/06/2021
+* Support PyMySQL 1.0
+
+0.25 21/07/2021
+* Support 'ZEROFILL' attribute for numeric datatypes
+
+0.26 30/08/2021
+* Correct timedelta value for negative MySQL TIME datatype
+* Fix parsing of row events for MySQL8 partitioned table
+* Set PyMySql version minimum to 0.10
+
+0.27 18/10/2021
+* Parse NULL-bitmask in table map event
+* Add support for specifying an end log_pos
+* Parse status variables in query event
+
+0.28 23/01/2022
+* Add support for MariaDB GTID
+
+0.29 08/04/2022
+* Skip db name parsing if mts_accessed_dbs == 254 
+
+0.30 28/04/2022
+* Fix decoding large json arrays
+* Handle null json

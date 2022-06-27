@@ -1,0 +1,45 @@
+name: PyTest
+on: [push, pull_request]
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: 'CPython 3.7', python: '3.7'}
+          - {name: 'CPython 3.8', python: '3.8'}
+          - {name: 'CPython 3.9', python: '3.9'}
+          - {name: 'CPython 3.10', python: '3.10'}
+          - {name: 'Pypy 3.7', python: 'pypy-3.7'}
+          - {name: 'Pypy 3.8', python: 'pypy-3.8'}
+          - {name: 'Pypy 3.9', python: 'pypy-3.9'}
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Run database server in docker
+        run: |
+          docker compose create
+          docker compose start
+          # Wait for the services to accept connections,
+          # TODO: do that smarter, poll connection attempt until it succeeds
+          sleep 30
+
+      - name: Install dependencies
+        run: |
+          pip install .
+          pip install pytest
+
+      - name: Run test suite
+        run: |
+          pytest -k "not test_no_trailing_rotate_event and not test_end_log_pos"

@@ -16,7 +16,7 @@ class Gtid(object):
     intervals [a,b), and represent all transactions x that happened on
     server SID such as
 
-        x <= a < b
+        a <= x < b
 
     The human representation of it, though, is either represented by a
     single transaction number A=a (when only one transaction is covered,

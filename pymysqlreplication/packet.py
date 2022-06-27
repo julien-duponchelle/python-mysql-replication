@@ -2,8 +2,6 @@
 
 import struct
 
-from pymysql.util import byte2int
-
 from pymysqlreplication import constants, event, row_event
 
 # Constants from PyMYSQL source code
@@ -79,10 +77,16 @@ class BinLogPacketWrapper(object):
         constants.WRITE_ROWS_EVENT_V2: row_event.WriteRowsEvent,
         constants.DELETE_ROWS_EVENT_V2: row_event.DeleteRowsEvent,
         constants.TABLE_MAP_EVENT: row_event.TableMapEvent,
+
         #5.6 GTID enabled replication events
         constants.ANONYMOUS_GTID_LOG_EVENT: event.NotImplementedEvent,
-        constants.PREVIOUS_GTIDS_LOG_EVENT: event.NotImplementedEvent
-
+        constants.PREVIOUS_GTIDS_LOG_EVENT: event.NotImplementedEvent,
+        # MariaDB GTID
+        constants.MARIADB_ANNOTATE_ROWS_EVENT: event.NotImplementedEvent,
+        constants.MARIADB_BINLOG_CHECKPOINT_EVENT: event.NotImplementedEvent,
+        constants.MARIADB_GTID_EVENT: event.MariadbGtidEvent,
+        constants.MARIADB_GTID_GTID_LIST_EVENT: event.NotImplementedEvent,
+        constants.MARIADB_START_ENCRYPTION_EVENT: event.NotImplementedEvent
     }
 
     def __init__(self, from_packet, table_map, ctl_connection, use_checksum,
@@ -108,11 +112,11 @@ class BinLogPacketWrapper(object):
         # server_id
         # log_pos
         # flags
-        unpack = struct.unpack('<cIcIIIH', self.packet.read(20))
+        unpack = struct.unpack('<cIBIIIH', self.packet.read(20))
 
         # Header
         self.timestamp = unpack[1]
-        self.event_type = byte2int(unpack[2])
+        self.event_type = unpack[2]
         self.server_id = unpack[3]
         self.event_size = unpack[4]
         # position of the next event
@@ -180,7 +184,7 @@ class BinLogPacketWrapper(object):
 
         From PyMYSQL source code
         """
-        c = byte2int(self.read(1))
+        c = struct.unpack("!B", self.read(1))[0]
         if c == NULL_COLUMN:
             return None
         if c < UNSIGNED_CHAR_COLUMN:
@@ -265,7 +269,7 @@ class BinLogPacketWrapper(object):
         length = 0
         bits_read = 0
         while byte & 0x80 != 0:
-            byte = byte2int(self.read(1))
+            byte = struct.unpack("!B", self.read(1))[0]
             length = length | ((byte & 0x7f) << bits_read)
             bits_read = bits_read + 7
         return self.read(length)
@@ -347,6 +351,9 @@ class BinLogPacketWrapper(object):
 
     def read_binary_json(self, size):
         length = self.read_uint_by_size(size)
+        if length == 0:
+            # handle NULL value
+            return None
         payload = self.read(length)
         self.unread(payload)
         t = self.read_uint8()
@@ -396,9 +403,9 @@ class BinLogPacketWrapper(object):
             elif value == JSONB_LITERAL_FALSE:
                 return False
         elif t == JSONB_TYPE_INT16:
-            return self.read_int16()
+            return self.read_int32() if large else self.read_int16()
         elif t == JSONB_TYPE_UINT16:
-            return self.read_uint16()
+            return self.read_uint32() if large else self.read_uint16()
         elif t == JSONB_TYPE_INT32:
             return self.read_int32()
         elif t == JSONB_TYPE_UINT32:
@@ -465,3 +472,20 @@ class BinLogPacketWrapper(object):
             return self.read_binary_json_type(x[0], length)
 
         return [_read(x) for x in values_type_offset_inline]
+
+    def read_string(self):
+        """Read a 'Length Coded String' from the data buffer.
+
+        Read __data_buffer until NULL character (0 = \0 = \x00)
+
+        Returns:
+            Binary string parsed from __data_buffer
+        """
+        string = b''
+        while True:
+            char = self.read(1)
+            if char == b'\0':
+                break
+            string += char
+
+        return string
