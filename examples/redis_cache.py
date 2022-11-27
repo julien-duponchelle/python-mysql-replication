@@ -28,6 +28,7 @@ def main():
 
     stream = BinLogStreamReader(
         connection_settings=MYSQL_SETTINGS,
+        server_id=3,  # server_id is your slave identifier, it should be unique
         only_events=[DeleteRowsEvent, WriteRowsEvent, UpdateRowsEvent])
 
     for binlogevent in stream:
