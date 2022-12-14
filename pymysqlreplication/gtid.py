@@ -277,7 +277,23 @@ class Gtid(object):
 
 
 class GtidSet(object):
+    """Represents a set of Gtid"""
     def __init__(self, gtid_set):
+        """
+        Construct a GtidSet initial state depends of the nature of `gtid_set` param.
+
+        params:
+          - gtid_set:
+            - None: then the GtidSet start empty
+            - a set of Gtid either as a their textual representation separated by comma
+            - A set or list of gtid
+            - A GTID alone.
+
+        Raises:
+          - ValueError: if `gtid_set` is a string separated with comma, but with malformated Gtid.
+          - Exception: if Gtid interval are either malformated or overlapping
+        """
+
         def _to_gtid(element):
             if isinstance(element, Gtid):
                 return element
@@ -302,6 +318,11 @@ class GtidSet(object):
         self.gtids = new_gtids
 
     def __contains__(self, other):
+        """
+        Raises:
+           - NotImplementedError other is not a GtidSet neither a Gtid,
+            please convert it first to one of them
+        """
         if isinstance(other, GtidSet):
             return all(other_gtid in self.gtids for other_gtid in other.gtids)
         if isinstance(other, Gtid):
@@ -309,6 +330,13 @@ class GtidSet(object):
         raise NotImplementedError
 
     def __add__(self, other):
+        """
+        Merge current instance with an other GtidSet or with a Gtid alone.
+
+        Raises:
+            - NotImplementedError other is not a GtidSet neither a Gtid,
+            please convert it first to one of them
+        """
         if isinstance(other, Gtid):
             new = GtidSet(self.gtids)
             new.merge_gtid(other)
@@ -323,6 +351,9 @@ class GtidSet(object):
         raise NotImplementedError
 
     def __str__(self):
+        """
+        Returns a comma separated string of gtids.
+        """
         return ','.join(str(x) for x in self.gtids)
 
     def __repr__(self):
