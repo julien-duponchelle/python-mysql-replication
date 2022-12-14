@@ -42,16 +42,19 @@ class Gtid(object):
 
         SID:1-74
 
-    Adding an already present transaction number (one that overlaps) will
-    raise an exception.
-
-    Adding a Gtid with a different SID will raise an exception.
+    Raises:
+        ValueError: If construction parsing from string fails
+        Exception: Adding an already present transaction number (one that overlaps).
+        Exception: Adding a Gtid with a different SID.
     """
     @staticmethod
     def parse_interval(interval):
         """
         We parse a human-generated string here. So our end value b
         is incremented to conform to the internal representation format.
+
+        Raises:
+            - ValueError if GTID format is incorrect
         """
         m = re.search('^([0-9]+)(?:-([0-9]+))?$', interval)
         if not m:
@@ -62,6 +65,11 @@ class Gtid(object):
 
     @staticmethod
     def parse(gtid):
+        """Parse a GTID from mysql textual format.
+
+        Raises:
+            - ValueError: if GTID format is incorrect.
+        """
         m = re.search('^([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})'
                       '((?::[0-9-]+)+)$', gtid)
         if not m:
@@ -79,6 +87,9 @@ class Gtid(object):
         """
         Use the internal representation format and add it
         to our intervals, merging if required.
+
+        Raises:
+            Exception: if Malformated interval or Overlapping interval
         """
         new = []
 
@@ -103,7 +114,9 @@ class Gtid(object):
         self.intervals = sorted(new + [itvl])
 
     def __sub_interval(self, itvl):
-        """Using the internal representation, remove an interval"""
+        """Using the internal representation, remove an interval
+
+        Raises: Exception if itvl malformated"""
         new = []
 
         if itvl[0] > itvl[1]:
@@ -144,8 +157,10 @@ class Gtid(object):
             self.__add_interval(itvl)
 
     def __add__(self, other):
-        """Include the transactions of this gtid. Raise if the
-        attempted merge has different SID"""
+        """Include the transactions of this gtid.
+
+        Raises:
+           Exception: if the attempted merge has different SID"""
         if self.sid != other.sid:
             raise Exception('Attempt to merge different SID'
                             '%s != %s' % (self.sid, other.sid))
