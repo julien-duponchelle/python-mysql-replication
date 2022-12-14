@@ -42,16 +42,19 @@ class Gtid(object):
 
         SID:1-74
 
-    Adding an already present transaction number (one that overlaps) will
-    raise an exception.
-
-    Adding a Gtid with a different SID will raise an exception.
+    Raises:
+        ValueError: If construction parsing from string fails
+        Exception: Adding an already present transaction number (one that overlaps).
+        Exception: Adding a Gtid with a different SID.
     """
     @staticmethod
     def parse_interval(interval):
         """
         We parse a human-generated string here. So our end value b
         is incremented to conform to the internal representation format.
+
+        Raises:
+            - ValueError if GTID format is incorrect
         """
         m = re.search('^([0-9]+)(?:-([0-9]+))?$', interval)
         if not m:
@@ -62,6 +65,11 @@ class Gtid(object):
 
     @staticmethod
     def parse(gtid):
+        """Parse a GTID from mysql textual format.
+
+        Raises:
+            - ValueError: if GTID format is incorrect.
+        """
         m = re.search('^([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})'
                       '((?::[0-9-]+)+)$', gtid)
         if not m:
@@ -79,6 +87,9 @@ class Gtid(object):
         """
         Use the internal representation format and add it
         to our intervals, merging if required.
+
+        Raises:
+            Exception: if Malformated interval or Overlapping interval
         """
         new = []
 
@@ -103,7 +114,9 @@ class Gtid(object):
         self.intervals = sorted(new + [itvl])
 
     def __sub_interval(self, itvl):
-        """Using the internal representation, remove an interval"""
+        """Using the internal representation, remove an interval
+
+        Raises: Exception if itvl malformated"""
         new = []
 
         if itvl[0] > itvl[1]:
@@ -144,8 +157,10 @@ class Gtid(object):
             self.__add_interval(itvl)
 
     def __add__(self, other):
-        """Include the transactions of this gtid. Raise if the
-        attempted merge has different SID"""
+        """Include the transactions of this gtid.
+
+        Raises:
+           Exception: if the attempted merge has different SID"""
         if self.sid != other.sid:
             raise Exception('Attempt to merge different SID'
                             '%s != %s' % (self.sid, other.sid))
@@ -262,7 +277,23 @@ class Gtid(object):
 
 
 class GtidSet(object):
+    """Represents a set of Gtid"""
     def __init__(self, gtid_set):
+        """
+        Construct a GtidSet initial state depends of the nature of `gtid_set` param.
+
+        params:
+          - gtid_set:
+            - None: then the GtidSet start empty
+            - a set of Gtid either as a their textual representation separated by comma
+            - A set or list of gtid
+            - A GTID alone.
+
+        Raises:
+          - ValueError: if `gtid_set` is a string separated with comma, but with malformated Gtid.
+          - Exception: if Gtid interval are either malformated or overlapping
+        """
+
         def _to_gtid(element):
             if isinstance(element, Gtid):
                 return element
@@ -287,6 +318,11 @@ class GtidSet(object):
         self.gtids = new_gtids
 
     def __contains__(self, other):
+        """
+        Raises:
+           - NotImplementedError other is not a GtidSet neither a Gtid,
+            please convert it first to one of them
+        """
         if isinstance(other, GtidSet):
             return all(other_gtid in self.gtids for other_gtid in other.gtids)
         if isinstance(other, Gtid):
@@ -294,6 +330,13 @@ class GtidSet(object):
         raise NotImplementedError
 
     def __add__(self, other):
+        """
+        Merge current instance with an other GtidSet or with a Gtid alone.
+
+        Raises:
+            - NotImplementedError other is not a GtidSet neither a Gtid,
+            please convert it first to one of them
+        """
         if isinstance(other, Gtid):
             new = GtidSet(self.gtids)
             new.merge_gtid(other)
@@ -308,6 +351,9 @@ class GtidSet(object):
         raise NotImplementedError
 
     def __str__(self):
+        """
+        Returns a comma separated string of gtids.
+        """
         return ','.join(str(x) for x in self.gtids)
 
     def __repr__(self):
