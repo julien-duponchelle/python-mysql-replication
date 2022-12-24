@@ -281,11 +281,6 @@ class Gtid(object):
             else '%d' % x
             for x in intervals])))
 
-    def __cmp__(self, other):
-        if other.sid != self.sid:
-            return cmp(self.sid, other.sid)
-        return cmp(self.intervals, other.intervals)
-
     def __eq__(self, other):
         if other.sid != self.sid:
             return False
