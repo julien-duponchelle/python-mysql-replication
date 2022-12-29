@@ -3,6 +3,7 @@
 import re
 import struct
 import binascii
+from copy import deepcopy
 from io import BytesIO
 
 def overlap(i1, i2):
@@ -165,7 +166,7 @@ class Gtid(object):
             raise Exception('Attempt to merge different SID'
                             '%s != %s' % (self.sid, other.sid))
 
-        result = Gtid(str(self))
+        result = deepcopy(self)
 
         for itvl in other.intervals:
             result.__add_interval(itvl)
@@ -175,7 +176,7 @@ class Gtid(object):
     def __sub__(self, other):
         """Remove intervals. Do not raise, if different SID simply
         ignore"""
-        result = Gtid(str(self))
+        result = deepcopy(self)
         if self.sid != other.sid:
             return result
 
