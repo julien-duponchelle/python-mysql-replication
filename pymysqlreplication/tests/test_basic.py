@@ -678,6 +678,41 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.resetBinLog()
             assert had_error
 
+    def test_ignore_decode_errors(self):
+        problematic_unicode_string = b'[{"type":"paragraph","text":"\xed\xa0\xbd \xed\xb1\x8d Some string"}]'
+        self.stream.close()
+        self.execute("CREATE TABLE test (id INTEGER(11), data VARCHAR(50))")
+        self.execute("INSERT INTO test VALUES (1, 'A value')")
+        self.execute("COMMIT")
+        self.execute("ALTER TABLE test MODIFY COLUMN data VARCHAR(50) CHARACTER SET utf8mb4")
+        self.execute(f"INSERT INTO test VALUES (2, {problematic_unicode_string})")
+        self.execute("COMMIT")
+
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(WriteRowsEvent,),
+            ignore_decode_errors=False
+        )
+        try:
+            self.stream.fetchone()
+            self.stream.fetchone()
+        except UnicodeDecodeError as e:
+            self.fail("raised unexpected exception: {exception}".format(exception=e))
+        finally:
+            self.resetBinLog()
+        
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(WriteRowsEvent,),
+            ignore_decode_errors=True
+        )
+        self.stream.fetchone()
+        self.stream.fetchone()
+
+        self.resetBinLog()
+    
     def test_drop_column(self):
         self.stream.close()
         self.execute("CREATE TABLE test_drop_column (id INTEGER(11), data VARCHAR(50))")

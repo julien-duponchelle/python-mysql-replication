@@ -13,7 +13,8 @@ class BinLogEvent(object):
                  only_schemas=None,
                  ignored_schemas=None,
                  freeze_schema=False,
-                 fail_on_table_metadata_unavailable=False):
+                 fail_on_table_metadata_unavailable=False,
+                 ignore_decode_errors=False):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
@@ -21,6 +22,7 @@ class BinLogEvent(object):
         self.event_size = event_size
         self._ctl_connection = ctl_connection
         self._fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
+        self._ignore_decode_errors = ignore_decode_errors
         # The event have been fully processed, if processed is false
         # the event will be skipped
         self._processed = True
