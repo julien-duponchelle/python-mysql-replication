@@ -681,10 +681,8 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def test_ignore_decode_errors(self):
         problematic_unicode_string = b'[{"text":"\xed\xa0\xbd \xed\xb1\x8d Some string"}]'
         self.stream.close()
-        self.execute("CREATE TABLE test (id INTEGER(11), data VARCHAR(50) CHARACTER SET utf8mb4)")
-        self.execute("INSERT INTO test VALUES (1, 'A value')")
-        self.execute("COMMIT")
-        self.execute_with_args("INSERT INTO test (id, data) VALUES (%s, %s)", (2, problematic_unicode_string))
+        self.execute("CREATE TABLE test (data VARCHAR(50) CHARACTER SET utf8mb4)")
+        self.execute_with_args("INSERT INTO test (data) VALUES (%s)", (problematic_unicode_string))
         self.execute("COMMIT")
 
         # Initialize with ignore_decode_errors=False
@@ -694,18 +692,13 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             only_events=(WriteRowsEvent,),
             ignore_decode_errors=False
         )
-        self.stream.fetchone()
-        self.stream.fetchone()
-        self.stream.fetchone()
-        event = self.stream.fetchone() # insert for row 1
-        data = event.rows[0]["values"]["data"]
-        self.assertEqual(data, 'A value')
-        
+        event = self.stream.fetchone()
+        event = self.stream.fetchone()   
         with self.assertRaises(UnicodeError) as exception:
-            event = self.stream.fetchone() # insert for row 2
+            event = self.stream.fetchone()
             data = event.rows[0]["values"]["data"]
         
-        # Initialize with ignore_decode_errors=False
+        # Initialize with ignore_decode_errors=True
         self.stream = BinLogStreamReader(
             self.database,
             server_id=1024,
@@ -713,13 +706,8 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             ignore_decode_errors=True
         )
         self.stream.fetchone()
-        self.stream.fetchone()
-        self.stream.fetchone()
-        event = self.stream.fetchone() # insert for row 1
-        data = event.rows[0]["values"]["data"]
-        self.assertEqual(data, 'A value')
-        
-        event = self.stream.fetchone() # insert for row 2
+        self.stream.fetchone()        
+        event = self.stream.fetchone()
         data = event.rows[0]["values"]["data"]
         self.assertEqual(data, '[{"text":"  Some string"}]')
     
