@@ -85,6 +85,11 @@ class PyMySQLReplicationTestCase(base):
         c = self.conn_control.cursor()
         c.execute(query)
         return c
+    
+    def execute_with_args(self, query, args):
+        c = self.conn_control.cursor()
+        c.execute(query, args)
+        return c
 
     def resetBinLog(self):
         self.execute("RESET MASTER")

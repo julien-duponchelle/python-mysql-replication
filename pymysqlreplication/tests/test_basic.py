@@ -685,7 +685,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.execute("INSERT INTO test VALUES (1, 'A value')")
         self.execute("COMMIT")
         self.execute("ALTER TABLE test MODIFY COLUMN data VARCHAR(50) CHARACTER SET utf8mb4")
-        self.execute(f"INSERT INTO test VALUES (2, '{problematic_unicode_string}')")
+        self.execute_with_args("INSERT INTO test (id, data) VALUES (%s, %s)", (2, problematic_unicode_string))
         self.execute("COMMIT")
 
         self.stream = BinLogStreamReader(
