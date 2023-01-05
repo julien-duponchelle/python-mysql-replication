@@ -681,27 +681,31 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def test_ignore_decode_errors(self):
         problematic_unicode_string = b'[{"text":"\xed\xa0\xbd \xed\xb1\x8d Some string"}]'
         self.stream.close()
-        self.execute("CREATE TABLE test (id INTEGER(11), data VARCHAR(50))")
+        self.execute("CREATE TABLE test (id INTEGER(11), data VARCHAR(50) CHARACTER SET utf8mb4)")
         self.execute("INSERT INTO test VALUES (1, 'A value')")
         self.execute("COMMIT")
-        self.execute("ALTER TABLE test MODIFY COLUMN data VARCHAR(50) CHARACTER SET utf8mb4")
         self.execute_with_args("INSERT INTO test (id, data) VALUES (%s, %s)", (2, problematic_unicode_string))
         self.execute("COMMIT")
 
+        # Initialize with ignore_decode_errors=False
         self.stream = BinLogStreamReader(
             self.database,
             server_id=1024,
             only_events=(WriteRowsEvent,),
             ignore_decode_errors=False
         )
-        try:
-            self.stream.fetchone()
-            self.stream.fetchone()
-        except UnicodeDecodeError as e:
-            self.fail("raised unexpected exception: {exception}".format(exception=e))
-        finally:
-            self.resetBinLog()
+        self.stream.fetchone()
+        self.stream.fetchone()
+        self.stream.fetchone()
+        event = self.stream.fetchone() # insert for row 1
+        data = event.rows[0]["values"]["data"]
+        self.assertEqual(data, 'A value')
         
+        with self.assertRaises(UnicodeError) as exception:
+            event = self.stream.fetchone() # insert for row 2
+            data = event.rows[0]["values"]["data"]
+        
+        # Initialize with ignore_decode_errors=False
         self.stream = BinLogStreamReader(
             self.database,
             server_id=1024,
@@ -710,8 +714,14 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         )
         self.stream.fetchone()
         self.stream.fetchone()
-
-        self.resetBinLog()
+        self.stream.fetchone()
+        event = self.stream.fetchone() # insert for row 1
+        data = event.rows[0]["values"]["data"]
+        self.assertEqual(data, 'A value')
+        
+        event = self.stream.fetchone() # insert for row 2
+        data = event.rows[0]["values"]["data"]
+        self.assertEqual(data, '[{"text":"  Some string"}]')
     
     def test_drop_column(self):
         self.stream.close()
