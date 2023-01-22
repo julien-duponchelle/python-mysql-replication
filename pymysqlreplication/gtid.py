@@ -140,6 +140,12 @@ class Gtid(object):
         self.intervals = new
 
     def __contains__(self, other):
+        """Test if other is contained within self.
+        First we compare sid they must be equals.
+
+        Then we search if intervals from other are contained within
+        self intervals.
+        """
         if other.sid != self.sid:
             return False
 
@@ -205,6 +211,31 @@ class Gtid(object):
                 len(self.intervals))
 
     def encode(self):
+        """Encode a Gtid in binary
+        Bytes are in **little endian**.
+
+        Format:
+
+        - sid will be uncoded as hex-binary without the dashes as a [u8; 16]
+        - size of the interval list as a u64
+        - all the interval as a pair: (start: u64, end: u64).
+
+        ## Diagram
+
+        ```txt
+        Alligned on u64 bit.
+        +-+-+-+-+-+-+-+-+-+-+
+        | sid [16;u8]       |
+        |                   |
+        +-+-+-+-+-+-+-+-+-+-+
+        | intervals_len u64 |
+        +-+-+-+-+-+-+-+-+-+-+
+        |start u64             <-+
+        - - - - - - - - - - -    + Repeated
+        |stop u64              <-+  interval_len times
+        - - - - - - - - - - -
+        ```
+        """
         buffer = b''
         # sid
         buffer += binascii.unhexlify(self.sid.replace('-', ''))
@@ -221,6 +252,10 @@ class Gtid(object):
 
     @classmethod
     def decode(cls, payload):
+        """Decode from binary a Gtid
+
+        :param BytesIO payload to decode
+        """
         assert isinstance(payload, BytesIO), \
             'payload is expected to be a BytesIO'
         sid = b''
@@ -308,6 +343,7 @@ class GtidSet(object):
             self.gtids = [Gtid(x.strip(' \n')) for x in gtid_set.split(',')]
 
     def merge_gtid(self, gtid):
+        """Insert a Gtid in current GtidSet."""
         new_gtids = []
         for existing in self.gtids:
             if existing.sid == gtid.sid:
@@ -320,6 +356,8 @@ class GtidSet(object):
 
     def __contains__(self, other):
         """
+        Test if self contains other, could be a GtidSet or a Gtid.
+
         Raises:
            - NotImplementedError other is not a GtidSet neither a Gtid,
             please convert it first to one of them
@@ -366,6 +404,22 @@ class GtidSet(object):
                 sum(x.encoded_length for x in self.gtids))
 
     def encoded(self):
+        """Encode a GtidSet in binary
+        Bytes are in **little endian**.
+
+        - `n_sid`: u64 is the number of Gtid to read
+        - `Gtid`: `n_sid` * `Gtid_encoded_size` times.
+          See`Gtid.encode` documentation for details.
+
+        ```txt
+        Alligned on u64 bit.
+        +-+-+-+-+-+-+-+-+-+-+
+        | n_gtid u64        |
+        +-+-+-+-+-+-+-+-+-+-+
+        | Gtid              | - Repeated n_gtid times
+        - - - - - - - - - - -
+        ```
+        """
         return b'' + (struct.pack('<Q', len(self.gtids)) +
                       b''.join(x.encode() for x in self.gtids))
 
@@ -373,6 +427,10 @@ class GtidSet(object):
 
     @classmethod
     def decode(cls, payload):
+        """Decode a GtidSet from binary.
+
+        :param BytesIO payload to decode
+        """
         assert isinstance(payload, BytesIO), \
             'payload is expected to be a BytesIO'
         (n_sid,) = struct.unpack('<Q', payload.read(8))
