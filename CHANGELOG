@@ -173,3 +173,6 @@
 0.30 28/04/2022
 * Fix decoding large json arrays
 * Handle null json
+
+0.31 12/03/2023
+* Fix parse error for query_events with MariaDB
