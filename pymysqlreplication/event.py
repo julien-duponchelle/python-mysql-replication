@@ -4,6 +4,7 @@ import binascii
 import struct
 import datetime
 from pymysqlreplication.constants.STATUS_VAR_KEY import *
+from pymysqlreplication.exceptions import StatusVariableMismatch
 
 
 class BinLogEvent(object):
@@ -291,6 +292,12 @@ class QueryEvent(BinLogEvent):
             self.sql_require_primary_key = self.packet.read_uint8()
         elif key == Q_DEFAULT_TABLE_ENCRYPTION:       # 0x14
             self.default_table_encryption = self.packet.read_uint8()
+        elif key == Q_HRNOW:
+            self.hrnow = self.packet.read_uint24()
+        elif key == Q_XID:
+            self.xid = self.packet.read_uint64()
+        else:
+            raise StatusVariableMismatch
 
 class BeginLoadQueryEvent(BinLogEvent):
     """

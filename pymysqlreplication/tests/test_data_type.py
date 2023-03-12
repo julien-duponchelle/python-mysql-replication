@@ -773,5 +773,31 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.event_type, TABLE_MAP_EVENT)
         self.assertEqual(event.null_bitmask, bit_mask)
 
+    def test_mariadb_only_status_vars(self):
+        """Test parse of mariadb exclusive status variables (a field in query event)
+
+        A query event for mariadb must be parsed successfully
+        since mariadb exclusive status variables are now taken to account
+        (Q_HRNOW, Q_XID)
+        Test if was parse successful by asserting the last field of the event,
+        'SQL statement'.
+
+        Raises:
+            StatusVariableMismatch: This is the case where new status variables are added to
+            mysql server. Same set of status variables must be added to the library as well.
+        """
+        if not self.isMariaDB():
+            return
+
+        create_query = "CREATE TABLE test (id INTEGER)"
+        event = self.create_table(create_query)
+
+        # skip dummy events with empty schema
+        while event.schema == b'':
+            event = self.stream.fetchone()
+
+        self.assertEqual(event.query, create_query)
+
+
 if __name__ == "__main__":
     unittest.main()
