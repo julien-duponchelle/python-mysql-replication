@@ -11,7 +11,7 @@ else:
 
 from pymysqlreplication.tests import base
 from pymysqlreplication import BinLogStreamReader
-from pymysqlreplication.gtid import GtidSet
+from pymysqlreplication.gtid import GtidSet, Gtid
 from pymysqlreplication.event import *
 from pymysqlreplication.exceptions import TableMetadataUnavailableError
 from pymysqlreplication.constants.BINLOG import *
@@ -25,9 +25,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         return [GtidEvent]
 
     def test_allowed_event_list(self):
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 14)
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 13)
-        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 13)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 15)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 14)
+        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 14)
         self.assertEqual(len(self.stream._allowed_event_list([RotateEvent], None, False)), 1)
 
     def test_read_query_event(self):
@@ -678,6 +678,39 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.resetBinLog()
             assert had_error
 
+    def test_ignore_decode_errors(self):
+        problematic_unicode_string = b'[{"text":"\xed\xa0\xbd \xed\xb1\x8d Some string"}]'
+        self.stream.close()
+        self.execute("CREATE TABLE test (data VARCHAR(50) CHARACTER SET utf8mb4)")
+        self.execute_with_args("INSERT INTO test (data) VALUES (%s)", (problematic_unicode_string))
+        self.execute("COMMIT")
+
+        # Initialize with ignore_decode_errors=False
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(WriteRowsEvent,),
+            ignore_decode_errors=False
+        )
+        event = self.stream.fetchone()
+        event = self.stream.fetchone()   
+        with self.assertRaises(UnicodeError) as exception:
+            event = self.stream.fetchone()
+            data = event.rows[0]["values"]["data"]
+        
+        # Initialize with ignore_decode_errors=True
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(WriteRowsEvent,),
+            ignore_decode_errors=True
+        )
+        self.stream.fetchone()
+        self.stream.fetchone()        
+        event = self.stream.fetchone()
+        data = event.rows[0]["values"]["data"]
+        self.assertEqual(data, '[{"text":"  Some string"}]')
+    
     def test_drop_column(self):
         self.stream.close()
         self.execute("CREATE TABLE test_drop_column (id INTEGER(11), data VARCHAR(50))")
@@ -901,6 +934,74 @@ class TestGtidRepresentation(unittest.TestCase):
         parsedset = myset.decode(io.BytesIO(payload))
 
         self.assertEqual(str(myset), str(parsedset))
+
+class GtidTests(unittest.TestCase):
+    def test_ordering(self):
+        gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+        other = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:5-10")
+        assert gtid.__lt__(other)
+        assert gtid.__le__(other)
+        assert other.__gt__(gtid)
+        assert other.__ge__(gtid)
+        gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+        other = Gtid("deadbeef-20d3-11e5-a393-4a63946f7eac:5-10")
+        assert gtid.__lt__(other)
+        assert gtid.__le__(other)
+        assert other.__gt__(gtid)
+        assert other.__ge__(gtid)
+
+    def test_encode_decode(self):
+        gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+        payload = gtid.encode()
+        decoded = Gtid.decode(io.BytesIO(payload))
+        assert str(gtid) == str(decoded)
+
+    def test_add_interval(self):
+        gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:5-56")
+        end = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:57-58")
+        assert (gtid + end).intervals == [(5, 59)]
+
+        start = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-2")
+        assert (gtid + start).intervals == [(1, 3), (5, 57)]
+
+        sparse = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-4:7-10")
+        within = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:5-6")
+        assert (sparse + within).intervals == [(1, 11)]
+
+    def test_interval_non_merging(self):
+        gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+        other = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:58-59")
+        gtid = gtid + other
+        self.assertEqual(str(gtid), "57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56:58-59")
+
+    def test_merging(self):
+        gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+        other = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:57-59")
+        gtid = gtid + other
+        self.assertEqual(str(gtid), "57b70f4e-20d3-11e5-a393-4a63946f7eac:1-59")
+
+    def test_sub_interval(self):
+        gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+        start = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-5")
+        assert (gtid - start).intervals == [(6, 57)]
+
+        end = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:55-56")
+        assert (gtid - end).intervals == [(1, 55)]
+
+        within = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:25-26")
+        assert (gtid - within).intervals == [(1, 25), (27, 57)]
+
+    def test_parsing(self):
+        with self.assertRaises(ValueError) as exc:
+            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-5 57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+            gtid = Gtid("NNNNNNNN-20d3-11e5-a393-4a63946f7eac:1-5")
+            gtid = Gtid("-20d3-11e5-a393-4a63946f7eac:1-5")
+            gtid = Gtid("-20d3-11e5-a393-4a63946f7eac:1-")
+            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:A-1")
+            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:-1")
+            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-:1")
+            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
+
 
 if __name__ == "__main__":
     import unittest

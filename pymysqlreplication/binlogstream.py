@@ -140,7 +140,8 @@ class BinLogStreamReader(object):
                  pymysql_wrapper=None,
                  fail_on_table_metadata_unavailable=False,
                  slave_heartbeat=None,
-                 is_mariadb=False):
+                 is_mariadb=False,
+                 ignore_decode_errors=False):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -177,6 +178,8 @@ class BinLogStreamReader(object):
                              for semantics
             is_mariadb: Flag to indicate it's a MariaDB server, used with auto_position
                     to point to Mariadb specific GTID.
+            ignore_decode_errors: If true, any decode errors encountered 
+                                  when reading column data will be ignored.
         """
 
         self.__connection_settings = connection_settings
@@ -198,6 +201,7 @@ class BinLogStreamReader(object):
         self.__allowed_events = self._allowed_event_list(
             only_events, ignored_events, filter_non_implemented_events)
         self.__fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
+        self.__ignore_decode_errors = ignore_decode_errors
 
         # We can't filter on packet level TABLE_MAP and rotate event because
         # we need them for handling other operations
@@ -502,7 +506,8 @@ class BinLogStreamReader(object):
                                                self.__only_schemas,
                                                self.__ignored_schemas,
                                                self.__freeze_schema,
-                                               self.__fail_on_table_metadata_unavailable)
+                                               self.__fail_on_table_metadata_unavailable,
+                                               self.__ignore_decode_errors)
 
             if binlog_event.event_type == ROTATE_EVENT:
                 self.log_pos = binlog_event.event.position

@@ -163,3 +163,16 @@
 * Parse NULL-bitmask in table map event
 * Add support for specifying an end log_pos
 * Parse status variables in query event
+
+0.28 23/01/2022
+* Add support for MariaDB GTID
+
+0.29 08/04/2022
+* Skip db name parsing if mts_accessed_dbs == 254 
+
+0.30 28/04/2022
+* Fix decoding large json arrays
+* Handle null json
+
+0.31 12/03/2023
+* Fix parse error for query_events with MariaDB

@@ -4,6 +4,7 @@ import binascii
 import struct
 import datetime
 from pymysqlreplication.constants.STATUS_VAR_KEY import *
+from pymysqlreplication.exceptions import StatusVariableMismatch
 
 
 class BinLogEvent(object):
@@ -13,7 +14,8 @@ class BinLogEvent(object):
                  only_schemas=None,
                  ignored_schemas=None,
                  freeze_schema=False,
-                 fail_on_table_metadata_unavailable=False):
+                 fail_on_table_metadata_unavailable=False,
+                 ignore_decode_errors=False):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
@@ -21,6 +23,7 @@ class BinLogEvent(object):
         self.event_size = event_size
         self._ctl_connection = ctl_connection
         self._fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
+        self._ignore_decode_errors = ignore_decode_errors
         # The event have been fully processed, if processed is false
         # the event will be skipped
         self._processed = True
@@ -257,6 +260,17 @@ class QueryEvent(BinLogEvent):
                 self.host = self.packet.read(host_len)
         elif key == Q_UPDATED_DB_NAMES:               # 0x0C
             mts_accessed_dbs = self.packet.read_uint8()
+            """
+            mts_accessed_dbs < 254:
+                `mts_accessed_dbs` is equal to the number of dbs
+                acessed by the query event.
+            mts_accessed_dbs == 254:
+                This is the case where the number of dbs accessed
+                is 1 and the name of the only db is ""
+                Since no further parsing required(empty name), return.
+            """
+            if mts_accessed_dbs == 254:
+                return
             dbs = []
             for i in range(mts_accessed_dbs):
                 db = self.packet.read_string()
@@ -278,6 +292,12 @@ class QueryEvent(BinLogEvent):
             self.sql_require_primary_key = self.packet.read_uint8()
         elif key == Q_DEFAULT_TABLE_ENCRYPTION:       # 0x14
             self.default_table_encryption = self.packet.read_uint8()
+        elif key == Q_HRNOW:
+            self.hrnow = self.packet.read_uint24()
+        elif key == Q_XID:
+            self.xid = self.packet.read_uint64()
+        else:
+            raise StatusVariableMismatch
 
 class BeginLoadQueryEvent(BinLogEvent):
     """

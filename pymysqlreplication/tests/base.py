@@ -43,6 +43,7 @@ class PyMySQLReplicationTestCase(base):
         self.stream = None
         self.resetBinLog()
         self.isMySQL56AndMore()
+        self.__is_mariaDB = None
 
     def getMySQLVersion(self):
         """Return the MySQL version of the server
@@ -64,6 +65,11 @@ class PyMySQLReplicationTestCase(base):
         version = float(self.getMySQLVersion().rsplit('.', 1)[0])
         return version >= 8.0
 
+    def isMariaDB(self):
+        if self.__is_mariaDB is None:
+            self.__is_mariaDB = "MariaDB" in self.execute("SELECT VERSION()").fetchone()
+        return self.__is_mariaDB
+
     @property
     def supportsGTID(self):
         if not self.isMySQL56AndMore():
@@ -84,6 +90,11 @@ class PyMySQLReplicationTestCase(base):
     def execute(self, query):
         c = self.conn_control.cursor()
         c.execute(query)
+        return c
+    
+    def execute_with_args(self, query, args):
+        c = self.conn_control.cursor()
+        c.execute(query, args)
         return c
 
     def resetBinLog(self):

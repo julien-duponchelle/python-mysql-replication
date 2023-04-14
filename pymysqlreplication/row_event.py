@@ -85,7 +85,8 @@ class RowsEvent(BinLogEvent):
             if self._fail_on_table_metadata_unavailable:
                 raise TableMetadataUnavailableError(self.table)
 
-    def __is_null(self, null_bitmap, position):
+    @staticmethod
+    def _is_null(null_bitmap, position):
         bit = null_bitmap[int(position / 8)]
         if type(bit) is str:
             bit = ord(bit)
@@ -113,7 +114,7 @@ class RowsEvent(BinLogEvent):
                 values[name] = None
                 continue
 
-            if self.__is_null(null_bitmap, nullBitmapIndex):
+            if self._is_null(null_bitmap, nullBitmapIndex):
                 values[name] = None
             elif column.type == FIELD_TYPE.TINY:
                 if unsigned:
@@ -246,7 +247,8 @@ class RowsEvent(BinLogEvent):
         string = self.packet.read_length_coded_pascal_string(size)
         if column.character_set_name is not None:
             encoding = self.charset_to_encoding(column.character_set_name)
-            string = string.decode(encoding)
+            decode_errors = "ignore" if self._ignore_decode_errors else "strict"
+            string = string.decode(encoding, decode_errors)
         return string
 
     def __read_bit(self, column):
@@ -649,7 +651,7 @@ class TableMapEvent(BinLogEvent):
                                self.table, self.columns)
 
         # ith column is nullable if (i - 1)th bit is set to True, not nullable otherwise
-        ## Refer to definition of and call to row.event.__is_null() to interpret bitmap corresponding to columns
+        ## Refer to definition of and call to row.event._is_null() to interpret bitmap corresponding to columns
         self.null_bitmask = self.packet.read((self.column_count + 7) / 8)
 
     def get_table(self):

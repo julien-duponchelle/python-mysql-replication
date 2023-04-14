@@ -96,7 +96,8 @@ class BinLogPacketWrapper(object):
                  only_schemas,
                  ignored_schemas,
                  freeze_schema,
-                 fail_on_table_metadata_unavailable):
+                 fail_on_table_metadata_unavailable,
+                 ignore_decode_errors):
         # -1 because we ignore the ok byte
         self.read_bytes = 0
         # Used when we want to override a value in the data buffer
@@ -140,7 +141,8 @@ class BinLogPacketWrapper(object):
                                  only_schemas=only_schemas,
                                  ignored_schemas=ignored_schemas,
                                  freeze_schema=freeze_schema,
-                                 fail_on_table_metadata_unavailable=fail_on_table_metadata_unavailable)
+                                 fail_on_table_metadata_unavailable=fail_on_table_metadata_unavailable,
+                                 ignore_decode_errors=ignore_decode_errors)
         if self.event._processed == False:
             self.event = None
 
@@ -349,6 +351,9 @@ class BinLogPacketWrapper(object):
 
     def read_binary_json(self, size):
         length = self.read_uint_by_size(size)
+        if length == 0:
+            # handle NULL value
+            return None
         payload = self.read(length)
         self.unread(payload)
         t = self.read_uint8()
@@ -402,9 +407,9 @@ class BinLogPacketWrapper(object):
         elif t == JSONB_TYPE_UINT16:
             return self.read_uint32() if large else self.read_uint16()
         elif t == JSONB_TYPE_INT32:
-            return self.read_int64() if large else self.read_int32()
+            return self.read_int32()
         elif t == JSONB_TYPE_UINT32:
-            return self.read_uint64() if large else self.read_uint32()
+            return self.read_uint32()
 
         raise ValueError('Json type %d is not handled' % t)
 

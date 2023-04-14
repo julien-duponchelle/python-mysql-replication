@@ -3,6 +3,7 @@
 import re
 import struct
 import binascii
+from copy import deepcopy
 from io import BytesIO
 
 def overlap(i1, i2):
@@ -42,16 +43,19 @@ class Gtid(object):
 
         SID:1-74
 
-    Adding an already present transaction number (one that overlaps) will
-    raise an exception.
-
-    Adding a Gtid with a different SID will raise an exception.
+    Raises:
+        ValueError: If construction parsing from string fails
+        Exception: Adding an already present transaction number (one that overlaps).
+        Exception: Adding a Gtid with a different SID.
     """
     @staticmethod
     def parse_interval(interval):
         """
         We parse a human-generated string here. So our end value b
         is incremented to conform to the internal representation format.
+
+        Raises:
+            - ValueError if GTID format is incorrect
         """
         m = re.search('^([0-9]+)(?:-([0-9]+))?$', interval)
         if not m:
@@ -62,6 +66,11 @@ class Gtid(object):
 
     @staticmethod
     def parse(gtid):
+        """Parse a GTID from mysql textual format.
+
+        Raises:
+            - ValueError: if GTID format is incorrect.
+        """
         m = re.search('^([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})'
                       '((?::[0-9-]+)+)$', gtid)
         if not m:
@@ -79,6 +88,9 @@ class Gtid(object):
         """
         Use the internal representation format and add it
         to our intervals, merging if required.
+
+        Raises:
+            Exception: if Malformated interval or Overlapping interval
         """
         new = []
 
@@ -103,7 +115,9 @@ class Gtid(object):
         self.intervals = sorted(new + [itvl])
 
     def __sub_interval(self, itvl):
-        """Using the internal representation, remove an interval"""
+        """Using the internal representation, remove an interval
+
+        Raises: Exception if itvl malformated"""
         new = []
 
         if itvl[0] > itvl[1]:
@@ -126,6 +140,12 @@ class Gtid(object):
         self.intervals = new
 
     def __contains__(self, other):
+        """Test if other is contained within self.
+        First we compare sid they must be equals.
+
+        Then we search if intervals from other are contained within
+        self intervals.
+        """
         if other.sid != self.sid:
             return False
 
@@ -144,13 +164,15 @@ class Gtid(object):
             self.__add_interval(itvl)
 
     def __add__(self, other):
-        """Include the transactions of this gtid. Raise if the
-        attempted merge has different SID"""
+        """Include the transactions of this gtid.
+
+        Raises:
+           Exception: if the attempted merge has different SID"""
         if self.sid != other.sid:
             raise Exception('Attempt to merge different SID'
                             '%s != %s' % (self.sid, other.sid))
 
-        result = Gtid(str(self))
+        result = deepcopy(self)
 
         for itvl in other.intervals:
             result.__add_interval(itvl)
@@ -160,7 +182,7 @@ class Gtid(object):
     def __sub__(self, other):
         """Remove intervals. Do not raise, if different SID simply
         ignore"""
-        result = Gtid(str(self))
+        result = deepcopy(self)
         if self.sid != other.sid:
             return result
 
@@ -189,6 +211,31 @@ class Gtid(object):
                 len(self.intervals))
 
     def encode(self):
+        """Encode a Gtid in binary
+        Bytes are in **little endian**.
+
+        Format:
+
+        - sid will be uncoded as hex-binary without the dashes as a [u8; 16]
+        - size of the interval list as a u64
+        - all the interval as a pair: (start: u64, end: u64).
+
+        ## Diagram
+
+        ```txt
+        Alligned on u64 bit.
+        +-+-+-+-+-+-+-+-+-+-+
+        | sid [16;u8]       |
+        |                   |
+        +-+-+-+-+-+-+-+-+-+-+
+        | intervals_len u64 |
+        +-+-+-+-+-+-+-+-+-+-+
+        |start u64             <-+
+        - - - - - - - - - - -    + Repeated
+        |stop u64              <-+  interval_len times
+        - - - - - - - - - - -
+        ```
+        """
         buffer = b''
         # sid
         buffer += binascii.unhexlify(self.sid.replace('-', ''))
@@ -205,6 +252,10 @@ class Gtid(object):
 
     @classmethod
     def decode(cls, payload):
+        """Decode from binary a Gtid
+
+        :param BytesIO payload to decode
+        """
         assert isinstance(payload, BytesIO), \
             'payload is expected to be a BytesIO'
         sid = b''
@@ -262,7 +313,23 @@ class Gtid(object):
 
 
 class GtidSet(object):
+    """Represents a set of Gtid"""
     def __init__(self, gtid_set):
+        """
+        Construct a GtidSet initial state depends of the nature of `gtid_set` param.
+
+        params:
+          - gtid_set:
+            - None: then the GtidSet start empty
+            - a set of Gtid either as a their textual representation separated by comma
+            - A set or list of gtid
+            - A GTID alone.
+
+        Raises:
+          - ValueError: if `gtid_set` is a string separated with comma, but with malformated Gtid.
+          - Exception: if Gtid interval are either malformated or overlapping
+        """
+
         def _to_gtid(element):
             if isinstance(element, Gtid):
                 return element
@@ -276,6 +343,7 @@ class GtidSet(object):
             self.gtids = [Gtid(x.strip(' \n')) for x in gtid_set.split(',')]
 
     def merge_gtid(self, gtid):
+        """Insert a Gtid in current GtidSet."""
         new_gtids = []
         for existing in self.gtids:
             if existing.sid == gtid.sid:
@@ -287,6 +355,13 @@ class GtidSet(object):
         self.gtids = new_gtids
 
     def __contains__(self, other):
+        """
+        Test if self contains other, could be a GtidSet or a Gtid.
+
+        Raises:
+           - NotImplementedError other is not a GtidSet neither a Gtid,
+            please convert it first to one of them
+        """
         if isinstance(other, GtidSet):
             return all(other_gtid in self.gtids for other_gtid in other.gtids)
         if isinstance(other, Gtid):
@@ -294,6 +369,13 @@ class GtidSet(object):
         raise NotImplementedError
 
     def __add__(self, other):
+        """
+        Merge current instance with an other GtidSet or with a Gtid alone.
+
+        Raises:
+            - NotImplementedError other is not a GtidSet neither a Gtid,
+            please convert it first to one of them
+        """
         if isinstance(other, Gtid):
             new = GtidSet(self.gtids)
             new.merge_gtid(other)
@@ -308,6 +390,9 @@ class GtidSet(object):
         raise NotImplementedError
 
     def __str__(self):
+        """
+        Returns a comma separated string of gtids.
+        """
         return ','.join(str(x) for x in self.gtids)
 
     def __repr__(self):
@@ -319,6 +404,22 @@ class GtidSet(object):
                 sum(x.encoded_length for x in self.gtids))
 
     def encoded(self):
+        """Encode a GtidSet in binary
+        Bytes are in **little endian**.
+
+        - `n_sid`: u64 is the number of Gtid to read
+        - `Gtid`: `n_sid` * `Gtid_encoded_size` times.
+          See`Gtid.encode` documentation for details.
+
+        ```txt
+        Alligned on u64 bit.
+        +-+-+-+-+-+-+-+-+-+-+
+        | n_gtid u64        |
+        +-+-+-+-+-+-+-+-+-+-+
+        | Gtid              | - Repeated n_gtid times
+        - - - - - - - - - - -
+        ```
+        """
         return b'' + (struct.pack('<Q', len(self.gtids)) +
                       b''.join(x.encode() for x in self.gtids))
 
@@ -326,6 +427,10 @@ class GtidSet(object):
 
     @classmethod
     def decode(cls, payload):
+        """Decode a GtidSet from binary.
+
+        :param BytesIO payload to decode
+        """
         assert isinstance(payload, BytesIO), \
             'payload is expected to be a BytesIO'
         (n_sid,) = struct.unpack('<Q', payload.read(8))
