@@ -44,7 +44,6 @@ Project status
 
 The project is test with:
 * MySQL 5.5, 5.6 and 5.7
-* Python >= 2.7
 * Python 3.3, 3.4, 3.5 and 3.6 (3.2 is not supported)
 * PyPy (really faster than the standard Python interpreter)
 
@@ -334,6 +333,7 @@ Other contributors:
 * Samira El Aabidi: Add support for MariaDB GTID (https://github.com/Samira-El)
 * Oliver Seemann: Handle large json, github actions (https://github.com/oseemann)
 * Mahadir Ahmad: Handle null json payload (https://github.com/mahadirz)
+* Axel Viala: Removal of Python 2.7 (https://github.com/darnuria)
 
 Thanks to GetResponse for their support
 
