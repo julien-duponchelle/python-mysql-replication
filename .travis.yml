@@ -4,8 +4,7 @@ services:
   - docker
 python:
   - "3.4"
-  - "3.5"
-  - "3.6"
+  - "3.11"
   - "pypy"
 env:
   - DB=mysql57
