@@ -109,6 +109,7 @@ class RowsEvent(BinLogEvent):
             name = self.table_map[self.table_id].columns[i].name
             unsigned = self.table_map[self.table_id].columns[i].unsigned
             zerofill = self.table_map[self.table_id].columns[i].zerofill
+            fixed_binary_length = self.table_map[self.table_id].columns[i].fixed_binary_length
 
             if BitGet(cols_bitmap, i) == 0:
                 values[name] = None
@@ -154,6 +155,14 @@ class RowsEvent(BinLogEvent):
                     values[name] = self.__read_string(2, column)
                 else:
                     values[name] = self.__read_string(1, column)
+
+                if fixed_binary_length and len(values[name]) < fixed_binary_length:
+                    # Fixed-length binary fields are stored in the binlog
+                    # without trailing zeros and must be padded with zeros up
+                    # to the specified length at read time.
+                    nr_pad = fixed_binary_length - len(values[name])
+                    values[name] += b'\x00' * nr_pad
+
             elif column.type == FIELD_TYPE.NEWDECIMAL:
                 values[name] = self.__read_new_decimal(column)
             elif column.type == FIELD_TYPE.BLOB:
@@ -640,6 +649,8 @@ class TableMapEvent(BinLogEvent):
                         'COLUMN_NAME': '__dropped_col_{i}__'.format(i=i),
                         'COLLATION_NAME': None,
                         'CHARACTER_SET_NAME': None,
+                        'CHARACTER_OCTET_LENGTH': None,
+                        'DATA_TYPE': 'BLOB',
                         'COLUMN_COMMENT': None,
                         'COLUMN_TYPE': 'BLOB',  # we don't know what it is, so let's not do anything with it.
                         'COLUMN_KEY': '',
