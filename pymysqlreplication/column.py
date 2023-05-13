@@ -26,6 +26,12 @@ class Column(object):
         self.type_is_bool = False
         self.is_primary = column_schema["COLUMN_KEY"] == "PRI"
 
+        # Check for fixed-length binary type. When that's the case then we need
+        # to zero-pad the values to full length at read time.
+        self.fixed_binary_length = None
+        if column_schema["DATA_TYPE"] == "binary":
+            self.fixed_binary_length = column_schema["CHARACTER_OCTET_LENGTH"]
+
         if self.type == FIELD_TYPE.VARCHAR:
             self.max_length = struct.unpack('<H', packet.read(2))[0]
         elif self.type == FIELD_TYPE.DOUBLE:

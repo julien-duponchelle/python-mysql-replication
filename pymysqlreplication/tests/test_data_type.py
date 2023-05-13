@@ -101,6 +101,18 @@ class TestDataType(base.PyMySQLReplicationTestCase):
 
         return event
 
+    def test_varbinary(self):
+        create_query = "CREATE TABLE test(b VARBINARY(4))"
+        insert_query = "INSERT INTO test VALUES(UNHEX('ff010000'))"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["b"], b'\xff\x01\x00\x00')
+
+    def test_fixed_length_binary(self):
+        create_query = "CREATE TABLE test(b BINARY(4))"
+        insert_query = "INSERT INTO test VALUES(UNHEX('ff010000'))"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.rows[0]["values"]["b"], b'\xff\x01\x00\x00')
+
     def test_decimal(self):
         create_query = "CREATE TABLE test (test DECIMAL(2,1))"
         insert_query = "INSERT INTO test VALUES(4.2)"
