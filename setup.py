@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 try:
+from pathlib import Path
     from setuptools import setup, Command
 except ImportError:
     from distutils.core import setup, Command
@@ -30,6 +31,9 @@ class TestCommand(Command):
 
 version = "0.41"
 
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
+
 setup(
     name="mysql-replication",
     version=version,
@@ -38,6 +42,8 @@ setup(
     author_email="julien@duponchelle.info",
     description=("Pure Python Implementation of MySQL replication protocol "
                  "build on top of PyMYSQL."),
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     license="Apache 2",
     packages=["pymysqlreplication",
               "pymysqlreplication.constants",
