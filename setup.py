@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 try:
-from pathlib import Path
     from setuptools import setup, Command
 except ImportError:
     from distutils.core import setup, Command
 
+from pathlib import Path
 import sys
 
 
@@ -37,7 +37,7 @@ long_description = (this_directory / "README.md").read_text()
 setup(
     name="mysql-replication",
     version=version,
-    url="https://github.com/noplay/python-mysql-replication",
+    url="https://github.com/julien-duponchelle/python-mysql-replication",
     author="Julien Duponchelle",
     author_email="julien@duponchelle.info",
     description=("Pure Python Implementation of MySQL replication protocol "
