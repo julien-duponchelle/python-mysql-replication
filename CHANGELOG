@@ -181,3 +181,6 @@
 * Drop support for Python 2.7
 * Gtid: remove __cmp__ due to python2 support dropped.
 * Mariadb 10.6.12: Mitigate corrupt binlog event bug
+
+0.41 03/06/2023
+* Zero-pad fixed-length binary fields
