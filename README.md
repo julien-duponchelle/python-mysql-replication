@@ -43,6 +43,7 @@ Project status
 The project is test with:
 * MySQL 5.5, 5.6 and 5.7 (v0.1 ~ v0.45)
 * MySQL 8.0.14 (v1.0 ~)
+* MariaDB 10.6
 * Python 3.7, 3.11
 * PyPy 3.7, 3.9 (really faster than the standard Python interpreter)
 
