@@ -184,3 +184,6 @@
 
 0.41 03/06/2023
 * Zero-pad fixed-length binary fields
+
+0.42 25/06/2023
+* Add XAPrepareEvent, parse last_committed & sequence_number of GtidEvent

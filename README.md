@@ -335,6 +335,7 @@ Other contributors:
 Zero-pad fixed-length binary fields (https://github.com/oseemann)
 * Mahadir Ahmad: Handle null json payload (https://github.com/mahadirz)
 * Axel Viala: Removal of Python 2.7 (https://github.com/darnuria)
+* Etern: Add XAPrepareEvent, parse last_committed & sequence_number of GtidEvent (https://github.com/etern)
 
 Thanks to GetResponse for their support
 
