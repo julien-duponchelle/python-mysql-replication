@@ -350,8 +350,6 @@ class BinLogPacketWrapper(object):
 
     def read_binary_json(self, size):
         length = self.read_uint_by_size(size)
-        payload = self.read(length)
-        self.unread(payload)
         t = self.read_uint8()
 
         return self.read_binary_json_type(t, length)
