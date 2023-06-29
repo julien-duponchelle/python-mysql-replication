@@ -19,17 +19,6 @@ from pymysqlreplication._compat import text_type
 
 __all__ = ["TestDataType"]
 
-
-def to_binary_dict(d):
-    def encode_value(v):
-        if isinstance(v, text_type):
-            return v.encode()
-        if isinstance(v, list):
-            return [encode_value(x) for x in v]
-        return v
-    return dict([(k.encode(), encode_value(v)) for (k, v) in d.items()])
-
-
 class TestDataType(base.PyMySQLReplicationTestCase):
     def ignoredEvents(self):
         return [GtidEvent]
@@ -449,7 +438,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (id int, value json);"
         insert_query = """INSERT INTO test (id, value) VALUES (1, '{"my_key": "my_val", "my_key2": "my_val2"}');"""
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["value"], {b"my_key": b"my_val", b"my_key2": b"my_val2"})
+        self.assertEqual(event.rows[0]["values"]["value"], {"my_key": "my_val", "my_key2": "my_val2"})
 
     def test_json_array(self):
         if not self.isMySQL57():
@@ -457,7 +446,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (id int, value json);"
         insert_query = """INSERT INTO test (id, value) VALUES (1, '["my_val", "my_val2"]');"""
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["value"], [b'my_val', b'my_val2'])
+        self.assertEqual(event.rows[0]["values"]["value"], ['my_val', 'my_val2'])
 
     def test_json_large(self):
         if not self.isMySQL57():
@@ -467,7 +456,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         insert_query = """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
         event = self.create_and_insert_value(create_query, insert_query)
 
-        self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict(data))
+        self.assertEqual(event.rows[0]["values"]["value"], data)
 
     def test_json_large_with_literal(self):
         if not self.isMySQL57():
@@ -502,7 +491,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             create_query = "CREATE TABLE test (id int, value json);"
             insert_query = """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
             event = self.create_and_insert_value(create_query, insert_query)
-            self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict(data))
+            self.assertEqual(event.rows[0]["values"]["value"], data)
 
             self.tearDown()
             self.setUp()
@@ -539,7 +528,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (id int, value json);"
         insert_query = u"""INSERT INTO test (id, value) VALUES (1, '{"miam": "🍔"}');"""
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["value"][b"miam"], u'🍔'.encode('utf8'))
+        self.assertEqual(event.rows[0]["values"]["value"]["miam"], u'🍔')
 
     def test_json_long_string(self):
         if not self.isMySQL57():
@@ -549,7 +538,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         string_value = "super_long_string" * 100
         insert_query = "INSERT INTO test (id, value) VALUES (1, '{\"my_key\": \"%s\"}');" % (string_value,)
         event = self.create_and_insert_value(create_query, insert_query)
-        self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict({"my_key": string_value}))
+        self.assertEqual(event.rows[0]["values"]["value"], {"my_key": string_value})
 
     def test_null(self):
         create_query = "CREATE TABLE test ( \

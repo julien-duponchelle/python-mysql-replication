@@ -271,7 +271,7 @@ class BinLogPacketWrapper(object):
             byte = byte2int(self.read(1))
             length = length | ((byte & 0x7f) << bits_read)
             bits_read = bits_read + 7
-        return self.read(length)
+        return self.read(length).decode('utf-8')
 
     def read_int24(self):
         a, b, c = struct.unpack("BBB", self.read(3))
@@ -434,7 +434,7 @@ class BinLogPacketWrapper(object):
         value_type_inlined_lengths = [read_offset_or_inline(self, large)
                                       for _ in range(elements)]
 
-        keys = [self.read(x[1]) for x in key_offset_lengths]
+        keys = [self.read(x[1]).decode('utf-8') for x in key_offset_lengths]
 
         out = {}
         for i in range(elements):
