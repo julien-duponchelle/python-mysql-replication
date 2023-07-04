@@ -249,7 +249,7 @@ class RowsEvent(BinLogEvent):
 
     @staticmethod
     def charset_to_encoding(name):
-        # there is no charset for utf8mb3, and this break decoding.
+        # Pymysql has no charset for utf8mb3, and this breaks decoding.
         # Mysql has deprecated utf8mb3, and in mariadb utf8 is an alias for utf8mb3
         if name == 'utf8mb3':
             name = 'utf8'
