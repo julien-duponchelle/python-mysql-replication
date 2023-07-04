@@ -225,7 +225,7 @@ class QueryEvent(BinLogEvent):
         self.packet.advance(1)
 
         self.query = self.packet.read(event_size - 13 - self.status_vars_length
-                                      - self.schema_length - 1).decode("utf-8")
+                                      - self.schema_length - 1).decode(ctl_connection.charset)
         #string[EOF]    query
 
     def _dump(self):
