@@ -176,3 +176,14 @@
 
 0.31 12/03/2023
 * Fix parse error for query_events with MariaDB
+
+0.40 07/05/2023
+* Drop support for Python 2.7
+* Gtid: remove __cmp__ due to python2 support dropped.
+* Mariadb 10.6.12: Mitigate corrupt binlog event bug
+
+0.41 03/06/2023
+* Zero-pad fixed-length binary fields
+
+0.42 25/06/2023
+* Add XAPrepareEvent, parse last_committed & sequence_number of GtidEvent

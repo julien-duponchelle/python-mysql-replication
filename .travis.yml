@@ -3,10 +3,8 @@ language: python
 services:
   - docker
 python:
-  - "2.7"
   - "3.4"
-  - "3.5"
-  - "3.6"
+  - "3.11"
   - "pypy"
 env:
   - DB=mysql57

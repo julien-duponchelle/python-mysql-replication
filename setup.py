@@ -6,13 +6,8 @@ try:
 except ImportError:
     from distutils.core import setup, Command
 
+from pathlib import Path
 import sys
-
-tests_require = []
-
-# add unittest2 to tests_require for python < 2.7
-if sys.version_info < (2, 7):
-    tests_require.append("unittest2")
 
 
 class TestCommand(Command):
@@ -34,21 +29,25 @@ class TestCommand(Command):
         unittest.main(tests, argv=sys.argv[:1])
 
 
-version = "0.31"
+version = "0.42"
+
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
 
 setup(
     name="mysql-replication",
     version=version,
-    url="https://github.com/noplay/python-mysql-replication",
+    url="https://github.com/julien-duponchelle/python-mysql-replication",
     author="Julien Duponchelle",
     author_email="julien@duponchelle.info",
     description=("Pure Python Implementation of MySQL replication protocol "
                  "build on top of PyMYSQL."),
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     license="Apache 2",
     packages=["pymysqlreplication",
               "pymysqlreplication.constants",
               "pymysqlreplication.tests"],
     cmdclass={"test": TestCommand},
-    extras_require={'test': tests_require},
     install_requires=['pymysql>=0.10'],
 )

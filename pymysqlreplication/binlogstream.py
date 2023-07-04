@@ -319,6 +319,14 @@ class BinLogStreamReader(object):
             cur.execute("set @master_heartbeat_period= %d" % heartbeat)
             cur.close()
 
+        # When replicating from Mariadb 10.6.12 using binlog coordinates, a slave capability < 4 triggers a bug in
+        # Mariadb, when it tries to replace GTID events with dummy ones. Given that this library understands GTID
+        # events, setting the capability to 4 circumvents this error.
+        # If the DB is mysql, this won't have any effect so no need to run this in a condition
+        cur = self._stream_connection.cursor()
+        cur.execute("SET @mariadb_slave_capability=4")
+        cur.close()
+
         self._register_slave()
 
         if not self.auto_position:
@@ -352,8 +360,6 @@ class BinLogStreamReader(object):
             if self.is_mariadb:
                 # https://mariadb.com/kb/en/5-slave-registration/
                 cur = self._stream_connection.cursor()
-
-                cur.execute("SET @mariadb_slave_capability=4")
                 cur.execute("SET @slave_connect_state='%s'" % self.auto_position)
                 cur.execute("SET @slave_gtid_strict_mode=1")
                 cur.execute("SET @slave_gtid_ignore_duplicates=0")
@@ -610,7 +616,8 @@ class BinLogStreamReader(object):
                 cur.execute("""
                     SELECT
                         COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME,
-                        COLUMN_COMMENT, COLUMN_TYPE, COLUMN_KEY, ORDINAL_POSITION
+                        COLUMN_COMMENT, COLUMN_TYPE, COLUMN_KEY, ORDINAL_POSITION,
+                        DATA_TYPE, CHARACTER_OCTET_LENGTH
                     FROM
                         information_schema.columns
                     WHERE

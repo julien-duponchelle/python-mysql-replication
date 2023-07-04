@@ -44,7 +44,6 @@ Project status
 
 The project is test with:
 * MySQL 5.5, 5.6 and 5.7
-* Python >= 2.7
 * Python 3.3, 3.4, 3.5 and 3.6 (3.2 is not supported)
 * PyPy (really faster than the standard Python interpreter)
 
@@ -332,14 +331,17 @@ Other contributors:
 * Dongwook Chan: Support for ZEROFILL, Correct timedelta value for negative MySQL TIME datatype, Fix parsing of row events for MySQL8 partitioned table, Parse status variables in query event, Parse status variables in query event , Fix parse errors with MariaDB (https://github.com/dongwook-chan)
 * Paul Vickers: Add support for specifying an end log_pos (https://github.com/paulvic)
 * Samira El Aabidi: Add support for MariaDB GTID (https://github.com/Samira-El)
-* Oliver Seemann: Handle large json, github actions (https://github.com/oseemann)
+* Oliver Seemann: Handle large json, github actions, 
+Zero-pad fixed-length binary fields (https://github.com/oseemann)
 * Mahadir Ahmad: Handle null json payload (https://github.com/mahadirz)
+* Axel Viala: Removal of Python 2.7 (https://github.com/darnuria)
+* Etern: Add XAPrepareEvent, parse last_committed & sequence_number of GtidEvent (https://github.com/etern)
 
 Thanks to GetResponse for their support
 
 Licence
 =======
-Copyright 2012-2022 Julien Duponchelle
+Copyright 2012-2023 Julien Duponchelle
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
