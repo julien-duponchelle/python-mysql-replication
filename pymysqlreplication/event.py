@@ -225,7 +225,8 @@ class QueryEvent(BinLogEvent):
         self.packet.advance(1)
 
         self.query = self.packet.read(event_size - 13 - self.status_vars_length
-                                      - self.schema_length - 1).decode("utf-8")
+                                      - self.schema_length - 1)
+        self.query = self._decode_query(self.query)
         #string[EOF]    query
 
     def _dump(self):
@@ -233,6 +234,9 @@ class QueryEvent(BinLogEvent):
         print("Schema: %s" % (self.schema))
         print("Execution time: %d" % (self.execution_time))
         print("Query: %s" % (self.query))
+
+    def _decode_query(self, query):
+        return query.decode("utf-8")
 
 
 class BeginLoadQueryEvent(BinLogEvent):
