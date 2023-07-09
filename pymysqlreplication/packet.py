@@ -69,6 +69,7 @@ class BinLogPacketWrapper(object):
         constants.BEGIN_LOAD_QUERY_EVENT: event.BeginLoadQueryEvent,
         constants.EXECUTE_LOAD_QUERY_EVENT: event.ExecuteLoadQueryEvent,
         constants.HEARTBEAT_LOG_EVENT: event.HeartbeatLogEvent,
+        constants.XA_PREPARE_EVENT: event.XAPrepareEvent,
         # row_event
         constants.UPDATE_ROWS_EVENT_V1: row_event.UpdateRowsEvent,
         constants.WRITE_ROWS_EVENT_V1: row_event.WriteRowsEvent,
@@ -89,7 +90,10 @@ class BinLogPacketWrapper(object):
         constants.MARIADB_START_ENCRYPTION_EVENT: event.NotImplementedEvent
     }
 
-    def __init__(self, from_packet, table_map, ctl_connection, use_checksum,
+    def __init__(self, from_packet, table_map,
+                 ctl_connection,
+                 mysql_version,
+                 use_checksum,
                  allowed_events,
                  only_tables,
                  ignored_tables,
@@ -136,6 +140,7 @@ class BinLogPacketWrapper(object):
             return
         self.event = event_class(self, event_size_without_header, table_map,
                                  ctl_connection,
+                                 mysql_version=mysql_version,
                                  only_tables=only_tables,
                                  ignored_tables=ignored_tables,
                                  only_schemas=only_schemas,
