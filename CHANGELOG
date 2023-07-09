@@ -187,3 +187,6 @@
 
 0.42 25/06/2023
 * Add XAPrepareEvent, parse last_committed & sequence_number of GtidEvent
+
+0.42.1 09/07/2023
+* Fix merging error of XAPrepareEvent
