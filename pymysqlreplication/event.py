@@ -62,7 +62,7 @@ class GtidEvent(BinLogEvent):
         self.commit_flag = struct.unpack("!B", self.packet.read(1))[0] == 1
         self.sid = self.packet.read(16)
         self.gno = struct.unpack('<Q', self.packet.read(8))[0]
-        self.lt_type = byte2int(self.packet.read(1))
+        self.lt_type = self.packet.read(1)[0]
 
         if self.mysql_version >= (5, 7):
             self.last_committed = struct.unpack('<Q', self.packet.read(8))[0]
