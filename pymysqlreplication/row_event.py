@@ -45,6 +45,12 @@ class RowsEvent(BinLogEvent):
             self._processed = False
             return
 
+        # Use pt-online-schema-change will auto generate a new table which name starts with '_',
+        # just ignore it.
+        if self.table.startswith('_'):
+            self._processed = False
+            return
+
         if self.__only_schemas is not None and self.schema not in self.__only_schemas:
             self._processed = False
             return
