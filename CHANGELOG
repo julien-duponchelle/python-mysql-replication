@@ -190,3 +190,6 @@
 
 0.42.1 09/07/2023
 * Fix merging error of XAPrepareEvent
+
+0.42.2 16/07/2023
+* Fix release error

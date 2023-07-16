@@ -29,7 +29,7 @@ class TestCommand(Command):
         unittest.main(tests, argv=sys.argv[:1])
 
 
-version = "0.42"
+version = "0.42.2"
 
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
