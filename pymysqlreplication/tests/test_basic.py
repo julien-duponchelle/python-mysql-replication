@@ -17,7 +17,7 @@ from pymysqlreplication.exceptions import TableMetadataUnavailableError
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 
-__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader"]
+__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader","TestMariadbBinlogStreaReader"]
 
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
@@ -1002,6 +1002,24 @@ class GtidTests(unittest.TestCase):
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-:1")
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
 
+class TestMariadbBinlogStreaReader(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super(TestMariadbBinlogStreaReader,self).setUp()
+        if not self.isMariaDB():
+            raise unittest.SkipTest("Skipping test: Not a MariaDB instance")
+    
+    def test_annotate_rows_evet(self):
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database, server_id=1024, blocking=False,is_mariadb=True,only_events=[MariadbAnnotateRowsEvent],auto_position="0-1-1",is_mariadb=True,annotate_rows_event=True,
+            )
+        event = self.stream.fetchone()
+        self.assertEqual(event.event_type,160)
+        self.assertIsInstance(event,MariadbAnnotateRowsEvent)
+        
 
 if __name__ == "__main__":
     import unittest
