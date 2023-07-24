@@ -14,7 +14,8 @@ from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
     XidEvent, GtidEvent, StopEvent, XAPrepareEvent,
     BeginLoadQueryEvent, ExecuteLoadQueryEvent,
-    HeartbeatLogEvent, NotImplementedEvent, MariadbGtidEvent)
+    HeartbeatLogEvent, NotImplementedEvent, MariadbGtidEvent,
+    MariadbAnnotateRowsEvent)
 from .exceptions import BinLogNotEnabled
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
@@ -141,6 +142,7 @@ class BinLogStreamReader(object):
                  fail_on_table_metadata_unavailable=False,
                  slave_heartbeat=None,
                  is_mariadb=False,
+                 annotate_rows_event=False,
                  ignore_decode_errors=False):
         """
         Attributes:
@@ -178,6 +180,8 @@ class BinLogStreamReader(object):
                              for semantics
             is_mariadb: Flag to indicate it's a MariaDB server, used with auto_position
                     to point to Mariadb specific GTID.
+            annotate_rows_event: Parameter value to enable annotate rows event in mariadb,
+                    used with auto_position,is_mariadb
             ignore_decode_errors: If true, any decode errors encountered 
                                   when reading column data will be ignored.
         """
@@ -219,6 +223,7 @@ class BinLogStreamReader(object):
         self.auto_position = auto_position
         self.skip_to_timestamp = skip_to_timestamp
         self.is_mariadb = is_mariadb
+        self.__annotate_rows_event = annotate_rows_event
 
         if end_log_pos:
             self.is_past_end_log_pos = False
@@ -351,6 +356,7 @@ class BinLogStreamReader(object):
                 prelude += struct.pack('<I', 4)
 
             flags = 0
+
             if not self.__blocking:
                 flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
             prelude += struct.pack('<H', flags)
@@ -380,6 +386,11 @@ class BinLogStreamReader(object):
                 prelude += struct.pack('<i', 4)
 
                 flags = 0
+
+                # Enable annotate rows event 
+                if self.__annotate_rows_event:
+                    flags = 2
+
                 if not self.__blocking:
                     flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
                 
@@ -600,7 +611,8 @@ class BinLogStreamReader(object):
                 TableMapEvent,
                 HeartbeatLogEvent,
                 NotImplementedEvent,
-                MariadbGtidEvent
+                MariadbGtidEvent,
+                MariadbAnnotateRowsEvent
                 ))
         if ignored_events is not None:
             for e in ignored_events:
