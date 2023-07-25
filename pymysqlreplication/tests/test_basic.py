@@ -25,9 +25,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         return [GtidEvent]
 
     def test_allowed_event_list(self):
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 15)
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 14)
-        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 14)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 16)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 15)
+        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 15)
         self.assertEqual(len(self.stream._allowed_event_list([RotateEvent], None, False)), 1)
 
     def test_read_query_event(self):
@@ -693,11 +693,11 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             ignore_decode_errors=False
         )
         event = self.stream.fetchone()
-        event = self.stream.fetchone()   
+        event = self.stream.fetchone()
         with self.assertRaises(UnicodeError) as exception:
             event = self.stream.fetchone()
             data = event.rows[0]["values"]["data"]
-        
+
         # Initialize with ignore_decode_errors=True
         self.stream = BinLogStreamReader(
             self.database,
@@ -706,11 +706,11 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             ignore_decode_errors=True
         )
         self.stream.fetchone()
-        self.stream.fetchone()        
+        self.stream.fetchone()
         event = self.stream.fetchone()
         data = event.rows[0]["values"]["data"]
         self.assertEqual(data, '[{"text":"  Some string"}]')
-    
+
     def test_drop_column(self):
         self.stream.close()
         self.execute("CREATE TABLE test_drop_column (id INTEGER(11), data VARCHAR(50))")

@@ -190,3 +190,9 @@
 
 0.42.1 09/07/2023
 * Fix merging error of XAPrepareEvent
+
+0.42.2 16/07/2023
+* Fix release error
+
+0.43.0 23/07/2023
+* Bump PyMySQL to 1.1.0 to solve : LookupError: unknown encoding: utf8mb3

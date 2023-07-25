@@ -8,11 +8,8 @@ jobs:
       matrix:
         include:
           - {name: 'CPython 3.7', python: '3.7'}
-          - {name: 'CPython 3.8', python: '3.8'}
-          - {name: 'CPython 3.9', python: '3.9'}
-          - {name: 'CPython 3.10', python: '3.10'}
+          - {name: 'CPython 3.11', python: '3.11'}
           - {name: 'Pypy 3.7', python: 'pypy-3.7'}
-          - {name: 'Pypy 3.8', python: 'pypy-3.8'}
           - {name: 'Pypy 3.9', python: 'pypy-3.9'}
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest

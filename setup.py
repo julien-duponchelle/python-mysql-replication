@@ -29,7 +29,7 @@ class TestCommand(Command):
         unittest.main(tests, argv=sys.argv[:1])
 
 
-version = "0.42"
+version = "0.43.0"
 
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
@@ -49,5 +49,5 @@ setup(
               "pymysqlreplication.constants",
               "pymysqlreplication.tests"],
     cmdclass={"test": TestCommand},
-    install_requires=['pymysql>=0.10'],
+    install_requires=['pymysql>=1.1.0'],
 )
