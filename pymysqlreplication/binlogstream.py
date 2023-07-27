@@ -14,6 +14,7 @@ from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
     XidEvent, GtidEvent, StopEvent, XAPrepareEvent,
     BeginLoadQueryEvent, ExecuteLoadQueryEvent,
+    RandEvent,
     HeartbeatLogEvent, NotImplementedEvent, MariadbGtidEvent)
 from .exceptions import BinLogNotEnabled
 from .row_event import (
@@ -346,9 +347,9 @@ class BinLogStreamReader(object):
                 + bytes(bytearray([COM_BINLOG_DUMP]))
 
             if self.__resume_stream:
-                prelude += struct.pack('<I', self.log_pos)
+                prelude += struct.pack('<I', self.log_pos) # log_pos를 사용하려면 resume_stream을 명시해줘야 함...!
             else:
-                prelude += struct.pack('<I', 4)
+                prelude += struct.pack('<I', 4) # MGIC 이후부터
 
             flags = 0
             if not self.__blocking:
@@ -357,7 +358,7 @@ class BinLogStreamReader(object):
 
             prelude += struct.pack('<I', self.__server_id)
             prelude += self.log_file.encode()
-        else:
+        else: # gtid가 세팅된 경우
             if self.is_mariadb:
                 # https://mariadb.com/kb/en/5-slave-registration/
                 cur = self._stream_connection.cursor()
@@ -463,7 +464,7 @@ class BinLogStreamReader(object):
                 # encoded_data_size (4 bytes)
                 prelude += struct.pack('<I', gtid_set.encoded_length)
                 # encoded_data
-                prelude += gtid_set.encoded()
+                prelude += gtid_set.encoded() # encoded(): binary 형태로 바꿔주는 것
 
         if pymysql.__version__ < LooseVersion("0.6"):
             self._stream_connection.wfile.write(prelude)
@@ -600,7 +601,8 @@ class BinLogStreamReader(object):
                 TableMapEvent,
                 HeartbeatLogEvent,
                 NotImplementedEvent,
-                MariadbGtidEvent
+                MariadbGtidEvent,
+                RandEvent
                 ))
         if ignored_events is not None:
             for e in ignored_events:

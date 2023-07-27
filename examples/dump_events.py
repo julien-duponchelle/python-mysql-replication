@@ -21,7 +21,11 @@ def main():
     # the end of the stream
     stream = BinLogStreamReader(connection_settings=MYSQL_SETTINGS,
                                 server_id=3,
-                                blocking=True)
+                                blocking=True,
+                                # log_file = "binlog.000022",
+                                # log_pos = 1265,
+                                resume_stream = True, # log-pos도 명시할 경우
+                                )
 
     for binlogevent in stream:
         binlogevent.dump()

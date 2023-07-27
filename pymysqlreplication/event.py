@@ -436,6 +436,24 @@ class IntvarEvent(BinLogEvent):
         print("type: %d" % (self.type))
         print("Value: %d" % (self.value))
 
+class RandEvent(BinLogEvent):
+    """
+    Attributes:
+        seed1
+        seed2
+    """
+    
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(RandEvent, self).__init__(from_packet, event_size, table_map,
+                                        ctl_connection, **kwargs)
+        # Payload
+        self.seed1 = self.packet.read_uint64()
+        self.seed2 = self.packet.read_uint64()
+        
+    def _dump(self):
+        super(RandEvent, self)._dump()
+        print("seed1: %d" % (self.seed1))
+        print("seed2: %d" % (self.seed2))
 
 class NotImplementedEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
