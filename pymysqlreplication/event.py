@@ -110,6 +110,7 @@ class MariadbGtidEvent(BinLogEvent):
         print("Flags:", self.flags)
         print('GTID:', self.gtid)
 
+
 class MariadbAnnotateRowsEvent(BinLogEvent):
     """
     Annotate rows event 

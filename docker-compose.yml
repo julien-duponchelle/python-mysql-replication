@@ -28,3 +28,4 @@ services:
       --log-bin=master-bin
       --binlog-format=row
       --log-slave-updates=on
+      

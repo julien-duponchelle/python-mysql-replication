@@ -122,6 +122,7 @@ class PyMySQLReplicationTestCase(base):
         bin_log_basename = bin_log_basename.split("/")[-1]
         return bin_log_basename
 
+
 class PyMySQLReplicationMariaDbTestCase(PyMySQLReplicationTestCase):
     def setUp(self):
         # default
@@ -145,3 +146,4 @@ class PyMySQLReplicationMariaDbTestCase(PyMySQLReplicationTestCase):
         self.connect_conn_control(db)
         self.stream = None
         self.resetBinLog()
+        
