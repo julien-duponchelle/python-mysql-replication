@@ -6,7 +6,7 @@ from pymysqlreplication.row_event import WriteRowsEvent, UpdateRowsEvent, Delete
 
 MARIADB_SETTINGS = {
     "host": "127.0.0.1",
-    "port": 4306,
+    "port": 3306,
     "user": "replication_user",
     "passwd": "secret123passwd",
 }
