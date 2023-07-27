@@ -450,18 +450,18 @@ class RandEvent(BinLogEvent):
         super(RandEvent, self).__init__(from_packet, event_size, table_map,
                                         ctl_connection, **kwargs)
         # Payload
-        self.seed1 = self.packet.read_uint64()
-        self.seed2 = self.packet.read_uint64()
+        self._seed1 = self.packet.read_uint64()
+        self._seed2 = self.packet.read_uint64()
 
     @property
     def seed1(self):
         """Get the first seed value"""
-        return self.seed1
+        return self._seed1
 
     @property
     def seed2(self):
         """Get the second seed value"""
-        return self.seed2
+        return self._seed2
 
     def _dump(self):
         super(RandEvent, self)._dump()
