@@ -1027,7 +1027,10 @@ class TestMariadbBinlogStreaReader(base.PyMySQLReplicationMariaDbTestCase):
             )
         
         event = self.stream.fetchone()
+        #Check event type 160,MariadbAnnotateRowsEvent
         self.assertEqual(event.event_type,160)
+        #Check self.sql_statement
+        self.assertEqual(event.sql_statement,b"INSERT INTO test (id, data) VALUES(1, 'Hello')")
         self.assertIsInstance(event,MariadbAnnotateRowsEvent)
         
 
