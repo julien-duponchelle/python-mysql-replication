@@ -389,7 +389,7 @@ class BinLogStreamReader(object):
 
                 # Enable annotate rows event 
                 if self.__annotate_rows_event:
-                    flags = 2
+                    flags |= 0x02
 
                 if not self.__blocking:
                     flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
