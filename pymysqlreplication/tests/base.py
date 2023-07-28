@@ -19,11 +19,9 @@ class PyMySQLReplicationTestCase(base):
         return []
 
     def setUp(self):
-
-        db = os.environ.get('DB')
         # default
         self.database = {
-            "host": "localhost",
+            "host": os.environ.get("MYSQL_5_7") or "localhost",
             "user": "root",
             "passwd": "",
             "port": 3306,
