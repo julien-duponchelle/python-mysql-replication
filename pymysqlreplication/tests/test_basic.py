@@ -17,7 +17,7 @@ from pymysqlreplication.exceptions import TableMetadataUnavailableError
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 
-__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader"]
+__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader", "TestStatementConnectionSetting"]
 
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
@@ -1001,6 +1001,33 @@ class GtidTests(unittest.TestCase):
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:-1")
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-:1")
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
+
+class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super(TestStatementConnectionSetting, self).setUp()
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(RandEvent, QueryEvent),
+            fail_on_table_metadata_unavailable=True
+        )
+
+    def test_rand_event(self):
+        self.execute("SET @@binlog_format='STATEMENT'")
+        self.execute("CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data INT NOT NULL, PRIMARY KEY (id))")
+        self.execute("INSERT INTO test (data) VALUES(RAND())")
+        self.execute("COMMIT")
+
+        self.assertEqual(self.bin_log_format(), "STATEMENT")
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), RandEvent)
+
+    def tearDown(self):
+        self.execute("SET @@binlog_format='ROW'")
+        self.assertEqual(self.bin_log_format(), "ROW")
+        super(TestStatementConnectionSetting, self).tearDown()
 
 
 if __name__ == "__main__":
