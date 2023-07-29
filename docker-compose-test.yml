@@ -36,9 +36,12 @@ services:
       - -ce
       - |
         echo "wait mysql server"
-        for i in $$(seq 1 40); do
-          echo "retry: $$i/40" && sleep 1
-          if mysql -h percona-5.7 --user=root --execute "USE pymysqlreplication_test;" 2>&1 >/dev/null; then break; fi
+        
+        while :
+        do
+          if mysql -h percona-5.7 --user=root --execute "USE pymysqlreplication_test;" 2>&1 >/dev/null && mysql -h percona-5.7-ctl --port=3307  --user=root --execute "USE pymysqlreplication_test;" 2>&1 >/dev/null; then
+            break
+          fi
         done
         
         echo "run pytest"
