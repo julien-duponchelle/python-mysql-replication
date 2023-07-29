@@ -440,6 +440,9 @@ class RandEvent(BinLogEvent):
     """
     RandEvent is generated every time a statement uses the RAND() function.
     Indicates the seed values to use for generating a random number with RAND() in the next statement.
+    Warning
+    - RAND_EVENT only works in statement-based logging. (need to set binlog_format as 'STATEMENT')
+    - RAND_EVENT only works when the seed number is not specified.
 
     Attributes:
         seed1
