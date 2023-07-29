@@ -1010,8 +1010,8 @@ class TestMariadbBinlogStreaReader(base.PyMySQLReplicationMariaDbTestCase):
         # Insert first event
         query = "BEGIN;"
         self.execute(query)
-        query = "INSERT INTO test (id, data) VALUES(1, 'Hello');"
-        self.execute(query)
+        insert_query = b"INSERT INTO test (id, data) VALUES(1, 'Hello')"
+        self.execute(insert_query)
         query = "COMMIT;"
         self.execute(query)
 
@@ -1021,7 +1021,6 @@ class TestMariadbBinlogStreaReader(base.PyMySQLReplicationMariaDbTestCase):
             server_id=1024, 
             blocking=False,
             only_events=[MariadbAnnotateRowsEvent],
-            auto_position="0-1-1",
             is_mariadb=True,
             annotate_rows_event=True,
             )
@@ -1030,7 +1029,7 @@ class TestMariadbBinlogStreaReader(base.PyMySQLReplicationMariaDbTestCase):
         #Check event type 160,MariadbAnnotateRowsEvent
         self.assertEqual(event.event_type,160)
         #Check self.sql_statement
-        self.assertEqual(event.sql_statement,b"INSERT INTO test (id, data) VALUES(1, 'Hello')")
+        self.assertEqual(event.sql_statement,insert_query)
         self.assertIsInstance(event,MariadbAnnotateRowsEvent)
         
 
