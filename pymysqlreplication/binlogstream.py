@@ -347,9 +347,9 @@ class BinLogStreamReader(object):
                 + bytes(bytearray([COM_BINLOG_DUMP]))
 
             if self.__resume_stream:
-                prelude += struct.pack('<I', self.log_pos) # log_pos를 사용하려면 resume_stream을 명시해줘야 함...!
+                prelude += struct.pack('<I', self.log_pos)
             else:
-                prelude += struct.pack('<I', 4) # MGIC 이후부터
+                prelude += struct.pack('<I', 4)
 
             flags = 0
             if not self.__blocking:
@@ -358,7 +358,7 @@ class BinLogStreamReader(object):
 
             prelude += struct.pack('<I', self.__server_id)
             prelude += self.log_file.encode()
-        else: # gtid가 세팅된 경우
+        else:
             if self.is_mariadb:
                 # https://mariadb.com/kb/en/5-slave-registration/
                 cur = self._stream_connection.cursor()
@@ -464,7 +464,7 @@ class BinLogStreamReader(object):
                 # encoded_data_size (4 bytes)
                 prelude += struct.pack('<I', gtid_set.encoded_length)
                 # encoded_data
-                prelude += gtid_set.encoded() # encoded(): binary 형태로 바꿔주는 것
+                prelude += gtid_set.encoded()
 
         if pymysql.__version__ < LooseVersion("0.6"):
             self._stream_connection.wfile.write(prelude)

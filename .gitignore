@@ -44,4 +44,5 @@ _build
 .python-version
 MANIFEST
 
-venv/
+# venv
+venv/*
