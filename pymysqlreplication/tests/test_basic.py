@@ -1012,9 +1012,9 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
             only_events=(RandEvent, QueryEvent),
             fail_on_table_metadata_unavailable=True
         )
+        self.execute("SET @@binlog_format='STATEMENT'")
 
     def test_rand_event(self):
-        self.execute("SET @@binlog_format='STATEMENT'")
         self.execute("CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data INT NOT NULL, PRIMARY KEY (id))")
         self.execute("INSERT INTO test (data) VALUES(RAND())")
         self.execute("COMMIT")
