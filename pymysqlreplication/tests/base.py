@@ -67,7 +67,7 @@ class PyMySQLReplicationTestCase(base):
 
     def isMariaDB(self):
         if self.__is_mariaDB is None:
-            self.__is_mariaDB = "MariaDB" in self.execute("SELECT VERSION()").fetchone()
+            self.__is_mariaDB = "MariaDB" in self.execute("SELECT VERSION()").fetchone()[0]
         return self.__is_mariaDB
 
     @property
