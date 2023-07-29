@@ -14,8 +14,8 @@ from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
     XidEvent, GtidEvent, StopEvent, XAPrepareEvent,
     BeginLoadQueryEvent, ExecuteLoadQueryEvent,
-    RandEvent,
-    HeartbeatLogEvent, NotImplementedEvent, MariadbGtidEvent)
+    HeartbeatLogEvent, NotImplementedEvent, 
+    MariadbGtidEvent, RandEvent)
 from .exceptions import BinLogNotEnabled
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
