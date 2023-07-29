@@ -21,9 +21,7 @@ def main():
     # the end of the stream
     stream = BinLogStreamReader(connection_settings=MYSQL_SETTINGS,
                                 server_id=3,
-                                blocking=True,
-                                resume_stream = True,
-                                )
+                                blocking=True)
 
     for binlogevent in stream:
         binlogevent.dump()
