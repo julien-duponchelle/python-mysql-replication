@@ -27,9 +27,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         return [GtidEvent]
 
     def test_allowed_event_list(self):
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 21)
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 20)
-        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 20)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 22)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 21)
+        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 21)
         self.assertEqual(len(self.stream._allowed_event_list([RotateEvent], None, False)), 1)
 
     def test_read_query_event(self):
@@ -1009,6 +1009,32 @@ class GtidTests(unittest.TestCase):
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-:1")
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
 
+class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
+    def test_binlog_checkpoint_event(self):
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database, 
+            server_id=1023,
+            blocking=False,
+            is_mariadb=True
+        )
+
+        query = "DROP TABLE IF EXISTS test"
+        self.execute(query)
+
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        self.stream.close()
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, RotateEvent)  
+        
+        event = self.stream.fetchone()
+        self.assertIsInstance(event,FormatDescriptionEvent)
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, MariadbBinLogCheckPointEvent)
+        self.assertEqual(event.filename, self.bin_log_basename()+".000001")
 
 class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
     

@@ -88,6 +88,7 @@ class BinLogPacketWrapper(object):
         # MariaDB GTID
         constants.MARIADB_ANNOTATE_ROWS_EVENT: event.MariadbAnnotateRowsEvent,
         constants.MARIADB_BINLOG_CHECKPOINT_EVENT: event.NotImplementedEvent,
+        constants.MARIADB_BINLOG_CHECKPOINT_EVENT: event.MariadbBinLogCheckPointEvent,
         constants.MARIADB_GTID_EVENT: event.MariadbGtidEvent,
         constants.MARIADB_GTID_GTID_LIST_EVENT: event.MariadbGtidListEvent,
         constants.MARIADB_START_ENCRYPTION_EVENT: event.MariadbStartEncryptionEvent

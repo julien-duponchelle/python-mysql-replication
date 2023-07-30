@@ -144,4 +144,9 @@ class PyMySQLReplicationMariaDbTestCase(PyMySQLReplicationTestCase):
         self.connect_conn_control(db)
         self.stream = None
         self.resetBinLog()
-        
+    
+    def bin_log_basename(self):
+        cursor = self.execute('SELECT @@log_bin_basename')
+        bin_log_basename = cursor.fetchone()[0]
+        bin_log_basename = bin_log_basename.split("/")[-1]
+        return bin_log_basename
