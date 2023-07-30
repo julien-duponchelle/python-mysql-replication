@@ -110,6 +110,23 @@ class MariadbGtidEvent(BinLogEvent):
         print("Flags:", self.flags)
         print('GTID:', self.gtid)
 
+class MariadbBinLogCheckPointEvent(BinLogEvent):
+    """
+    Check point in binlog event in MariaDB
+    https://mariadb.com/kb/en/binlog_checkpoint_event/
+    """
+
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(MariadbBinLogCheckPointEvent, self).__init__(from_packet, event_size, table_map, ctl_connection,
+                                                           **kwargs)
+
+        self.filename_length = self.packet.read_uint32()
+        self.filename = self.packet.read(event_size - 4).decode()
+
+    def _dump(self):
+        super(MariadbBinLogCheckPointEvent, self)._dump()
+        print("Filename Length:", self.filename_length)
+        print('Filename:', self.filename)
 
 class RotateEvent(BinLogEvent):
     """Change MySQL bin log file
