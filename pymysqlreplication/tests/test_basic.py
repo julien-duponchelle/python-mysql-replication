@@ -1002,9 +1002,9 @@ class GtidTests(unittest.TestCase):
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-:1")
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
 
-class TestMariadbBinlogStreaReader(base.PyMySQLReplicationMariaDbTestCase):
+class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
     
-    def test_annotate_rows_evet(self):
+    def test_annotate_rows_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
         # Insert first event
