@@ -130,7 +130,7 @@ class PyMySQLReplicationMariaDbTestCase(PyMySQLReplicationTestCase):
             "host": "localhost",
             "user": "root",
             "passwd": "",
-            "port": 3308,
+            "port": 3306,
             "use_unicode": True,
             "charset": "utf8",
             "db": "pymysqlreplication_test"
