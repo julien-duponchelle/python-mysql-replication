@@ -119,13 +119,10 @@ class MariadbBinLogCheckPointEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(MariadbBinLogCheckPointEvent, self).__init__(from_packet, event_size, table_map, ctl_connection,
                                                            **kwargs)
-
-        self.filename_length = self.packet.read_uint32()
-        self.filename = self.packet.read(event_size - 4).decode()
+        filename_length = self.packet.read_uint32()
+        self.filename = self.packet.read(filename_length).decode()
 
     def _dump(self):
-        super(MariadbBinLogCheckPointEvent, self)._dump()
-        print("Filename Length:", self.filename_length)
         print('Filename:', self.filename)
 
 class RotateEvent(BinLogEvent):
