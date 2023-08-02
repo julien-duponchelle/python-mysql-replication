@@ -1022,7 +1022,11 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
         self.assertEqual(self.bin_log_format(), "STATEMENT")
         self.assertIsInstance(self.stream.fetchone(), QueryEvent)
         self.assertIsInstance(self.stream.fetchone(), QueryEvent)
-        self.assertIsInstance(self.stream.fetchone(), RandEvent)
+
+        expect_rand_event = self.stream.fetchone()
+        self.assertIsInstance(expect_rand_event, RandEvent)
+        self.assertEqual(type(expect_rand_event.seed1), int)
+        self.assertEqual(type(expect_rand_event.seed2), int)
 
     def tearDown(self):
         self.execute("SET @@binlog_format='ROW'")
