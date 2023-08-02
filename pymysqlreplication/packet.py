@@ -65,7 +65,7 @@ class BinLogPacketWrapper(object):
         constants.XID_EVENT: event.XidEvent,
         constants.INTVAR_EVENT: event.IntvarEvent,
         constants.GTID_LOG_EVENT: event.GtidEvent,
-        constants.PREVIOUS_GTIDS_LOG_EVENT: event.PreviousGtidEvent,
+        constants.PREVIOUS_GTIDS_LOG_EVENT: event.PreviousGtidsEvent,
         constants.STOP_EVENT: event.StopEvent,
         constants.BEGIN_LOAD_QUERY_EVENT: event.BeginLoadQueryEvent,
         constants.EXECUTE_LOAD_QUERY_EVENT: event.ExecuteLoadQueryEvent,
