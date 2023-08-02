@@ -1003,35 +1003,31 @@ class GtidTests(unittest.TestCase):
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
 
 class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
-
     def test_binlog_checkpoint_event(self):
-
         self.stream.close()
         self.stream = BinLogStreamReader(
             self.database, 
-            server_id=1024, 
+            server_id=1023,
             blocking=False,
             is_mariadb=True
-            )
+        )
 
         query = "DROP TABLE IF EXISTS test"
         self.execute(query)
 
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
+        self.stream.close()
 
-        #check rotate event
         event = self.stream.fetchone()
         self.assertIsInstance(event, RotateEvent)  
         
-        #check format description event
         event = self.stream.fetchone()
         self.assertIsInstance(event,FormatDescriptionEvent)
 
-        #check Mariadb binlog checkpoint event
         event = self.stream.fetchone()
         self.assertIsInstance(event, MariadbBinLogCheckPointEvent)
-        self.assertEqual(event.filename, self.bin_log_basename() + ".000001")
+        self.assertEqual(event.filename, self.bin_log_basename()+".000001")
 
 if __name__ == "__main__":
     import unittest
