@@ -90,6 +90,40 @@ class GtidEvent(BinLogEvent):
         return '<GtidEvent "%s">' % self.gtid
 
 
+class PreviousGtidEvent(BinLogEvent):
+    """
+    PreviousGtidEvent is contains the Gtids executed in the last binary log file.
+    Attributes:
+        n_sid: which size is the gtid_set
+        sid: 16bytes UUID as a binary
+        n_intervals: how many intervals are sent
+    Eg: [4c9e3dfc-9d25-11e9-8d2e-0242ac1cfd7e:1-100, 4c9e3dfc-9d25-11e9-8d2e-0242ac1cfd7e:1-10:20-30]
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(PreviousGtidEvent, self).__init__(from_packet, event_size, table_map,
+                                                ctl_connection, **kwargs)
+
+        self._n_sid = self.packet.read_int64()
+        self._gtids = []
+
+        for _ in range(self._n_sid):
+            sid = self.packet.read(16)
+            n_intervals = self.packet.read_uint64()
+            intervals = [f"{self.packet.read_int64()}-{self.packet.read_uint64()}" for _ in range(n_intervals)]
+            nibbles = binascii.hexlify(sid).decode('ascii')
+            gtid = '%s-%s-%s-%s-%s:%s' % (
+                nibbles[:8], nibbles[8:12], nibbles[12:16], nibbles[16:20], nibbles[20:], ':'.join(intervals))
+            self._gtids.append(gtid)
+
+        self._previous_gtids = ','.join(self._gtids)
+
+    def _dump(self):
+        print("previous_gtids: %s" % self._previous_gtids)
+
+    def __repr__(self):
+        return '<PreviousGtidEvent "%s">' % self._previous_gtids
+
+
 class MariadbGtidEvent(BinLogEvent):
     """
     GTID change in binlog event in MariaDB
@@ -289,7 +323,7 @@ class QueryEvent(BinLogEvent):
         elif key == Q_TIME_ZONE_CODE:                 # 0x05
             time_zone_len = self.packet.read_uint8()
             if time_zone_len:
-                self.time_zone = self.packet.read(time_zone_len) 
+                self.time_zone = self.packet.read(time_zone_len)
         elif key == Q_CATALOG_NZ_CODE:                # 0x06
             catalog_len = self.packet.read_uint8()
             if catalog_len:

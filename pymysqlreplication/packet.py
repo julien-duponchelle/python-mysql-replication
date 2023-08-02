@@ -65,6 +65,7 @@ class BinLogPacketWrapper(object):
         constants.XID_EVENT: event.XidEvent,
         constants.INTVAR_EVENT: event.IntvarEvent,
         constants.GTID_LOG_EVENT: event.GtidEvent,
+        constants.PREVIOUS_GTIDS_LOG_EVENT: event.PreviousGtidEvent,
         constants.STOP_EVENT: event.StopEvent,
         constants.BEGIN_LOAD_QUERY_EVENT: event.BeginLoadQueryEvent,
         constants.EXECUTE_LOAD_QUERY_EVENT: event.ExecuteLoadQueryEvent,
@@ -81,7 +82,6 @@ class BinLogPacketWrapper(object):
 
         #5.6 GTID enabled replication events
         constants.ANONYMOUS_GTID_LOG_EVENT: event.NotImplementedEvent,
-        constants.PREVIOUS_GTIDS_LOG_EVENT: event.NotImplementedEvent,
         # MariaDB GTID
         constants.MARIADB_ANNOTATE_ROWS_EVENT: event.NotImplementedEvent,
         constants.MARIADB_BINLOG_CHECKPOINT_EVENT: event.NotImplementedEvent,
