@@ -445,8 +445,8 @@ class RandEvent(BinLogEvent):
     - RAND_EVENT only works when the seed number is not specified.
 
     Attributes:
-        seed1
-        seed2
+        seed1: value for the first seed
+        seed2: value for the second seed
     """
     
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
