@@ -1002,6 +1002,39 @@ class GtidTests(unittest.TestCase):
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-:1")
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
 
+class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
+
+    def test_start_encryption_event(self):
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        query = "INSERT INTO test (data) VALUES('Hello World')"
+        self.execute(query)
+        self.execute("COMMIT")
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+
+        start_encryption_event = self.stream.fetchone()
+        self.assertIsInstance(start_encryption_event, StartEncryptionEvent)
+
+        schema = start_encryption_event.schema
+        key_version = start_encryption_event.key_version
+        nonce = start_encryption_event.nonce
+
+        try:
+            with open("../../.mariadb/no_encryption_key.key", "r") as key_file:
+                first_line = key_file.readline()
+                key_version_from_key_file = int(first_line.split(";")[0])
+        except Exception as e:
+            self.fail("raised unexpected exception: {exception}".format(exception=e))
+        finally:
+            self.resetBinLog()
+
+        # schema is always 1
+        self.assertEqual(schema, 1)
+        self.assertEqual(key_version, key_version_from_key_file)
+        self.assertEqual(type(nonce), bytes)
+        self.assertEqual(len(nonce), 12)
 
 if __name__ == "__main__":
     import unittest
