@@ -25,8 +25,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         return [GtidEvent]
 
     def test_allowed_event_list(self):
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 16)
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 15)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 17)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 16)
         self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 15)
         self.assertEqual(len(self.stream._allowed_event_list([RotateEvent], None, False)), 1)
 
