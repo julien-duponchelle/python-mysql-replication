@@ -1022,7 +1022,7 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         nonce = start_encryption_event.nonce
 
         try:
-            with open("../../.mariadb/no_encryption_key.key", "r") as key_file:
+            with open("./../../.mariadb/no_encryption_key.key", "r") as key_file:
                 first_line = key_file.readline()
                 key_version_from_key_file = int(first_line.split(";")[0])
         except Exception as e:
