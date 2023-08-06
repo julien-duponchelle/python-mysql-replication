@@ -112,12 +112,13 @@ class MariadbGtidEvent(BinLogEvent):
 
 class MariadbBinLogCheckPointEvent(BinLogEvent):
     """
-    Represent a checkpoint in a binlog event in MariaDB.
+    Represents a checkpoint in a binlog event in MariaDB.
+
+    More details are available in the MariaDB Knowledge Base:
     https://mariadb.com/kb/en/binlog_checkpoint_event/
 
-    Attributes:
-        filename_length (int): The length of the filename.
-        filename (str): The name of the file saved at the checkpoint.
+    :ivar filename_length:  int - The length of the filename.
+    :ivar filename: str - The name of the file saved at the checkpoint.
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
