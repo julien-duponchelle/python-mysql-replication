@@ -440,13 +440,12 @@ class RandEvent(BinLogEvent):
     """
     RandEvent is generated every time a statement uses the RAND() function.
     Indicates the seed values to use for generating a random number with RAND() in the next statement.
-    Warning
-    - RAND_EVENT only works in statement-based logging. (need to set binlog_format as 'STATEMENT')
-    - RAND_EVENT only works when the seed number is not specified.
 
-    Attributes:
-        seed1: value for the first seed
-        seed2: value for the second seed
+    RandEvent only works in statement-based logging (need to set binlog_format as 'STATEMENT')
+    and only works when the seed number is not specified.
+
+    :ivar seed1: int - value for the first seed
+    :ivar seed2: int - value for the second seed
     """
     
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
