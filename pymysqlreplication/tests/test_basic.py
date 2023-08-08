@@ -17,6 +17,8 @@ from pymysqlreplication.exceptions import TableMetadataUnavailableError
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 
+from pathlib import Path
+
 __all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader"]
 
 
@@ -1021,8 +1023,12 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         key_version = start_encryption_event.key_version
         nonce = start_encryption_event.nonce
 
+        from pathlib import Path
+
+        encryption_key_file_path = Path(__file__).parent.parent.parent
+
         try:
-            with open("./../../.mariadb/no_encryption_key.key", "r") as key_file:
+            with open(f"{encryption_key_file_path}/.mariadb/no_encryption_key.key", "r") as key_file:
                 first_line = key_file.readline()
                 key_version_from_key_file = int(first_line.split(";")[0])
         except Exception as e:
