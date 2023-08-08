@@ -436,6 +436,22 @@ class IntvarEvent(BinLogEvent):
         print("type: %d" % (self.type))
         print("Value: %d" % (self.value))
 
+class RowsQueryLogEvent(BinLogEvent):
+    """Change MySQL bin log file
+
+    Attributes:
+        position: Position inside next binlog
+        next_binlog: Name of next binlog file
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(RowsQueryLogEvent, self).__init__(from_packet, event_size, table_map,
+                                          ctl_connection, **kwargs)
+        self.query_length = self.packet.read_uint8()
+        self.query = self.packet.read(self.query_length).decode('utf-8')
+    def dump(self):
+        print("=== %s ===" % (self.__class__.__name__))
+        print("Query length: %d" % self.query_length)
+        print("Query: %s" % self.query)
 
 class NotImplementedEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
