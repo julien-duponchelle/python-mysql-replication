@@ -437,7 +437,7 @@ class IntvarEvent(BinLogEvent):
         print("Value: %d" % (self.value))
 
 
-class StartEncryptionEvent(BinLogEvent):
+class MariadbStartEncryptionEvent(BinLogEvent):
     """
     Attributes:
         schema
@@ -446,7 +446,7 @@ class StartEncryptionEvent(BinLogEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(StartEncryptionEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+        super(MariadbStartEncryptionEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
 
         self.schema = self.packet.read_uint8()
         self.key_version = self.packet.read_uint32()
@@ -456,7 +456,6 @@ class StartEncryptionEvent(BinLogEvent):
         print("Schema: %d" % self.schema)
         print("Key version: %d" % self.key_version)
         print(f"Nonce: {self.nonce}")
-
 
 
 class NotImplementedEvent(BinLogEvent):

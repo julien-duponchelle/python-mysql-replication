@@ -1017,7 +1017,7 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
 
         start_encryption_event = self.stream.fetchone()
-        self.assertIsInstance(start_encryption_event, StartEncryptionEvent)
+        self.assertIsInstance(start_encryption_event, MariadbStartEncryptionEvent)
 
         schema = start_encryption_event.schema
         key_version = start_encryption_event.key_version
