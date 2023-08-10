@@ -1003,6 +1003,24 @@ class GtidTests(unittest.TestCase):
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
 
 
+class TestRowsQueryLogEvents(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super(TestRowsQueryLogEvents, self).setUp(port=3308)
+
+    def test_rows_query_log_event(self):
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=[RowsQueryLogEvent],
+        )
+        self.execute("CREATE TABLE IF NOT EXISTS test (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))")
+        self.execute("INSERT INTO test (name) VALUES ('Soul Lee')")
+        self.execute("COMMIT")
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, RowsQueryLogEvent)
+
+
 if __name__ == "__main__":
     import unittest
     unittest.main()
