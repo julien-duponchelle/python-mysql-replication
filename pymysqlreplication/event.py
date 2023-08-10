@@ -439,10 +439,18 @@ class IntvarEvent(BinLogEvent):
 
 class MariadbStartEncryptionEvent(BinLogEvent):
     """
+    Since MariaDB 10.1.7, 
+    the START_ENCRYPTION event is written to every binary log file 
+    if encrypt_binlog is set to ON. Prior to enabling this setting, 
+    additional configuration steps are required in MariaDB. 
+    (Link: **https://mariadb.com/kb/en/encrypting-binary-logs/**)
+
+    This event is written just once, after the Format Description event
+
     Attributes:
-        schema
-        key_version
-        nonce
+        schema: The Encryption scheme, always set to 1 for system files.
+        key_version: The Encryption key version.
+        nonce: Nonce (12 random bytes) of current binlog file.
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
