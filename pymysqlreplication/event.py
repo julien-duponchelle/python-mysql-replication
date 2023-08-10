@@ -443,7 +443,7 @@ class MariadbStartEncryptionEvent(BinLogEvent):
     the START_ENCRYPTION event is written to every binary log file 
     if encrypt_binlog is set to ON. Prior to enabling this setting, 
     additional configuration steps are required in MariaDB. 
-    (Link: **https://mariadb.com/kb/en/encrypting-binary-logs/**)
+    (Link: https://mariadb.com/kb/en/encrypting-binary-logs/)
 
     This event is written just once, after the Format Description event
 
