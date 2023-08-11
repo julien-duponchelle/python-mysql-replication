@@ -664,6 +664,8 @@ class TableMapEvent(BinLogEvent):
         # ith column is nullable if (i - 1)th bit is set to True, not nullable otherwise
         ## Refer to definition of and call to row.event._is_null() to interpret bitmap corresponding to columns
         self.null_bitmask = self.packet.read((self.column_count + 7) / 8)
+        # optional meta Data
+        self.get_optional_meta_data()
 
     def get_table(self):
         return self.table_obj
@@ -674,3 +676,57 @@ class TableMapEvent(BinLogEvent):
         print("Schema: %s" % (self.schema))
         print("Table: %s" % (self.table))
         print("Columns: %s" % (self.column_count))
+
+    def get_optional_meta_data(self):  # TLV 형식으로 데이터 받아옴 (TYPE, LENGTH, VALUE)
+        signed_column_list = []
+        while self.packet.read_bytes > 0:
+            type = self.packet.read(1)[0]
+            length = self.packet.read_length_coded_binary()
+            field_type: MetadataFieldType = MetadataFieldType.by_index(type)
+
+            if field_type == MetadataFieldType.SIGNEDNESS:
+                t = self.packet.read((self.column_count + 7) >> 3)
+                for i in range(self.column_count):
+                    if ((t[i >> 3] & (1 << (7 - (i % 8)))) != 0):
+                        signed_column_list.append(i)
+
+            if field_type == MetadataFieldType.DEFAULT_CHARSET:
+                # charset =  self.packet.read_length_coded_binary()
+                # column_index = self.packet.read_length_coded_binary()
+                # column_charset = self.packet.read_length_coded_binary()
+                # TO-DO 파씽이 제대로 안됨 ..
+                pass
+            if field_type == MetadataFieldType.COLUMN_NAME:
+                data = self.packet.read(length)
+                data.decode('utf-8')
+                # TO-DO
+                # Data 양식: co1col2col3
+                # 앞에 이런 값으로 들어옴 일관성이 있는지 확인해봐야함
+                # 리스트로 아름답게 받을 방법 찾아봐야함
+
+
+from enum import Enum
+
+
+class MetadataFieldType(Enum):
+    SIGNEDNESS = 1  # Signedness of numeric columns
+    DEFAULT_CHARSET = 2  # Charsets of character columns
+    COLUMN_CHARSET = 3  # Charsets of character columns
+    COLUMN_NAME = 4  # Names of columns
+    SET_STR_VALUE = 5  # The string values of SET columns
+    ENUM_STR_VALUE = 6  # The string values in ENUM columns
+    GEOMETRY_TYPE = 7  # The real type of geometry columns
+    SIMPLE_PRIMARY_KEY = 8  # The primary key without any prefix
+    PRIMARY_KEY_WITH_PREFIX = 9  # The primary key with some prefix
+    ENUM_AND_SET_DEFAULT_CHARSET = 10  # Charsets of ENUM and SET columns
+    ENUM_AND_SET_COLUMN_CHARSET = 11  # Charsets of ENUM and SET columns
+
+    def __init__(self, code):
+        self.code = code
+
+    def get_code(self):
+        return self.code
+
+    @staticmethod
+    def by_index(index):
+        return MetadataFieldType(index)
