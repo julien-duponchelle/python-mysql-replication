@@ -437,11 +437,14 @@ class IntvarEvent(BinLogEvent):
         print("Value: %d" % (self.value))
 
 class RowsQueryLogEvent(BinLogEvent):
-    """Change MySQL bin log file
+    """
+    Record original query for the row events in Row-Based Replication
 
-    Attributes:
-        position: Position inside next binlog
-        next_binlog: Name of next binlog file
+    More details are available in the MySQL Knowledge Base:
+    https://dev.mysql.com/doc/dev/mysql-server/latest/classRows__query__log__event.html
+
+    :ivar query_length: uint - Length of the SQL statement
+    :ivar query: str - The executed SQL statement
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(RowsQueryLogEvent, self).__init__(from_packet, event_size, table_map,
