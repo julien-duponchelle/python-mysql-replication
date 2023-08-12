@@ -1005,10 +1005,11 @@ class GtidTests(unittest.TestCase):
 
 class TestRowsQueryLogEvents(base.PyMySQLReplicationTestCase):
     def setUp(self):
-        super().setUp()
+        super(TestRowsQueryLogEvents, self).setUp()
         self.execute("SET global binlog_rows_query_log_events=1")
 
     def tearDown(self):
+        super(TestRowsQueryLogEvents, self).tearDown()
         self.execute("SET global binlog_rows_query_log_events=0")
 
     def test_rows_query_log_event(self):
