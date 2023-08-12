@@ -3,6 +3,7 @@
 import binascii
 import struct
 import datetime
+import decimal
 from pymysqlreplication.constants.STATUS_VAR_KEY import *
 from pymysqlreplication.exceptions import StatusVariableMismatch
 
@@ -484,6 +485,14 @@ class UserVarEvent(BinLogEvent):
     :ivar flags: int - Extra flags associated with the user variable
     """
 
+    type_codes = {
+        0x00: 'STRING_RESULT',
+        0x01: 'REAL_RESULT',
+        0x02: 'INT_RESULT',
+        0x03: 'ROW_RESULT',
+        0x04: 'DECIMAL_RESULT',
+    }
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(UserVarEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
 
@@ -496,15 +505,86 @@ class UserVarEvent(BinLogEvent):
             self.type = self.packet.read_uint8()
             self.charset = self.packet.read_uint32()
             self.value_len = self.packet.read_uint32()
-            self.value = self.packet.read(self.value_len).decode()
+
+            type_to_method = {
+                0x00: self._read_string,
+                0x01: self._read_real,
+                0x02: self._read_int,
+                0x04: self._read_decimal
+            }
+
+            self.value = type_to_method.get(self.type, self._read_default)()
             self.flags = self.packet.read_uint8()
-            
+        else:
+            self.type, self.charset, self.value, self.flags = None, None, None, None
+
+    def _read_string(self):
+        return self.packet.read(self.value_len).decode()
+
+    def _read_real(self):
+        return str(struct.unpack('d', self.packet.read(8))[0])
+
+    def _read_int(self):
+        return str(self.packet.read_uint_by_size(self.value_len))
+
+    def _read_decimal(self):
+        self.precision = self.packet.read_uint8()
+        self.decimals = self.packet.read_uint8()
+        raw_decimal = self.packet.read(self.value_len)
+        return self._parse_decimal_from_bytes(raw_decimal, self.precision, self.decimals)
+
+    def _read_default(self):
+        return self.packet.read(self.value_len)
+
+    @staticmethod
+    def _parse_decimal_from_bytes(raw_decimal, precision, decimals):
+        digits_per_integer = 9
+        compressed_bytes = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4]
+        integral = precision - decimals
+
+        uncomp_integral, comp_integral = divmod(integral, digits_per_integer)
+        uncomp_fractional, comp_fractional = divmod(decimals, digits_per_integer)
+
+        res = "-" if not raw_decimal[0] & 0x80 else ""
+        mask = -1 if res == "-" else 0
+        raw_decimal = bytearray([raw_decimal[0] ^ 0x80]) + raw_decimal[1:]
+
+        def decode_decimal_decompress_value(comp_indx, data, mask):
+            size = compressed_bytes[comp_indx]
+            if size > 0:
+                databuff = bytearray(data[:size])
+                for i in range(size):
+                    databuff[i] ^= mask
+                return size, int.from_bytes(databuff, byteorder='big')
+            return 0, 0
+
+        pointer, value = decode_decimal_decompress_value(comp_integral, raw_decimal, mask)
+        res += str(value)
+
+        for _ in range(uncomp_integral):
+            value = struct.unpack('>i', raw_decimal[pointer:pointer+4])[0] ^ mask
+            res += '%09d' % value
+            pointer += 4
+
+        res += "."
+
+        for _ in range(uncomp_fractional):
+            value = struct.unpack('>i', raw_decimal[pointer:pointer+4])[0] ^ mask
+            res += '%09d' % value
+            pointer += 4
+
+        size, value = decode_decimal_decompress_value(comp_fractional, raw_decimal[pointer:], mask)
+        if size > 0:
+            res += '%0*d' % (comp_fractional, value)
+
+        return decimal.Decimal(res)
+    
     def _dump(self):
         super(UserVarEvent, self)._dump()
         print("User variable name: %s" % self.name)
         print("Is NULL: %s" % ("Yes" if self.is_null else "No"))
         if not self.is_null:
-            print("Type: %s" % self.type)
+            print("Type: %s" % self.type_codes.get(self.type, 'UNKNOWN_TYPE'))
             print("Charset: %s" % self.charset)
             print("Value: %s" % self.value)
             if self.flags is not None:
