@@ -15,11 +15,3 @@ services:
     ports:
       - 3307:3307
     command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave_updates -P 3307
-
-  percona-5.7-binlog-rows-query-events:
-    image: percona:5.7
-    environment:
-        MYSQL_ALLOW_EMPTY_PASSWORD: true
-    ports:
-        - 3308:3308
-    command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --binlog-rows-query-log-events=on --gtid_mode=on --enforce-gtid-consistency=on --log_slave_updates -P 3308
