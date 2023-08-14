@@ -15,6 +15,7 @@ from .column import Column
 from .table import Table
 from .bitmap import BitCount, BitGet
 
+
 class RowsEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(RowsEvent, self).__init__(from_packet, event_size, table_map,
@@ -25,7 +26,7 @@ class RowsEvent(BinLogEvent):
         self.__only_schemas = kwargs["only_schemas"]
         self.__ignored_schemas = kwargs["ignored_schemas"]
 
-        #Header
+        # Header
         self.table_id = self._read_table_id()
 
         # Additional information
@@ -33,7 +34,7 @@ class RowsEvent(BinLogEvent):
             self.primary_key = table_map[self.table_id].data["primary_key"]
             self.schema = self.table_map[self.table_id].schema
             self.table = self.table_map[self.table_id].table
-        except KeyError: #If we have filter the corresponding TableMap Event
+        except KeyError:  # If we have filter the corresponding TableMap Event
             self._processed = False
             return
 
@@ -51,32 +52,31 @@ class RowsEvent(BinLogEvent):
             self._processed = False
             return
 
-
-        #Event V2
+        # Event V2
         if self.event_type == BINLOG.WRITE_ROWS_EVENT_V2 or \
                 self.event_type == BINLOG.DELETE_ROWS_EVENT_V2 or \
                 self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2:
-                self.flags, self.extra_data_length = struct.unpack('<HH', self.packet.read(4))
-                if self.extra_data_length > 2:
-                    self.extra_data_type = struct.unpack('<B', self.packet.read(1))[0]
+            self.flags, self.extra_data_length = struct.unpack('<HH', self.packet.read(4))
+            if self.extra_data_length > 2:
+                self.extra_data_type = struct.unpack('<B', self.packet.read(1))[0]
 
-                    # ndb information
-                    if self.extra_data_type == 0:
-                        self.nbd_info_length, self.nbd_info_format = struct.unpack('<BB', self.packet.read(1))
-                        self.nbd_info = self.packet.read(self.nbd_info_length - 2)
-                    # partition information
-                    elif self.extra_data_type == 1:
-                        if self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2:
-                            self.partition_id, self.source_partition_id = struct.unpack('<HH', self.packet.read(4))
-                        else:
-                            self.partition_id = struct.unpack('<H', self.packet.read(2))[0]
-                    # etc
+                # ndb information
+                if self.extra_data_type == 0:
+                    self.nbd_info_length, self.nbd_info_format = struct.unpack('<BB', self.packet.read(1))
+                    self.nbd_info = self.packet.read(self.nbd_info_length - 2)
+                # partition information
+                elif self.extra_data_type == 1:
+                    if self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2:
+                        self.partition_id, self.source_partition_id = struct.unpack('<HH', self.packet.read(4))
                     else:
-                        self.extra_data = self.packet.read(self.extra_info_length - 3)
+                        self.partition_id = struct.unpack('<H', self.packet.read(2))[0]
+                # etc
+                else:
+                    self.extra_data = self.packet.read(self.extra_info_length - 3)
         else:
             self.flags = struct.unpack('<H', self.packet.read(2))[0]
 
-        #Body
+        # Body
         self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns = self.table_map[self.table_id].columns
 
@@ -92,7 +92,7 @@ class RowsEvent(BinLogEvent):
             bit = ord(bit)
         return bit & (1 << (position % 8))
 
-    def _read_column_data(self,  cols_bitmap):
+    def _read_column_data(self, cols_bitmap):
         """Use for WRITE, UPDATE and DELETE events.
         Return an array of column data
         """
@@ -244,7 +244,7 @@ class RowsEvent(BinLogEvent):
             microsecond = self.packet.read_int_be_by_size(read)
             if column.fsp % 2:
                 microsecond = int(microsecond / 10)
-            return microsecond * (10 ** (6-column.fsp))
+            return microsecond * (10 ** (6 - column.fsp))
         return 0
 
     @staticmethod
@@ -541,7 +541,7 @@ class UpdateRowsEvent(RowsEvent):
         super(UpdateRowsEvent, self).__init__(from_packet, event_size,
                                               table_map, ctl_connection, **kwargs)
         if self._processed:
-            #Body
+            # Body
             self.columns_present_bitmap = self.packet.read(
                 (self.number_of_columns + 7) / 8)
             self.columns_present_bitmap2 = self.packet.read(
@@ -567,12 +567,10 @@ class UpdateRowsEvent(RowsEvent):
                                       row["after_values"][key]))
 
 
-
-
 class OptionalMetaData:
     def __init__(self):
         self.signed_column_list = []
-        self.default_charset_collation:int = None
+        self.default_charset_collation: int = None
         self.charset_collation = {}
         self.column_charset = []
         self.column_name_list = []
@@ -581,7 +579,7 @@ class OptionalMetaData:
         self.geometry_type_list = []
         self.simple_primary_key_list = []
         self.primary_keys_with_prefix = {}
-        self.enum_and_set_default_charset:int = None
+        self.enum_and_set_default_charset: int = None
         self.enum_and_set_default_column_charset_list = []
         self.visibility_list = []
 
@@ -593,6 +591,7 @@ class OptionalMetaData:
         print("column_name_list: %s" % (self.column_name_list))
         print("simple_primary_key_list: %s" % (self.simple_primary_key_list))
         print("visibility_list: %s" % (self.visibility_list))
+
 
 class TableMapEvent(BinLogEvent):
     """This event describes the structure of a table.
@@ -695,7 +694,6 @@ class TableMapEvent(BinLogEvent):
         # optional meta Data
         self.get_optional_meta_data(numeric_column_count)
 
-
     def get_table(self):
         return self.table_obj
 
@@ -706,7 +704,7 @@ class TableMapEvent(BinLogEvent):
         print("Table: %s" % (self.table))
         print("Columns: %s" % (self.column_count))
 
-    def _numeric_column_count(self,column_types):
+    def _numeric_column_count(self, column_types):
         count = 0
         for column_type in column_types:
             if column_type in [FIELD_TYPE.TINY, FIELD_TYPE.SHORT, FIELD_TYPE.INT24, FIELD_TYPE.LONG,
@@ -715,14 +713,14 @@ class TableMapEvent(BinLogEvent):
                 count += 1
         return count
 
-    def get_optional_meta_data(self, numeric_column_count):  # TLV 형식으로 데이터 받아옴 (TYPE, LENGTH, VALUE)
+    def get_optional_meta_data(self, numeric_column_count):  # TLV format data (TYPE, LENGTH, VALUE)
         optional_metadata = OptionalMetaData()
         target_position = len(self.packet.get_all_data())
 
         while self.packet.read_bytes < target_position:
             print(optional_metadata.dump())
-            option_metadata_type = self.packet.read(1)[0] # t
-            length = self.packet.read_length_coded_binary() # l
+            option_metadata_type = self.packet.read(1)[0]  # t
+            length = self.packet.read_length_coded_binary()  # l
             try:
                 field_type: MetadataFieldType = MetadataFieldType.by_index(option_metadata_type)
             except ValueError:
@@ -735,7 +733,8 @@ class TableMapEvent(BinLogEvent):
                 optional_metadata.signed_column_list = signed_column_list
 
             elif field_type == MetadataFieldType.DEFAULT_CHARSET:
-                optional_metadata.default_charset_collation, optional_metadata.charset_collation = self._read_default_charset(length)
+                optional_metadata.default_charset_collation, optional_metadata.charset_collation = self._read_default_charset(
+                    length)
 
             elif field_type == MetadataFieldType.COLUMN_CHARSET:
                 optional_metadata.column_charset = self._read_ints(length)
@@ -767,47 +766,47 @@ class TableMapEvent(BinLogEvent):
             elif field_type == field_type.VISIBILITY:
                 optional_metadata.visibility_list = self._read_bool_list(self.column_count)
 
-    def _read_bool_list(self,len):
+    def _read_bool_list(self, length):
         column_index_list = []
-        value = self.packet.read((len+7) >> 3)
-        for i in range(len):
-            if ((value[i >> 3] & (1 << (7 - (i % 8)))) != 0):
+        value = self.packet.read((length + 7) >> 3)
+        for i in range(length):
+            if (value[i >> 3] & (1 << (7 - (i % 8)))) != 0:
                 column_index_list.append(i)
         return column_index_list
 
-    def _read_default_charset(self,length):
+    def _read_default_charset(self, length):
         charset = {}
         read_until = self.packet.read_bytes + length
-        if(self.packet.read_bytes >= read_until):
+        if self.packet.read_bytes >= read_until:
             return
         default_charset_collation = self.packet.read_length_coded_binary()
-        while (self.packet.read_bytes < read_until):
+        while self.packet.read_bytes < read_until:
             column_index = self.packet.read_length_coded_binary()
             charset_collation = self.packet.read_length_coded_binary()
             charset[column_index] = charset_collation
 
-        return default_charset_collation,charset
+        return default_charset_collation, charset
 
-    def _read_ints(self,length):
+    def _read_ints(self, length):
         result = []
         read_until = self.packet.read_bytes + length
-        while (self.packet.read_bytes < read_until):
+        while self.packet.read_bytes < read_until:
             result.append(self.packet.read_length_coded_binary())
         return result
 
-    def _read_column_names(self,length):
+    def _read_column_names(self, length):
         result = []
         read_until = self.packet.read_bytes + length
-        while (self.packet.read_bytes < read_until):
+        while self.packet.read_bytes < read_until:
             result.append(self.packet.read_variable_length_string().decode())
         return result
 
-    def _read_type_values(self,length):
+    def _read_type_values(self, length):
         result = []
         read_until = self.packet.read_bytes + length
-        if(self.packet.read_bytes >= read_until):
+        if self.packet.read_bytes >= read_until:
             return
-        while (self.packet.read_bytes < read_until):
+        while self.packet.read_bytes < read_until:
             type_value_list = []
             value_count = self.packet.read_length_coded_binary()
             for i in range(value_count):
@@ -815,14 +814,15 @@ class TableMapEvent(BinLogEvent):
             result.append(type_value_list)
         return result
 
-    def _read_int_pairs(self,length):
+    def _read_int_pairs(self, length):
         result = {}
         read_until = self.packet.read_bytes + length
-        while (self.packet.read_bytes < read_until):
+        while self.packet.read_bytes < read_until:
             column_index = self.packet.read_length_coded_binary()
             column_charset = self.packet.read_length_coded_binary()
             result[column_index] = column_charset
         return result
+
 
 from enum import Enum
 
@@ -841,6 +841,7 @@ class MetadataFieldType(Enum):
     ENUM_AND_SET_COLUMN_CHARSET = 11  # Charsets of ENUM and SET columns
     VISIBILITY = 12
     UNKNOWN_METADATA_FIELD_TYPE = 128
+
     def __init__(self, code):
         self.code = code
 
