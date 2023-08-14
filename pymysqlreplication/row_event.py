@@ -567,6 +567,33 @@ class UpdateRowsEvent(RowsEvent):
                                       row["after_values"][key]))
 
 
+
+
+class OptionalMetaData:
+    def __init__(self):
+        self.signed_column_list = []
+        self.default_charset_collation:int = None
+        self.charset_collation = {}
+        self.column_charset = []
+        self.column_list = []
+        self.set_str_value_list = []
+        self.set_enum_str_value_list = []
+        self.geometry_type_list = []
+        self.simple_primary_key_list = []
+        self.primary_keys_with_prefix = {}
+        self.enum_and_set_default_charset:int = None
+        self.enum_and_set_default_column_charset_list = []
+        self.visibility_list = []
+
+    def dump(self):
+        print("=== %s ===" % (self.__class__.__name__))
+        print("sigend_column_list: %s" % self.signed_column_list)
+        print("default_charset_collation: %s" % (self.default_charset_collation))
+        print("charset_collation: %s" % (self.charset_collation))
+        print("column_list: %s" % (self.column_list))
+        print("simple_primary_key_list: %s" % (self.simple_primary_key_list))
+        print("visibility_list: %s" % (self.visibility_list))
+
 class TableMapEvent(BinLogEvent):
     """This event describes the structure of a table.
     It's sent before a change happens on a table.
@@ -667,6 +694,7 @@ class TableMapEvent(BinLogEvent):
         # optional meta Data
         self.get_optional_meta_data()
 
+
     def get_table(self):
         return self.table_obj
 
@@ -678,33 +706,109 @@ class TableMapEvent(BinLogEvent):
         print("Columns: %s" % (self.column_count))
 
     def get_optional_meta_data(self):  # TLV 형식으로 데이터 받아옴 (TYPE, LENGTH, VALUE)
-        signed_column_list = []
-        while self.packet.read_bytes > 0:
-            type = self.packet.read(1)[0]
-            length = self.packet.read_length_coded_binary()
-            field_type: MetadataFieldType = MetadataFieldType.by_index(type)
+        optional_metadata = OptionalMetaData()
+        while self.packet.read_bytes < len(self.packet._data):
+            print(optional_metadata.dump())
+            option_metadata_type = self.packet.read(1)[0] #t
+            length = self.packet.read_length_coded_binary() #l
+            try:
+                field_type: MetadataFieldType = MetadataFieldType.by_index(option_metadata_type)
+            except ValueError:
+                #TO-DO
+                print("이상한값이 들어오는데 이유모르겠음 ")
+                break
 
             if field_type == MetadataFieldType.SIGNEDNESS:
-                t = self.packet.read((self.column_count + 7) >> 3)
-                for i in range(self.column_count):
-                    if ((t[i >> 3] & (1 << (7 - (i % 8)))) != 0):
-                        signed_column_list.append(i)
+                signed_column_list = self._read_bool_list(1)
+                optional_metadata.signed_column_list = signed_column_list
 
-            if field_type == MetadataFieldType.DEFAULT_CHARSET:
-                # charset =  self.packet.read_length_coded_binary()
-                # column_index = self.packet.read_length_coded_binary()
-                # column_charset = self.packet.read_length_coded_binary()
-                # TO-DO 파씽이 제대로 안됨 ..
-                pass
-            if field_type == MetadataFieldType.COLUMN_NAME:
-                data = self.packet.read(length)
-                data.decode('utf-8')
-                # TO-DO
-                # Data 양식: co1col2col3
-                # 앞에 이런 값으로 들어옴 일관성이 있는지 확인해봐야함
-                # 리스트로 아름답게 받을 방법 찾아봐야함
+            elif field_type == MetadataFieldType.DEFAULT_CHARSET:
+                optional_metadata.default_charset_collation, optional_metadata.charset_collation = self._read_default_charset(length)
 
+            elif field_type == MetadataFieldType.COLUMN_CHARSET:
+                optional_metadata.column_charset = self._read_ints(length)
 
+            elif field_type == MetadataFieldType.COLUMN_NAME:
+                optional_metadata.column_list = self._read_column_names(length)
+
+            elif field_type == field_type.SET_STR_VALUE :
+                optional_metadata.set_str_value_list = self._read_type_values(length)
+
+            elif field_type == field_type.ENUM_STR_VALUE :
+                optional_metadata.set_enum_str_value_list = self._read_type_values(length)
+
+            elif field_type == field_type.GEOMETRY_TYPE:
+                optional_metadata.geometry_type_list = self._read_ints(length)
+
+            elif field_type == MetadataFieldType.SIMPLE_PRIMARY_KEY:
+                optional_metadata.simple_primary_key_list = self._read_ints(length)
+
+            elif field_type == field_type.PRIMARY_KEY_WITH_PREFIX:
+                optional_metadata.primary_keys_with_prefix = self._read_ints(length)
+
+            elif field_type == field_type.ENUM_AND_SET_DEFAULT_CHARSET:
+                optional_metadata.enum_and_set_default_charset = self._read_default_charset(length)
+
+            elif field_type == field_type.ENUM_AND_SET_COLUMN_CHARSET:
+                optional_metadata.enum_and_set_default_column_charset_list = self._read_integer_pairs(length)
+
+            elif field_type == field_type.VISIBILITY:
+                optional_metadata.visibility_list = self._read_bool_list(2)
+
+    def _read_bool_list(self,len):
+        column_index_list = []
+        value = self.packet.read((len+7) >> 3)
+        for i in range(len):
+            if ((value[i >> 3] & (1 << (7 - (i % 8)))) != 0):
+                column_index_list.append(i)
+        return column_index_list
+    def _read_default_charset(self,length):
+        charset = {}
+        read_until = self.packet.read_bytes + length
+        if(self.packet.read_bytes >= read_until):
+            return
+        default_charset_collation = self.packet.read_length_coded_binary()
+        while (self.packet.read_bytes < read_until):
+            column_index = self.packet.read_length_coded_binary()
+            charset_collation = self.packet.read_length_coded_binary()
+            charset[column_index] = charset_collation
+
+        return default_charset_collation,charset
+
+    def _read_ints(self,length):
+        result = []
+        read_until = self.packet.read_bytes + length
+        while (self.packet.read_bytes < read_until):
+            result.append(self.packet.read_length_coded_binary())
+        return result
+
+    def _read_column_names(self,length):
+        result = []
+        read_until = self.packet.read_bytes + length
+        while (self.packet.read_bytes < read_until):
+            result.append(self.packet.read_variable_length_string().decode())
+        return result
+
+    def _read_type_values(self,length):
+        result = []
+        read_until = self.packet.read_bytes + length
+        if(self.packet.read_bytes >= read_until):
+            return
+        while (self.packet.read_bytes < read_until):
+            type_value_list = []
+            value_count = self.packet.read_length_coded_binary()
+            for i in range(value_count):
+                type_value_list.append(self.packet.read_variable_length_string())
+            result.append(type_value_list)
+        return result
+    def _read_integer_pairs(self,length):
+        result = {}
+        read_until = self.packet.read_bytes + length
+        while (self.packet.read_bytes < read_until):
+            column_index = self.packet.read_length_coded_binary()
+            column_charset = self.packet.read_length_coded_binary()
+            result[column_index] = column_charset
+        return result
 from enum import Enum
 
 
@@ -720,7 +824,8 @@ class MetadataFieldType(Enum):
     PRIMARY_KEY_WITH_PREFIX = 9  # The primary key with some prefix
     ENUM_AND_SET_DEFAULT_CHARSET = 10  # Charsets of ENUM and SET columns
     ENUM_AND_SET_COLUMN_CHARSET = 11  # Charsets of ENUM and SET columns
-
+    VISIBILITY = 12
+    UNKNOWN_METADATA_FIELD_TYPE = 128
     def __init__(self, code):
         self.code = code
 
