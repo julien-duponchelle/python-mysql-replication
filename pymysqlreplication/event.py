@@ -133,7 +133,7 @@ class RotateEvent(BinLogEvent):
 
 class XAPrepareEvent(BinLogEvent):
     """An XA prepare event is generated for a XA prepared transaction.
-    Like Xid_event it contans XID of the *prepared* transaction
+    Like Xid_event it contains XID of the *prepared* transaction
 
     Attributes:
         one_phase: current XA transaction commit method
