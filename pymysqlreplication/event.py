@@ -244,7 +244,7 @@ class QueryEvent(BinLogEvent):
 
         # Payload
         status_vars_end_pos = self.packet.read_bytes + self.status_vars_length
-        while self.packet.read_bytes < status_vars_end_pos: # while 남은 data length가 얼마만큼? OR read_bytes
+        while self.packet.read_bytes < status_vars_end_pos:
             # read KEY for status variable
             status_vars_key = self.packet.read_uint8()
             # read VALUE for status variable
