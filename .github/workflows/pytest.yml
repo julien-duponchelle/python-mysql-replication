@@ -32,7 +32,7 @@ jobs:
         
           while :
           do
-            if mysql -h 127.0.0.1 --user=root --execute "show global variables like 'binlog_format%';" 2>&1 >/dev/null && mysql -h 127.0.0.1 --port=3307  --user=root --execute "show global variables like 'binlog_format%;" 2>&1 >/dev/null; then
+            if mysql -h 127.0.0.1 --user=root --execute "SELECT version();" 2>&1 >/dev/null && mysql -h 127.0.0.1 --port=3307  --user=root --execute "SELECT version();" 2>&1 >/dev/null; then
               break
             fi
             sleep 1
