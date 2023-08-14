@@ -28,9 +28,17 @@ jobs:
         run: |
           docker compose create
           docker compose start
-          # Wait for the services to accept connections,
-          # TODO: do that smarter, poll connection attempt until it succeeds
-          sleep 30
+          echo "wait mysql server"
+        
+          while :
+          do
+            if mysql -h percona-5.7 --user=root --execute "show global variables like 'binlog_format%';" 2>&1 >/dev/null && mysql -h percona-5.7-ctl --port=3307  --user=root --execute "USE pymysqlreplication_test;" 2>&1 >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          
+          echo "run pytest"
 
       - name: Install dependencies
         run: |

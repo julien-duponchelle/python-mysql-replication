@@ -42,6 +42,7 @@ services:
           if mysql -h percona-5.7 --user=root --execute "USE pymysqlreplication_test;" 2>&1 >/dev/null && mysql -h percona-5.7-ctl --port=3307  --user=root --execute "USE pymysqlreplication_test;" 2>&1 >/dev/null; then
             break
           fi
+          sleep 1
         done
         
         echo "run pytest"
@@ -52,6 +53,7 @@ services:
       - default
     depends_on:
       - percona-5.7
+      - percona-5.7-ctl
 
 networks:
   default: {}
