@@ -314,7 +314,7 @@ class QueryEvent(BinLogEvent):
             """
             mts_accessed_dbs < 254:
                 `mts_accessed_dbs` is equal to the number of dbs
-                acessed by the query event.
+                accessed by the query event.
             mts_accessed_dbs == 254:
                 This is the case where the number of dbs accessed
                 is 1 and the name of the only db is ""
