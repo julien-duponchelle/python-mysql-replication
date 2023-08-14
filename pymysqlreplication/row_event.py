@@ -575,7 +575,7 @@ class OptionalMetaData:
         self.default_charset_collation:int = None
         self.charset_collation = {}
         self.column_charset = []
-        self.column_list = []
+        self.column_name_list = []
         self.set_str_value_list = []
         self.set_enum_str_value_list = []
         self.geometry_type_list = []
@@ -590,7 +590,7 @@ class OptionalMetaData:
         print("sigend_column_list: %s" % self.signed_column_list)
         print("default_charset_collation: %s" % (self.default_charset_collation))
         print("charset_collation: %s" % (self.charset_collation))
-        print("column_list: %s" % (self.column_list))
+        print("column_name_list: %s" % (self.column_name_list))
         print("simple_primary_key_list: %s" % (self.simple_primary_key_list))
         print("visibility_list: %s" % (self.visibility_list))
 
@@ -650,10 +650,11 @@ class TableMapEvent(BinLogEvent):
             self.column_schemas = self._ctl_connection._get_table_information(self.schema, self.table)
 
         ordinal_pos_loc = 0
-
+        numeric_column_count = 0
         if len(self.column_schemas) != 0:
             # Read columns meta data
             column_types = bytearray(self.packet.read(self.column_count))
+            numeric_column_count = self._numeric_column_count(column_types)
             self.packet.read_length_coded_binary()
             for i in range(0, len(column_types)):
                 column_type = column_types[i]
@@ -692,7 +693,7 @@ class TableMapEvent(BinLogEvent):
         ## Refer to definition of and call to row.event._is_null() to interpret bitmap corresponding to columns
         self.null_bitmask = self.packet.read((self.column_count + 7) / 8)
         # optional meta Data
-        self.get_optional_meta_data()
+        self.get_optional_meta_data(numeric_column_count)
 
 
     def get_table(self):
@@ -705,21 +706,32 @@ class TableMapEvent(BinLogEvent):
         print("Table: %s" % (self.table))
         print("Columns: %s" % (self.column_count))
 
-    def get_optional_meta_data(self):  # TLV 형식으로 데이터 받아옴 (TYPE, LENGTH, VALUE)
+    def _numeric_column_count(self,column_types):
+        count = 0
+        for column_type in column_types:
+            if column_type in [FIELD_TYPE.TINY, FIELD_TYPE.SHORT, FIELD_TYPE.INT24, FIELD_TYPE.LONG,
+                               FIELD_TYPE.LONGLONG, FIELD_TYPE.NEWDECIMAL, FIELD_TYPE.FLOAT, FIELD_TYPE.DOUBLE,
+                               FIELD_TYPE.YEAR]:
+                count += 1
+        return count
+
+    def get_optional_meta_data(self, numeric_column_count):  # TLV 형식으로 데이터 받아옴 (TYPE, LENGTH, VALUE)
         optional_metadata = OptionalMetaData()
-        while self.packet.read_bytes < len(self.packet._data):
+        target_position = len(self.packet.get_all_data())
+
+        while self.packet.read_bytes < target_position:
             print(optional_metadata.dump())
-            option_metadata_type = self.packet.read(1)[0] #t
-            length = self.packet.read_length_coded_binary() #l
+            option_metadata_type = self.packet.read(1)[0] # t
+            length = self.packet.read_length_coded_binary() # l
             try:
                 field_type: MetadataFieldType = MetadataFieldType.by_index(option_metadata_type)
             except ValueError:
-                #TO-DO
+                # TO-DO
                 print("이상한값이 들어오는데 이유모르겠음 ")
                 break
 
             if field_type == MetadataFieldType.SIGNEDNESS:
-                signed_column_list = self._read_bool_list(1)
+                signed_column_list = self._read_bool_list(numeric_column_count)
                 optional_metadata.signed_column_list = signed_column_list
 
             elif field_type == MetadataFieldType.DEFAULT_CHARSET:
@@ -729,12 +741,12 @@ class TableMapEvent(BinLogEvent):
                 optional_metadata.column_charset = self._read_ints(length)
 
             elif field_type == MetadataFieldType.COLUMN_NAME:
-                optional_metadata.column_list = self._read_column_names(length)
+                optional_metadata.column_name_list = self._read_column_names(length)
 
-            elif field_type == field_type.SET_STR_VALUE :
+            elif field_type == field_type.SET_STR_VALUE:
                 optional_metadata.set_str_value_list = self._read_type_values(length)
 
-            elif field_type == field_type.ENUM_STR_VALUE :
+            elif field_type == field_type.ENUM_STR_VALUE:
                 optional_metadata.set_enum_str_value_list = self._read_type_values(length)
 
             elif field_type == field_type.GEOMETRY_TYPE:
@@ -750,10 +762,10 @@ class TableMapEvent(BinLogEvent):
                 optional_metadata.enum_and_set_default_charset = self._read_default_charset(length)
 
             elif field_type == field_type.ENUM_AND_SET_COLUMN_CHARSET:
-                optional_metadata.enum_and_set_default_column_charset_list = self._read_integer_pairs(length)
+                optional_metadata.enum_and_set_default_column_charset_list = self._read_int_pairs(length)
 
             elif field_type == field_type.VISIBILITY:
-                optional_metadata.visibility_list = self._read_bool_list(2)
+                optional_metadata.visibility_list = self._read_bool_list(self.column_count)
 
     def _read_bool_list(self,len):
         column_index_list = []
@@ -762,6 +774,7 @@ class TableMapEvent(BinLogEvent):
             if ((value[i >> 3] & (1 << (7 - (i % 8)))) != 0):
                 column_index_list.append(i)
         return column_index_list
+
     def _read_default_charset(self,length):
         charset = {}
         read_until = self.packet.read_bytes + length
@@ -801,7 +814,8 @@ class TableMapEvent(BinLogEvent):
                 type_value_list.append(self.packet.read_variable_length_string())
             result.append(type_value_list)
         return result
-    def _read_integer_pairs(self,length):
+
+    def _read_int_pairs(self,length):
         result = {}
         read_until = self.packet.read_bytes + length
         while (self.packet.read_bytes < read_until):
@@ -809,6 +823,7 @@ class TableMapEvent(BinLogEvent):
             column_charset = self.packet.read_length_coded_binary()
             result[column_index] = column_charset
         return result
+
 from enum import Enum
 
 
