@@ -32,7 +32,7 @@ jobs:
         
           while :
           do
-            if mysql -h localhost --user=root --execute "show global variables like 'binlog_format%';" 2>&1 >/dev/null && mysql -h percona-5.7-ctl --port=3307  --user=root --execute "USE pymysqlreplication_test;" 2>&1 >/dev/null; then
+            if mysql -h 127.0.0.1 --user=root --execute "show global variables like 'binlog_format%';" 2>&1 >/dev/null && mysql -h 127.0.0.1 --port=3307  --user=root --execute "show global variables like 'binlog_format%;" 2>&1 >/dev/null; then
               break
             fi
             sleep 1
