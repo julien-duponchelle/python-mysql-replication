@@ -715,18 +715,11 @@ class TableMapEvent(BinLogEvent):
 
     def get_optional_meta_data(self, numeric_column_count):  # TLV format data (TYPE, LENGTH, VALUE)
         optional_metadata = OptionalMetaData()
-        target_position = len(self.packet.get_all_data())
 
-        while self.packet.read_bytes < target_position:
-            print(optional_metadata.dump())
+        while self.packet.bytes_to_read() > BINLOG.BINLOG_CHECKSUM_LEN:
             option_metadata_type = self.packet.read(1)[0]  # t
             length = self.packet.read_length_coded_binary()  # l
-            try:
-                field_type: MetadataFieldType = MetadataFieldType.by_index(option_metadata_type)
-            except ValueError:
-                # TO-DO
-                print("이상한값이 들어오는데 이유모르겠음 ")
-                break
+            field_type: MetadataFieldType = MetadataFieldType.by_index(option_metadata_type)
 
             if field_type == MetadataFieldType.SIGNEDNESS:
                 signed_column_list = self._read_bool_list(numeric_column_count)

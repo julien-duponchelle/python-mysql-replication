@@ -494,3 +494,6 @@ class BinLogPacketWrapper(object):
             string += char
 
         return string
+
+    def bytes_to_read(self):
+        return len(self.packet._data) - self.packet._position
