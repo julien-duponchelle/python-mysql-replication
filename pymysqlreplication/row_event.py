@@ -589,6 +589,7 @@ class OptionalMetaData:
         print("unsigend_column_list: %s" % self.unsigned_column_list)
         print("default_charset_collation: %s" % (self.default_charset_collation))
         print("charset_collation: %s" % (self.charset_collation))
+        print("column_charset: %s" % (self.column_charset))
         print("column_name_list: %s" % (self.column_name_list))
         print("set_str_value_list : %s" % (self.set_str_value_list))
         print("set_enum_str_value_list : %s" % (self.set_enum_str_value_list))
