@@ -580,6 +580,7 @@ class OptionalMetaData:
         self.simple_primary_key_list = []
         self.primary_keys_with_prefix = {}
         self.enum_and_set_default_charset: int = None
+        self.enum_and_set_charset_collation = {}
         self.enum_and_set_default_column_charset_list = []
         self.visibility_list = []
 
@@ -589,7 +590,14 @@ class OptionalMetaData:
         print("default_charset_collation: %s" % (self.default_charset_collation))
         print("charset_collation: %s" % (self.charset_collation))
         print("column_name_list: %s" % (self.column_name_list))
+        print("set_str_value_list : %s" % (self.set_str_value_list))
+        print("set_enum_str_value_list : %s" % (self.set_enum_str_value_list))
+        print("geometry_type_list : %s" % (self.geometry_type_list))
         print("simple_primary_key_list: %s" % (self.simple_primary_key_list))
+        print("primary_keys_with_prefix: %s" % (self.primary_keys_with_prefix))
+        print("enum_and_set_default_charset: " +f'{self.enum_and_set_default_charset}')
+        print("enum_and_set_charset_collation: " + f'{self.enum_and_set_charset_collation}')
+        print("enum_and_set_default_column_charset_list: "+f'{self.enum_and_set_default_column_charset_list}')
         print("visibility_list: %s" % (self.visibility_list))
 
 
@@ -750,7 +758,7 @@ class TableMapEvent(BinLogEvent):
                 optional_metadata.primary_keys_with_prefix = self._read_ints(length)
 
             elif field_type == field_type.ENUM_AND_SET_DEFAULT_CHARSET:
-                optional_metadata.enum_and_set_default_charset = self._read_default_charset(length)
+                optional_metadata.enum_and_set_default_charset, optional_metadata.enum_and_set_charset_collation = self._read_default_charset(length)
 
             elif field_type == field_type.ENUM_AND_SET_COLUMN_CHARSET:
                 optional_metadata.enum_and_set_default_column_charset_list = self._read_int_pairs(length)
@@ -778,10 +786,7 @@ class TableMapEvent(BinLogEvent):
 
     def _read_bool_list(self, read_byte_length, signedness_flag):
         bool_list = []
-        byte = self.packet.read((read_byte_length + 7) >> 3)
-
         column_count = 0
-
         if signedness_flag:
             # if signedness
             # The order of the index in the packet is only the index between the numeric_columns.
@@ -789,9 +794,14 @@ class TableMapEvent(BinLogEvent):
             column_count = len(self._numeric_column_index_list())
         else:
             column_count = self.column_count
+        byte = self.packet.read(1)[0]
+        bit_idx = 0
         for i in range(column_count):
-            bool_list.append((byte[i >> 3] & (1 << (7 - (i % 8))) != 0))
-
+            if bit_idx >= 8:
+                byte = self.packet.read(1)[0]
+                bit_idx = 0
+            bool_list.append((byte & (0b10000000 >> bit_idx)) != 0)
+            bit_idx += 1
         return bool_list
 
     def _read_default_charset(self, length):
@@ -830,7 +840,7 @@ class TableMapEvent(BinLogEvent):
             type_value_list = []
             value_count = self.packet.read_length_coded_binary()
             for i in range(value_count):
-                type_value_list.append(self.packet.read_variable_length_string())
+                type_value_list.append(self.packet.read_variable_length_string().decode())
             result.append(type_value_list)
         return result
 
