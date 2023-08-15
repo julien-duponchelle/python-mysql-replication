@@ -653,7 +653,6 @@ class TableMapEvent(BinLogEvent):
         if len(self.column_schemas) != 0:
             # Read columns meta data
             column_types = bytearray(self.packet.read(self.column_count))
-            numeric_column_count = self._numeric_column_count(column_types)
             self.packet.read_length_coded_binary()
             for i in range(0, len(column_types)):
                 column_type = column_types[i]
@@ -692,7 +691,7 @@ class TableMapEvent(BinLogEvent):
         ## Refer to definition of and call to row.event._is_null() to interpret bitmap corresponding to columns
         self.null_bitmask = self.packet.read((self.column_count + 7) / 8)
         # optional meta Data
-        self.get_optional_meta_data(numeric_column_count)
+        self.get_optional_meta_data()
 
     def get_table(self):
         return self.table_obj
@@ -704,25 +703,26 @@ class TableMapEvent(BinLogEvent):
         print("Table: %s" % (self.table))
         print("Columns: %s" % (self.column_count))
 
-    def _numeric_column_count(self, column_types):
-        count = 0
-        for column_type in column_types:
-            if column_type in [FIELD_TYPE.TINY, FIELD_TYPE.SHORT, FIELD_TYPE.INT24, FIELD_TYPE.LONG,
-                               FIELD_TYPE.LONGLONG, FIELD_TYPE.NEWDECIMAL, FIELD_TYPE.FLOAT, FIELD_TYPE.DOUBLE,
-                               FIELD_TYPE.YEAR]:
-                count += 1
-        return count
+    def numeric_list(self):
+        numeric_column_idx_list = []
+        for column_idx in range(len(self.columns)):
+            if self.columns[column_idx].type in [FIELD_TYPE.TINY, FIELD_TYPE.SHORT, FIELD_TYPE.INT24, FIELD_TYPE.LONG,
+                                                 FIELD_TYPE.LONGLONG, FIELD_TYPE.NEWDECIMAL, FIELD_TYPE.FLOAT,
+                                                 FIELD_TYPE.DOUBLE,
+                                                 FIELD_TYPE.YEAR]:
+                numeric_column_idx_list.append(column_idx)
 
-    def get_optional_meta_data(self, numeric_column_count):  # TLV format data (TYPE, LENGTH, VALUE)
+        return numeric_column_idx_list
+
+    def get_optional_meta_data(self):  # TLV format data (TYPE, LENGTH, VALUE)
         optional_metadata = OptionalMetaData()
-
         while self.packet.bytes_to_read() > BINLOG.BINLOG_CHECKSUM_LEN:
             option_metadata_type = self.packet.read(1)[0]  # t
             length = self.packet.read_length_coded_binary()  # l
             field_type: MetadataFieldType = MetadataFieldType.by_index(option_metadata_type)
-
             if field_type == MetadataFieldType.SIGNEDNESS:
-                signed_column_list = self._read_bool_list(numeric_column_count)
+                signed_column_list = self._convert_include_non_numeric_column(
+                    self._read_bool_list(self.column_count, True))
                 optional_metadata.signed_column_list = signed_column_list
 
             elif field_type == MetadataFieldType.DEFAULT_CHARSET:
@@ -757,15 +757,43 @@ class TableMapEvent(BinLogEvent):
                 optional_metadata.enum_and_set_default_column_charset_list = self._read_int_pairs(length)
 
             elif field_type == field_type.VISIBILITY:
-                optional_metadata.visibility_list = self._read_bool_list(self.column_count)
+                optional_metadata.visibility_list = self._read_bool_list(length, False)
 
-    def _read_bool_list(self, length):
-        column_index_list = []
-        value = self.packet.read((length + 7) >> 3)
-        for i in range(length):
-            if (value[i >> 3] & (1 << (7 - (i % 8)))) != 0:
-                column_index_list.append(i)
-        return column_index_list
+        print(optional_metadata.dump())
+
+    def _convert_include_non_numeric_column(self, signedness_bool_list):
+        # The incoming order of columns in the packet represents the indices of the numeric columns.
+        # Thus, it transforms non-numeric columns to align with the sorting.
+        bool_list = [False] * self.column_count
+
+        numeric_idx_list = self.numeric_list()
+        mapping_column = {}
+        for idx, value in enumerate(numeric_idx_list):
+            mapping_column[idx] = value
+
+        for i in range(len(signedness_bool_list)):
+            if signedness_bool_list[i]:
+                bool_list[mapping_column[i]] = True
+
+        return bool_list
+
+    def _read_bool_list(self, read_byte_length, signedness_flag):
+        bool_list = []
+        byte = self.packet.read((read_byte_length + 7) >> 3)
+
+        column_count = 0
+
+        if signedness_flag:
+            # if signedness
+            # The order of the index in the packet is only the index between the numeric_columns.
+            # Therefore, we need to use numeric_column_count when calculating bits.
+            column_count = len(self.numeric_list())
+        else:
+            column_count = self.column_count
+        for i in range(column_count):
+            bool_list.append((byte[i >> 3] & (1 << (7 - (i % 8))) != 0))
+
+        return bool_list
 
     def _read_default_charset(self, length):
         charset = {}
