@@ -569,7 +569,7 @@ class UpdateRowsEvent(RowsEvent):
 
 class OptionalMetaData:
     def __init__(self):
-        self.signed_column_list = []
+        self.unsigned_column_list = []
         self.default_charset_collation: int = None
         self.charset_collation = {}
         self.column_charset = []
@@ -585,7 +585,7 @@ class OptionalMetaData:
 
     def dump(self):
         print("=== %s ===" % (self.__class__.__name__))
-        print("sigend_column_list: %s" % self.signed_column_list)
+        print("unsigend_column_list: %s" % self.unsigned_column_list)
         print("default_charset_collation: %s" % (self.default_charset_collation))
         print("charset_collation: %s" % (self.charset_collation))
         print("column_name_list: %s" % (self.column_name_list))
@@ -649,7 +649,6 @@ class TableMapEvent(BinLogEvent):
             self.column_schemas = self._ctl_connection._get_table_information(self.schema, self.table)
 
         ordinal_pos_loc = 0
-        numeric_column_count = 0
         if len(self.column_schemas) != 0:
             # Read columns meta data
             column_types = bytearray(self.packet.read(self.column_count))
@@ -703,7 +702,7 @@ class TableMapEvent(BinLogEvent):
         print("Table: %s" % (self.table))
         print("Columns: %s" % (self.column_count))
 
-    def numeric_list(self):
+    def _numeric_column_index_list(self):
         numeric_column_idx_list = []
         for column_idx in range(len(self.columns)):
             if self.columns[column_idx].type in [FIELD_TYPE.TINY, FIELD_TYPE.SHORT, FIELD_TYPE.INT24, FIELD_TYPE.LONG,
@@ -723,7 +722,7 @@ class TableMapEvent(BinLogEvent):
             if field_type == MetadataFieldType.SIGNEDNESS:
                 signed_column_list = self._convert_include_non_numeric_column(
                     self._read_bool_list(self.column_count, True))
-                optional_metadata.signed_column_list = signed_column_list
+                optional_metadata.unsigned_column_list = signed_column_list
 
             elif field_type == MetadataFieldType.DEFAULT_CHARSET:
                 optional_metadata.default_charset_collation, optional_metadata.charset_collation = self._read_default_charset(
@@ -766,7 +765,7 @@ class TableMapEvent(BinLogEvent):
         # Thus, it transforms non-numeric columns to align with the sorting.
         bool_list = [False] * self.column_count
 
-        numeric_idx_list = self.numeric_list()
+        numeric_idx_list = self._numeric_column_index_list()
         mapping_column = {}
         for idx, value in enumerate(numeric_idx_list):
             mapping_column[idx] = value
@@ -787,7 +786,7 @@ class TableMapEvent(BinLogEvent):
             # if signedness
             # The order of the index in the packet is only the index between the numeric_columns.
             # Therefore, we need to use numeric_column_count when calculating bits.
-            column_count = len(self.numeric_list())
+            column_count = len(self._numeric_column_index_list())
         else:
             column_count = self.column_count
         for i in range(column_count):
