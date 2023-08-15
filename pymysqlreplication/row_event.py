@@ -730,7 +730,7 @@ class TableMapEvent(BinLogEvent):
             field_type: MetadataFieldType = MetadataFieldType.by_index(option_metadata_type)
             if field_type == MetadataFieldType.SIGNEDNESS:
                 signed_column_list = self._convert_include_non_numeric_column(
-                    self._read_bool_list(self.column_count, True))
+                    self._read_bool_list(length, True))
                 optional_metadata.unsigned_column_list = signed_column_list
 
             elif field_type == MetadataFieldType.DEFAULT_CHARSET:
@@ -795,14 +795,19 @@ class TableMapEvent(BinLogEvent):
             column_count = len(self._numeric_column_index_list())
         else:
             column_count = self.column_count
-        byte = self.packet.read(1)[0]
+
+        bytes_data = self.packet.read(read_byte_length)
+
+        byte = 0
+        byte_idx = 0
         bit_idx = 0
+
         for i in range(column_count):
-            if bit_idx >= 8:
-                byte = self.packet.read(1)[0]
-                bit_idx = 0
+            if bit_idx == 0:
+                byte = bytes_data[byte_idx]
+                byte_idx += 1
             bool_list.append((byte & (0b10000000 >> bit_idx)) != 0)
-            bit_idx += 1
+            bit_idx = (bit_idx + 1) % 8
         return bool_list
 
     def _read_default_charset(self, length):
