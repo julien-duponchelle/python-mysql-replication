@@ -56,6 +56,11 @@ Limitations
 
 https://python-mysql-replication.readthedocs.org/en/latest/limitations.html
 
+Featured Books
+=============
+
+[Data Pipelines Pocket Reference](https://www.oreilly.com/library/view/data-pipelines-pocket/9781492087823/) (by James Densmore, O'Reilly): Introduced and exemplified in Chapter 4: Data Ingestion: Extracting Data.
+
 Projects using this library
 ===========================
 
