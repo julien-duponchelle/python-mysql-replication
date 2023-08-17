@@ -586,7 +586,7 @@ class OptionalMetaData:
 
     def dump(self):
         print("=== %s ===" % (self.__class__.__name__))
-        print("unsigend_column_list: %s" % self.unsigned_column_list)
+        print("unsigned_column_list: %s" % self.unsigned_column_list)
         print("default_charset_collation: %s" % (self.default_charset_collation))
         print("charset_collation: %s" % (self.charset_collation))
         print("column_charset: %s" % (self.column_charset))
@@ -755,8 +755,8 @@ class TableMapEvent(BinLogEvent):
             elif field_type == MetadataFieldType.SIMPLE_PRIMARY_KEY:
                 optional_metadata.simple_primary_key_list = self._read_ints(length)
 
-            elif field_type == field_type.PRIMARY_KEY_WITH_PREFIX:
-                optional_metadata.primary_keys_with_prefix = self._read_ints(length)
+            elif field_type == MetadataFieldType.PRIMARY_KEY_WITH_PREFIX:
+                optional_metadata.primary_keys_with_prefix = self._read_primary_keys_with_prefix(length)
 
             elif field_type == field_type.ENUM_AND_SET_DEFAULT_CHARSET:
                 optional_metadata.enum_and_set_default_charset, optional_metadata.enum_and_set_charset_collation = self._read_default_charset(length)
@@ -857,6 +857,13 @@ class TableMapEvent(BinLogEvent):
             column_index = self.packet.read_length_coded_binary()
             column_charset = self.packet.read_length_coded_binary()
             result[column_index] = column_charset
+        return result
+
+    def _read_primary_keys_with_prefix(self, length):
+        ints = self._read_ints(length)
+        result = {}
+        for i in range(0, len(ints), 2):
+            result[ints[i]] = ints[i + 1]
         return result
 
 
