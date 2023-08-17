@@ -743,13 +743,13 @@ class TableMapEvent(BinLogEvent):
             elif field_type == MetadataFieldType.COLUMN_NAME:
                 optional_metadata.column_name_list = self._read_column_names(length)
 
-            elif field_type == field_type.SET_STR_VALUE:
+            elif field_type == MetadataFieldType.SET_STR_VALUE:
                 optional_metadata.set_str_value_list = self._read_type_values(length)
 
-            elif field_type == field_type.ENUM_STR_VALUE:
+            elif field_type == MetadataFieldType.ENUM_STR_VALUE:
                 optional_metadata.set_enum_str_value_list = self._read_type_values(length)
 
-            elif field_type == field_type.GEOMETRY_TYPE:
+            elif field_type == MetadataFieldType.GEOMETRY_TYPE:
                 optional_metadata.geometry_type_list = self._read_ints(length)
 
             elif field_type == MetadataFieldType.SIMPLE_PRIMARY_KEY:
@@ -758,13 +758,13 @@ class TableMapEvent(BinLogEvent):
             elif field_type == MetadataFieldType.PRIMARY_KEY_WITH_PREFIX:
                 optional_metadata.primary_keys_with_prefix = self._read_primary_keys_with_prefix(length)
 
-            elif field_type == field_type.ENUM_AND_SET_DEFAULT_CHARSET:
+            elif field_type == MetadataFieldType.ENUM_AND_SET_DEFAULT_CHARSET:
                 optional_metadata.enum_and_set_default_charset, optional_metadata.enum_and_set_charset_collation = self._read_default_charset(length)
 
-            elif field_type == field_type.ENUM_AND_SET_COLUMN_CHARSET:
+            elif field_type == MetadataFieldType.ENUM_AND_SET_COLUMN_CHARSET:
                 optional_metadata.enum_and_set_default_column_charset_list = self._read_int_pairs(length)
 
-            elif field_type == field_type.VISIBILITY:
+            elif field_type == MetadataFieldType.VISIBILITY:
                 optional_metadata.visibility_list = self._read_bool_list(length, False)
 
         print(optional_metadata.dump())
