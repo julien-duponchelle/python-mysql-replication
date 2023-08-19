@@ -19,7 +19,7 @@ from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 
 __all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings",
-           "TestGtidBinLogStreamReader", "OptionalMetaDataTest"]
+           "TestGtidBinLogStreamReader", "TestOptionalMetaData"]
 
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
@@ -1007,12 +1007,22 @@ class GtidTests(unittest.TestCase):
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
 
 
-class OptionalMetaDataTest(base.PyMySQLReplicationTestCase):
+class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
     def setUp(self):
-        super(OptionalMetaDataTest, self).setUp()
+        super(TestOptionalMetaData, self).setUp()
         self.stream.close()
+        optional_metadata_db = copy.copy(self.database)
+        optional_metadata_db["db"] = None
+        optional_metadata_db["port"] = 3308
+        self.optional_metadata_conn_control = pymysql.connect(**optional_metadata_db)
+        self.optional_metadata_conn_control.cursor().execute("DROP DATABASE IF EXISTS pymysqlreplication_test")
+        self.optional_metadata_conn_control.cursor().execute("CREATE DATABASE pymysqlreplication_test")
+        self.optional_metadata_conn_control.close()
+        optional_metadata_db["db"] = "pymysqlreplication_test"
+        self.optional_metadata_conn_control = pymysql.connect(**optional_metadata_db)
         self.stream = BinLogStreamReader(
             self.database,
+            ctl_connection_settings=optional_metadata_db,
             server_id=1024,
             only_events=(TableMapEvent,),
             fail_on_table_metadata_unavailable=True
@@ -1086,8 +1096,8 @@ class OptionalMetaDataTest(base.PyMySQLReplicationTestCase):
 
     def tearDown(self):
         self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")
-        super(OptionalMetaDataTest, self).tearDown()
-
+        super(TestOptionalMetaData, self).tearDown()
+        self.optional_metadata_conn_control.close()
 
 if __name__ == "__main__":
     import unittest
