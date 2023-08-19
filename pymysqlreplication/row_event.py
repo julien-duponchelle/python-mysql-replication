@@ -705,12 +705,12 @@ class TableMapEvent(BinLogEvent):
         return self.table_obj
 
     def _dump(self):
-        print(self.optional_metadata.dump())
         super(TableMapEvent, self)._dump()
         print("Table id: %d" % (self.table_id))
         print("Schema: %s" % (self.schema))
         print("Table: %s" % (self.table))
         print("Columns: %s" % (self.column_count))
+        print(self.optional_metadata.dump())
 
     def _numeric_column_index_list(self):
         numeric_column_idx_list = []
