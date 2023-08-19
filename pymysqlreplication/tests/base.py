@@ -65,6 +65,11 @@ class PyMySQLReplicationTestCase(base):
         version = float(self.getMySQLVersion().rsplit('.', 1)[0])
         return version >= 8.0
 
+    def isMySQL8014AndMore(self):
+        version = float(self.getMySQLVersion().rsplit(".", 1)[0])
+        version_detail = int(self.getMySQLVersion().rsplit(".", 1)[1])
+        return version >= 8.0 and version_detail >= 14
+
     def isMariaDB(self):
         if self.__is_mariaDB is None:
             self.__is_mariaDB = "MariaDB" in self.execute("SELECT VERSION()").fetchone()[0]
