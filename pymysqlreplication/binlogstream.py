@@ -302,8 +302,7 @@ class BinLogStreamReader(object):
 
         if self.slave_uuid:
             cur = self._stream_connection.cursor()
-            cur.execute("SET @slave_uuid = %s, @replica_uuid = %s",
-                        (str(self.slave_uuid), str(self.slave_uuid)))
+            cur.execute("SET @slave_uuid = %s, @replica_uuid = %s", (self.slave_uuid, self.slave_uuid))
             cur.close()
 
         if self.slave_heartbeat:
