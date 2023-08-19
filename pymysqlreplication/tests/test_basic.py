@@ -1042,6 +1042,18 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(expected_table_map_event, TableMapEvent)
         self.assertEqual(expected_table_map_event.optional_metadata.unsigned_column_list, [False, True])
 
+    def test_default_charset(self):
+        create_query = "CREATE TABLE test_default_charset(name VARCHAR(50)) CHARACTER SET utf8mb4;"
+        insert_query = "INSERT INTO test_default_charset VALUES('Hello, World!');"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        self.assertEqual(event.optional_metadata.default_charset_collation, 255)
+
     def test_set_str_value(self):
         query = "CREATE TABLE test_set (skills SET('Programming', 'Writing', 'Design'));"
         self.execute(query)
@@ -1081,7 +1093,6 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         table_map_event = self.stream.fetchone()
         self.assertIsInstance(table_map_event, TableMapEvent)
         self.assertEqual(table_map_event.optional_metadata.simple_primary_key_list, [0, 2])
-
 
     def test_primary_keys_with_prefix(self):
         create_query = "CREATE TABLE t2(c_key1 CHAR(100), c_key3 CHAR(100), c_not_key INT, c_key2 CHAR(10),PRIMARY KEY(c_key1(5), c_key2, c_key3(10)));"
