@@ -699,12 +699,13 @@ class TableMapEvent(BinLogEvent):
         ## Refer to definition of and call to row.event._is_null() to interpret bitmap corresponding to columns
         self.null_bitmask = self.packet.read((self.column_count + 7) / 8)
         # optional meta Data
-        self.get_optional_meta_data()
+        self.optional_metadata = self.get_optional_meta_data()
 
     def get_table(self):
         return self.table_obj
 
     def _dump(self):
+        print(self.optional_metadata.dump())
         super(TableMapEvent, self)._dump()
         print("Table id: %d" % (self.table_id))
         print("Schema: %s" % (self.schema))
@@ -767,7 +768,7 @@ class TableMapEvent(BinLogEvent):
             elif field_type == MetadataFieldType.VISIBILITY:
                 optional_metadata.visibility_list = self._read_bool_list(length, False)
 
-        print(optional_metadata.dump())
+        return optional_metadata
 
     def _convert_include_non_numeric_column(self, signedness_bool_list):
         # The incoming order of columns in the packet represents the indices of the numeric columns.
