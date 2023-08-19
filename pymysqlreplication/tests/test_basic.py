@@ -1047,6 +1047,35 @@ class OptionalMetaDataTest(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, TableMapEvent)
         self.assertEqual(event.optional_metadata.set_enum_str_value_list, [['Dog', 'Cat']])
 
+    def test_simple_primary_keys(self):
+        create_query = "CREATE TABLE test_simple (c_key1 INT, c_not_key INT, c_key2 INT, PRIMARY KEY(c_key1, c_key2));"
+        insert_query = "INSERT INTO test_simple VALUES (1, 2, 3);"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        table_map_event = self.stream.fetchone()
+        self.assertIsInstance(table_map_event, TableMapEvent)
+        self.assertEqual(table_map_event.optional_metadata.simple_primary_key_list, [0, 2])
+
+
+    def test_primary_keys_with_prefix(self):
+        create_query = "CREATE TABLE t2(c_key1 CHAR(100), c_key3 CHAR(100), c_not_key INT, c_key2 CHAR(10),PRIMARY KEY(c_key1(5), c_key2, c_key3(10)));"
+        insert_query = "INSERT INTO t2 VALUES('1', '2', 3, '4');"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        table_map_event = self.stream.fetchone()
+        self.assertIsInstance(table_map_event, TableMapEvent)
+        self.assertEqual(table_map_event.optional_metadata.primary_keys_with_prefix, {0: 5, 1: 10, 3: 0})
+
+    def tearDown(self):
+        self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")
+        super(OptionalMetaDataTest, self).tearDown()
+
 
 if __name__ == "__main__":
     import unittest
