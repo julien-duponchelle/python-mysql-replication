@@ -1028,11 +1028,11 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
             fail_on_table_metadata_unavailable=True
         )
         self.isMySQL8014AndMore()
-        self.execute("SET GLOBAL binlog_row_metadata = 'FULL'")
+        self.execute("SET GLOBAL binlog_row_metadata='FULL'")
 
     def test_signedness(self):
-        create_query = "CREATE TABLE test_signedness (col1 INT, col2 INT UNSIGNED)"
-        insert_query = "INSERT INTO test_signedness VALUES (-10, 10)"
+        create_query = "CREATE TABLE test_signedness (col1 INT, col2 INT UNSIGNED);"
+        insert_query = "INSERT INTO test_signedness VALUES (-10, 10);"
 
         self.execute(create_query)
         self.execute(insert_query)
@@ -1043,8 +1043,8 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         self.assertEqual(expected_table_map_event.optional_metadata.unsigned_column_list, [False, True])
 
     def test_default_charset(self):
-        create_query = "CREATE TABLE test_default_charset(name VARCHAR(50)) CHARACTER SET utf8mb4;"
-        insert_query = "INSERT INTO test_default_charset VALUES('Hello, World!');"
+        create_query = "CREATE TABLE test_default_charset (name VARCHAR(50)) CHARACTER SET utf8mb4;"
+        insert_query = "INSERT INTO test_default_charset VALUES ('Hello, World!');"
 
         self.execute(create_query)
         self.execute(insert_query)
@@ -1054,61 +1054,9 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, TableMapEvent)
         self.assertEqual(event.optional_metadata.default_charset_collation, 255)
 
-    def test_set_str_value(self):
-        query = "CREATE TABLE test_set (skills SET('Programming', 'Writing', 'Design'));"
-        self.execute(query)
-        query = "BEGIN"
-        self.execute(query)
-        query = "INSERT INTO test_set VALUES ('Programming,Writing');"
-        self.execute(query)
-        query = "COMMIT"
-        self.execute(query)
-
-        event = self.stream.fetchone()
-        self.assertIsInstance(event, TableMapEvent)
-        self.assertEqual(event.optional_metadata.set_str_value_list, [['Programming', 'Writing', 'Design']])
-
-    def test_enum_str_value(self):
-        query = "CREATE TABLE test_enum (pet ENUM('Dog', 'Cat'));"
-        self.execute(query)
-        query = "BEGIN"
-        self.execute(query)
-        query = "INSERT INTO test_enum VALUES ('Cat');"
-        self.execute(query)
-        query = "COMMIT"
-        self.execute(query)
-
-        event = self.stream.fetchone()
-        self.assertIsInstance(event, TableMapEvent)
-        self.assertEqual(event.optional_metadata.set_enum_str_value_list, [['Dog', 'Cat']])
-
-    def test_simple_primary_keys(self):
-        create_query = "CREATE TABLE test_simple (c_key1 INT, c_not_key INT, c_key2 INT, PRIMARY KEY(c_key1, c_key2));"
-        insert_query = "INSERT INTO test_simple VALUES (1, 2, 3);"
-
-        self.execute(create_query)
-        self.execute(insert_query)
-        self.execute("COMMIT")
-
-        table_map_event = self.stream.fetchone()
-        self.assertIsInstance(table_map_event, TableMapEvent)
-        self.assertEqual(table_map_event.optional_metadata.simple_primary_key_list, [0, 2])
-
-    def test_primary_keys_with_prefix(self):
-        create_query = "CREATE TABLE t2(c_key1 CHAR(100), c_key3 CHAR(100), c_not_key INT, c_key2 CHAR(10),PRIMARY KEY(c_key1(5), c_key2, c_key3(10)));"
-        insert_query = "INSERT INTO t2 VALUES('1', '2', 3, '4');"
-
-        self.execute(create_query)
-        self.execute(insert_query)
-        self.execute("COMMIT")
-
-        table_map_event = self.stream.fetchone()
-        self.assertIsInstance(table_map_event, TableMapEvent)
-        self.assertEqual(table_map_event.optional_metadata.primary_keys_with_prefix, {0: 5, 1: 10, 3: 0})
-
     def test_column_charset(self):
-        create_query = "CREATE TABLE test_column_charset (col1 varchar(50), col2 varchar(50) character set binary, col3 varchar(50) character set latin1)"
-        insert_query = "INSERT INTO test_column_charset VALUES ('python', 'mysql', 'replication')"
+        create_query = "CREATE TABLE test_column_charset (col1 VARCHAR(50), col2 VARCHAR(50) CHARACTER SET binary, col3 VARCHAR(50) CHARACTER SET latin1);"
+        insert_query = "INSERT INTO test_column_charset VALUES ('python', 'mysql', 'replication');"
 
         self.execute(create_query)
         self.execute(insert_query)
@@ -1117,6 +1065,66 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         table_map_event = self.stream.fetchone()
         self.assertIsInstance(table_map_event, TableMapEvent)
         self.assertEqual(table_map_event.optional_metadata.column_charset, [255, 63, 8])
+
+    def test_column_name(self):
+        create_query = "CREATE TABLE test_column_name (col_int INT, col_varchar VARCHAR(30), col_bool BOOL);"
+        insert_query = "INSERT INTO test_column_name VALUES (1, 'Hello', true);"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        table_map_event = self.stream.fetchone()
+        self.assertIsInstance(table_map_event, TableMapEvent)
+        self.assertEqual(table_map_event.optional_metadata.column_name_list, ['col_int', 'col_varchar', 'col_bool'])
+
+    def test_set_str_value(self):
+        create_query = "CREATE TABLE test_set (skills SET('Programming', 'Writing', 'Design'));"
+        insert_query = "INSERT INTO test_set VALUES ('Programming,Writing');"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        self.assertEqual(event.optional_metadata.set_str_value_list, [['Programming', 'Writing', 'Design']])
+
+    def test_enum_str_value(self):
+        create_query = "CREATE TABLE test_enum (pet ENUM('Dog', 'Cat'));"
+        insert_query = "INSERT INTO test_enum VALUES ('Cat');"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        self.assertEqual(event.optional_metadata.set_enum_str_value_list, [['Dog', 'Cat']])
+
+    def test_simple_primary_keys(self):
+        create_query = "CREATE TABLE test_simple (c_key1 INT, c_key2 INT, c_not_key INT, PRIMARY KEY(c_key1, c_key2));"
+        insert_query = "INSERT INTO test_simple VALUES (1, 2, 3);"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        table_map_event = self.stream.fetchone()
+        self.assertIsInstance(table_map_event, TableMapEvent)
+        self.assertEqual(table_map_event.optional_metadata.simple_primary_key_list, [0, 1])
+
+    def test_primary_keys_with_prefix(self):
+        create_query = "CREATE TABLE test_primary (c_key1 CHAR(100), c_key2 CHAR(10), c_not_key INT, c_key3 CHAR(100), PRIMARY KEY(c_key1(5), c_key2, c_key3(10)));"
+        insert_query = "INSERT INTO test_primary VALUES('1', '2', 3, '4');"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        table_map_event = self.stream.fetchone()
+        self.assertIsInstance(table_map_event, TableMapEvent)
+        self.assertEqual(table_map_event.optional_metadata.primary_keys_with_prefix, {0: 5, 1: 0, 3: 10})
 
     def tearDown(self):
         self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")
