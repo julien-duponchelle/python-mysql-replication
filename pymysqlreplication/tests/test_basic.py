@@ -1095,6 +1095,18 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(table_map_event, TableMapEvent)
         self.assertEqual(table_map_event.optional_metadata.primary_keys_with_prefix, {0: 5, 1: 10, 3: 0})
 
+    def test_column_charset(self):
+        create_query = "CREATE TABLE test_column_charset (col1 varchar(50), col2 varchar(50) character set binary, col3 varchar(50) character set latin1)"
+        insert_query = "INSERT INTO test_column_charset VALUES ('python', 'mysql', 'replication')"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        table_map_event = self.stream.fetchone()
+        self.assertIsInstance(table_map_event, TableMapEvent)
+        self.assertEqual(table_map_event.optional_metadata.column_charset, [255, 63, 8])
+
     def tearDown(self):
         self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")
         super(TestOptionalMetaData, self).tearDown()
