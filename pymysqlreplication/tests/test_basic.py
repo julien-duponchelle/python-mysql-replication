@@ -1019,6 +1019,18 @@ class OptionalMetaDataTest(base.PyMySQLReplicationTestCase):
         )
         self.execute("SET GLOBAL binlog_row_metadata = 'FULL'")
 
+    def test_signedness(self):
+        create_query = "CREATE TABLE test_signedness (col1 INT, col2 INT UNSIGNED)"
+        insert_query = "INSERT INTO test_signedness VALUES (-10, 10)"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        expected_table_map_event = self.stream.fetchone()
+        self.assertIsInstance(expected_table_map_event, TableMapEvent)
+        self.assertEqual(expected_table_map_event.optional_metadata.unsigned_column_list, [False, True])
+
     def test_set_str_value(self):
         query = "CREATE TABLE test_set (skills SET('Programming', 'Writing', 'Design'));"
         self.execute(query)
