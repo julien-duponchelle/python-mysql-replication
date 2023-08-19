@@ -1028,6 +1028,7 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
             fail_on_table_metadata_unavailable=True
         )
         self.execute("SET GLOBAL binlog_row_metadata = 'FULL'")
+        self.isMySQL80AndMore()
 
     def test_signedness(self):
         create_query = "CREATE TABLE test_signedness (col1 INT, col2 INT UNSIGNED)"
