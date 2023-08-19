@@ -763,7 +763,7 @@ class TableMapEvent(BinLogEvent):
                 optional_metadata.enum_and_set_default_charset, optional_metadata.enum_and_set_charset_collation = self._read_default_charset(length)
 
             elif field_type == MetadataFieldType.ENUM_AND_SET_COLUMN_CHARSET:
-                optional_metadata.enum_and_set_default_column_charset_list = self._read_int_pairs(length)
+                optional_metadata.enum_and_set_default_column_charset_list = self._read_ints(length)
 
             elif field_type == MetadataFieldType.VISIBILITY:
                 optional_metadata.visibility_list = self._read_bool_list(length, False)
