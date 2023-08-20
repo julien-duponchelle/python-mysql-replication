@@ -52,12 +52,60 @@ class BinLogEvent(object):
         """Core data dumped for the event"""
         pass
 
+    def _read_new_decimal(self, precision, decimals):
+        """
+        Read MySQL's new decimal format introduced in MySQL 5.
+        This project was a great source of inspiration for understanding this storage format.
+        (https://github.com/jeremycole/mysql_binlog)
+        """
+        digits_per_integer = 9
+        compressed_bytes = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4]
+        integral = (precision - decimals)
+        uncomp_integral = int(integral / digits_per_integer)
+        uncomp_fractional = int(decimals / digits_per_integer)
+        comp_integral = integral - (uncomp_integral * digits_per_integer)
+        comp_fractional = decimals - (uncomp_fractional * digits_per_integer)
+
+        # Support negative
+        # The sign is encoded in the high bit of the byte
+        # But this bit can also be used in the value
+
+        value = self.packet.read_uint8()
+        if value & 0x80 != 0:
+            res = ""
+            mask = 0
+        else:
+            mask = -1
+            res = "-"
+        self.packet.unread(struct.pack('<B', value ^ 0x80))
+
+        size = compressed_bytes[comp_integral]
+        if size > 0:
+            value = self.packet.read_int_be_by_size(size) ^ mask
+            res += str(value)
+
+        for i in range(0, uncomp_integral):
+            value = struct.unpack('>i', self.packet.read(4))[0] ^ mask
+            res += '%09d' % value
+
+        res += "."
+
+        for i in range(0, uncomp_fractional):
+            value = struct.unpack('>i', self.packet.read(4))[0] ^ mask
+            res += '%09d' % value
+
+        size = compressed_bytes[comp_fractional]
+        if size > 0:
+            value = self.packet.read_int_be_by_size(size) ^ mask
+            res += '%0*d' % (comp_fractional, value)
+
+        return decimal.Decimal(res)
 
 class GtidEvent(BinLogEvent):
     """GTID change in binlog event
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(GtidEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
 
         self.commit_flag = struct.unpack("!B", self.packet.read(1))[0] == 1
@@ -98,7 +146,7 @@ class MariadbGtidEvent(BinLogEvent):
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
 
-        super(MariadbGtidEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+        super().__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
 
         self.server_id = self.packet.server_id
         self.gtid_seq_no = self.packet.read_uint64()
@@ -107,9 +155,27 @@ class MariadbGtidEvent(BinLogEvent):
         self.gtid = "%d-%d-%d" % (self.domain_id, self.server_id, self.gtid_seq_no)
 
     def _dump(self):
-        super(MariadbGtidEvent, self)._dump()
+        super()._dump()
         print("Flags:", self.flags)
         print('GTID:', self.gtid)
+
+
+class MariadbAnnotateRowsEvent(BinLogEvent):
+    """
+    Annotate rows event 
+    If you want to check this binlog, change the value of the flag(line 382 of the 'binlogstream.py') option to 2 
+    https://mariadb.com/kb/en/annotate_rows_event/
+
+    Attributes:
+        sql_statement: The SQL statement
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super().__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+        self.sql_statement = self.packet.read(event_size)
+
+    def _dump(self):
+        super()._dump()
+        print("SQL statement :", self.sql_statement)   
 
 
 class RotateEvent(BinLogEvent):
@@ -120,7 +186,7 @@ class RotateEvent(BinLogEvent):
         next_binlog: Name of next binlog file
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(RotateEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
         self.position = struct.unpack('<Q', self.packet.read(8))[0]
         self.next_binlog = self.packet.read(event_size - 8).decode()
@@ -134,14 +200,14 @@ class RotateEvent(BinLogEvent):
 
 class XAPrepareEvent(BinLogEvent):
     """An XA prepare event is generated for a XA prepared transaction.
-    Like Xid_event it contans XID of the *prepared* transaction
+    Like Xid_event it contains XID of the *prepared* transaction
 
     Attributes:
         one_phase: current XA transaction commit method
         xid: serialized XID representation of XA transaction
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(XAPrepareEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
 
         # one_phase is True: XA COMMIT ... ONE PHASE
@@ -165,7 +231,7 @@ class XAPrepareEvent(BinLogEvent):
 
 class FormatDescriptionEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(FormatDescriptionEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
         self.binlog_version = struct.unpack('<H', self.packet.read(2))
         self.mysql_version_str = self.packet.read(50).rstrip(b'\0').decode()
@@ -189,12 +255,12 @@ class XidEvent(BinLogEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(XidEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                        ctl_connection, **kwargs)
         self.xid = struct.unpack('<Q', self.packet.read(8))[0]
 
     def _dump(self):
-        super(XidEvent, self)._dump()
+        super()._dump()
         print("Transaction ID: %d" % (self.xid))
 
 
@@ -219,13 +285,13 @@ class HeartbeatLogEvent(BinLogEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(HeartbeatLogEvent, self).__init__(from_packet, event_size,
+        super().__init__(from_packet, event_size,
                                                 table_map, ctl_connection,
                                                 **kwargs)
         self.ident = self.packet.read(event_size).decode()
 
     def _dump(self):
-        super(HeartbeatLogEvent, self)._dump()
+        super()._dump()
         print("Current binlog: %s" % (self.ident))
 
 
@@ -233,7 +299,7 @@ class QueryEvent(BinLogEvent):
     '''This event is trigger when a query is run of the database.
     Only replicated queries are logged.'''
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(QueryEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                          ctl_connection, **kwargs)
 
         # Post-header
@@ -245,7 +311,7 @@ class QueryEvent(BinLogEvent):
 
         # Payload
         status_vars_end_pos = self.packet.read_bytes + self.status_vars_length
-        while self.packet.read_bytes < status_vars_end_pos: # while 남은 data length가 얼마만큼? OR read_bytes
+        while self.packet.read_bytes < status_vars_end_pos:
             # read KEY for status variable
             status_vars_key = self.packet.read_uint8()
             # read VALUE for status variable
@@ -259,7 +325,7 @@ class QueryEvent(BinLogEvent):
         #string[EOF]    query
 
     def _dump(self):
-        super(QueryEvent, self)._dump()
+        super()._dump()
         print("Schema: %s" % (self.schema))
         print("Execution time: %d" % (self.execution_time))
         print("Query: %s" % (self.query))
@@ -315,7 +381,7 @@ class QueryEvent(BinLogEvent):
             """
             mts_accessed_dbs < 254:
                 `mts_accessed_dbs` is equal to the number of dbs
-                acessed by the query event.
+                accessed by the query event.
             mts_accessed_dbs == 254:
                 This is the case where the number of dbs accessed
                 is 1 and the name of the only db is ""
@@ -359,7 +425,7 @@ class BeginLoadQueryEvent(BinLogEvent):
         block-data
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(BeginLoadQueryEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                                      ctl_connection, **kwargs)
 
         # Payload
@@ -367,7 +433,7 @@ class BeginLoadQueryEvent(BinLogEvent):
         self.block_data = self.packet.read(event_size - 4)
 
     def _dump(self):
-        super(BeginLoadQueryEvent, self)._dump()
+        super()._dump()
         print("File id: %d" % (self.file_id))
         print("Block data: %s" % (self.block_data))
 
@@ -388,7 +454,7 @@ class ExecuteLoadQueryEvent(BinLogEvent):
         dup_handling_flags
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(ExecuteLoadQueryEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                                         ctl_connection, **kwargs)
 
         # Post-header
@@ -425,7 +491,7 @@ class IntvarEvent(BinLogEvent):
         value
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(IntvarEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
 
         # Payload
@@ -433,9 +499,10 @@ class IntvarEvent(BinLogEvent):
         self.value = self.packet.read_uint32()
 
     def _dump(self):
-        super(IntvarEvent, self)._dump()
+        super()._dump()
         print("type: %d" % (self.type))
         print("Value: %d" % (self.value))
+
 
 class RandEvent(BinLogEvent):
     """
@@ -448,9 +515,8 @@ class RandEvent(BinLogEvent):
     :ivar seed1: int - value for the first seed
     :ivar seed2: int - value for the second seed
     """
-
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(RandEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                         ctl_connection, **kwargs)
         # Payload
         self._seed1 = self.packet.read_uint64()
@@ -467,7 +533,7 @@ class RandEvent(BinLogEvent):
         return self._seed2
 
     def _dump(self):
-        super(RandEvent, self)._dump()
+        super()._dump()
         print("seed1: %d" % (self.seed1))
         print("seed2: %d" % (self.seed2))
 
@@ -485,14 +551,6 @@ class UserVarEvent(BinLogEvent):
     :ivar flags: int - Extra flags associated with the user variable
     """
 
-    type_codes = {
-        0x00: 'STRING_RESULT',
-        0x01: 'REAL_RESULT',
-        0x02: 'INT_RESULT',
-        0x03: 'ROW_RESULT',
-        0x04: 'DECIMAL_RESULT',
-    }
-
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(UserVarEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
 
@@ -500,20 +558,20 @@ class UserVarEvent(BinLogEvent):
         self.name_len = self.packet.read_uint32()
         self.name = self.packet.read(self.name_len).decode()
         self.is_null = self.packet.read_uint8()
+        self.type_to_codes_and_method = {
+            0x00: ['STRING_RESULT', self._read_string],
+            0x01: ['REAL_RESULT', self._read_real],
+            0x02: ['INT_RESULT', self._read_int],
+            0x03: ['ROW_RESULT', self._read_default],
+            0x04: ['DECIMAL_RESULT', self._read_decimal]
+        }
 
         if not self.is_null:
             self.type = self.packet.read_uint8()
             self.charset = self.packet.read_uint32()
             self.value_len = self.packet.read_uint32()
 
-            type_to_method = {
-                0x00: self._read_string,
-                0x01: self._read_real,
-                0x02: self._read_int,
-                0x04: self._read_decimal
-            }
-
-            self.value = type_to_method.get(self.type, self._read_default)()
+            self.value = self.type_to_codes_and_method.get(self.type, ["UNKNOWN_RESULT", self._read_default])[1]()
             self.flags = self.packet.read_uint8()
         else:
             self.type, self.charset, self.value, self.flags = None, None, None, None
@@ -522,76 +580,90 @@ class UserVarEvent(BinLogEvent):
         return self.packet.read(self.value_len).decode()
 
     def _read_real(self):
-        return str(struct.unpack('d', self.packet.read(8))[0])
+        return struct.unpack('<d', self.packet.read(8))[0]
 
     def _read_int(self):
-        return str(self.packet.read_uint_by_size(self.value_len))
+        raw_int = self.packet.read(8)
+        is_negative = bool(raw_int[-1] & 0x80)
+        if is_negative:
+            int_value = struct.unpack('<Q', raw_int)[0]
+        else:
+            int_value = struct.unpack('<q', raw_int)[0]
+        return int_value
 
     def _read_decimal(self):
         self.precision = self.packet.read_uint8()
         self.decimals = self.packet.read_uint8()
-        raw_decimal = self.packet.read(self.value_len)
-        return self._parse_decimal_from_bytes(raw_decimal, self.precision, self.decimals)
+        return self._read_new_decimal(self.precision, self.decimals)
 
     def _read_default(self):
         return self.packet.read(self.value_len)
 
-    @staticmethod
-    def _parse_decimal_from_bytes(raw_decimal, precision, decimals):
-        digits_per_integer = 9
-        compressed_bytes = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4]
-        integral = precision - decimals
+    def _read_new_decimal(self, precision, decimals):
+        return float(super()._read_new_decimal(precision, decimals))
 
-        uncomp_integral, comp_integral = divmod(integral, digits_per_integer)
-        uncomp_fractional, comp_fractional = divmod(decimals, digits_per_integer)
-
-        res = "-" if not raw_decimal[0] & 0x80 else ""
-        mask = -1 if res == "-" else 0
-        raw_decimal = bytearray([raw_decimal[0] ^ 0x80]) + raw_decimal[1:]
-
-        def decode_decimal_decompress_value(comp_indx, data, mask):
-            size = compressed_bytes[comp_indx]
-            if size > 0:
-                databuff = bytearray(data[:size])
-                for i in range(size):
-                    databuff[i] ^= mask
-                return size, int.from_bytes(databuff, byteorder='big')
-            return 0, 0
-
-        pointer, value = decode_decimal_decompress_value(comp_integral, raw_decimal, mask)
-        res += str(value)
-
-        for _ in range(uncomp_integral):
-            value = struct.unpack('>i', raw_decimal[pointer:pointer+4])[0] ^ mask
-            res += '%09d' % value
-            pointer += 4
-
-        res += "."
-
-        for _ in range(uncomp_fractional):
-            value = struct.unpack('>i', raw_decimal[pointer:pointer+4])[0] ^ mask
-            res += '%09d' % value
-            pointer += 4
-
-        size, value = decode_decimal_decompress_value(comp_fractional, raw_decimal[pointer:], mask)
-        if size > 0:
-            res += '%0*d' % (comp_fractional, value)
-
-        return decimal.Decimal(res)
-    
     def _dump(self):
         super(UserVarEvent, self)._dump()
         print("User variable name: %s" % self.name)
         print("Is NULL: %s" % ("Yes" if self.is_null else "No"))
         if not self.is_null:
-            print("Type: %s" % self.type_codes.get(self.type, 'UNKNOWN_TYPE'))
+            print("Type: %s" % self.type_to_codes_and_method.get(self.type, ['UNKNOWN_TYPE'])[0])
             print("Charset: %s" % self.charset)
             print("Value: %s" % self.value)
-            if self.flags is not None:
-                print("Flags: %s" % self.flags)
+            print("Flags: %s" % self.flags)
+
+class MariadbStartEncryptionEvent(BinLogEvent):
+    """
+    Since MariaDB 10.1.7, 
+    the START_ENCRYPTION event is written to every binary log file 
+    if encrypt_binlog is set to ON. Prior to enabling this setting, 
+    additional configuration steps are required in MariaDB. 
+    (Link: https://mariadb.com/kb/en/encrypting-binary-logs/)
+
+    This event is written just once, after the Format Description event
+
+    Attributes:
+        schema: The Encryption scheme, always set to 1 for system files.
+        key_version: The Encryption key version.
+        nonce: Nonce (12 random bytes) of current binlog file.
+    """
+
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super().__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+
+        self.schema = self.packet.read_uint8()
+        self.key_version = self.packet.read_uint32()
+        self.nonce = self.packet.read(12)
+
+    def _dump(self):
+        print("Schema: %d" % self.schema)
+        print("Key version: %d" % self.key_version)
+        print(f"Nonce: {self.nonce}")
+
+
+class RowsQueryLogEvent(BinLogEvent):
+    """
+    Record original query for the row events in Row-Based Replication
+
+    More details are available in the MySQL Knowledge Base:
+    https://dev.mysql.com/doc/dev/mysql-server/latest/classRows__query__log__event.html
+
+    :ivar query_length: uint - Length of the SQL statement
+    :ivar query: str - The executed SQL statement
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(RowsQueryLogEvent, self).__init__(from_packet, event_size, table_map,
+                                          ctl_connection, **kwargs)
+        self.query_length = self.packet.read_uint8()
+        self.query = self.packet.read(self.query_length).decode('utf-8')
+    def dump(self):
+        print("=== %s ===" % (self.__class__.__name__))
+        print("Query length: %d" % self.query_length)
+        print("Query: %s" % self.query)
+
 
 class NotImplementedEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(NotImplementedEvent, self).__init__(
+        super().__init__(
             from_packet, event_size, table_map, ctl_connection, **kwargs)
         self.packet.advance(event_size)

@@ -17,7 +17,7 @@ from .bitmap import BitCount, BitGet
 
 class RowsEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(RowsEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                         ctl_connection, **kwargs)
         self.__rows = None
         self.__only_tables = kwargs["only_tables"]
@@ -164,7 +164,7 @@ class RowsEvent(BinLogEvent):
                     values[name] += b'\x00' * nr_pad
 
             elif column.type == FIELD_TYPE.NEWDECIMAL:
-                values[name] = self.__read_new_decimal(column)
+                values[name] = self._read_new_decimal(column.precision, column.decimals)
             elif column.type == FIELD_TYPE.BLOB:
                 values[name] = self.__read_string(column.length_size, column)
             elif column.type == FIELD_TYPE.DATETIME:
@@ -386,55 +386,8 @@ class RowsEvent(BinLogEvent):
             return None
         return self.__add_fsp_to_time(t, column)
 
-    def __read_new_decimal(self, column):
-        """Read MySQL's new decimal format introduced in MySQL 5"""
-
-        # This project was a great source of inspiration for
-        # understanding this storage format.
-        # https://github.com/jeremycole/mysql_binlog
-
-        digits_per_integer = 9
-        compressed_bytes = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4]
-        integral = (column.precision - column.decimals)
-        uncomp_integral = int(integral / digits_per_integer)
-        uncomp_fractional = int(column.decimals / digits_per_integer)
-        comp_integral = integral - (uncomp_integral * digits_per_integer)
-        comp_fractional = column.decimals - (uncomp_fractional
-                                             * digits_per_integer)
-
-        # Support negative
-        # The sign is encoded in the high bit of the the byte
-        # But this bit can also be used in the value
-        value = self.packet.read_uint8()
-        if value & 0x80 != 0:
-            res = ""
-            mask = 0
-        else:
-            mask = -1
-            res = "-"
-        self.packet.unread(struct.pack('<B', value ^ 0x80))
-
-        size = compressed_bytes[comp_integral]
-        if size > 0:
-            value = self.packet.read_int_be_by_size(size) ^ mask
-            res += str(value)
-
-        for i in range(0, uncomp_integral):
-            value = struct.unpack('>i', self.packet.read(4))[0] ^ mask
-            res += '%09d' % value
-
-        res += "."
-
-        for i in range(0, uncomp_fractional):
-            value = struct.unpack('>i', self.packet.read(4))[0] ^ mask
-            res += '%09d' % value
-
-        size = compressed_bytes[comp_fractional]
-        if size > 0:
-            value = self.packet.read_int_be_by_size(size) ^ mask
-            res += '%0*d' % (comp_fractional, value)
-
-        return decimal.Decimal(res)
+    def _read_new_decimal(self, precision, decimals):
+        return super()._read_new_decimal(precision, decimals)
 
     def __read_binary_slice(self, binary, start, size, data_length):
         """
@@ -449,7 +402,7 @@ class RowsEvent(BinLogEvent):
         return binary & mask
 
     def _dump(self):
-        super(RowsEvent, self)._dump()
+        super()._dump()
         print("Table: %s.%s" % (self.schema, self.table))
         print("Affected columns: %d" % self.number_of_columns)
         print("Changed rows: %d" % (len(self.rows)))
@@ -477,7 +430,7 @@ class DeleteRowsEvent(RowsEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(DeleteRowsEvent, self).__init__(from_packet, event_size,
+        super().__init__(from_packet, event_size,
                                               table_map, ctl_connection, **kwargs)
         if self._processed:
             self.columns_present_bitmap = self.packet.read(
@@ -490,7 +443,7 @@ class DeleteRowsEvent(RowsEvent):
         return row
 
     def _dump(self):
-        super(DeleteRowsEvent, self)._dump()
+        super()._dump()
         print("Values:")
         for row in self.rows:
             print("--")
@@ -505,7 +458,7 @@ class WriteRowsEvent(RowsEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(WriteRowsEvent, self).__init__(from_packet, event_size,
+        super().__init__(from_packet, event_size,
                                              table_map, ctl_connection, **kwargs)
         if self._processed:
             self.columns_present_bitmap = self.packet.read(
@@ -518,7 +471,7 @@ class WriteRowsEvent(RowsEvent):
         return row
 
     def _dump(self):
-        super(WriteRowsEvent, self)._dump()
+        super()._dump()
         print("Values:")
         for row in self.rows:
             print("--")
@@ -538,7 +491,7 @@ class UpdateRowsEvent(RowsEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(UpdateRowsEvent, self).__init__(from_packet, event_size,
+        super().__init__(from_packet, event_size,
                                               table_map, ctl_connection, **kwargs)
         if self._processed:
             #Body
@@ -556,7 +509,7 @@ class UpdateRowsEvent(RowsEvent):
         return row
 
     def _dump(self):
-        super(UpdateRowsEvent, self)._dump()
+        super()._dump()
         print("Affected columns: %d" % self.number_of_columns)
         print("Values:")
         for row in self.rows:
@@ -574,7 +527,7 @@ class TableMapEvent(BinLogEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(TableMapEvent, self).__init__(from_packet, event_size,
+        super().__init__(from_packet, event_size,
                                             table_map, ctl_connection, **kwargs)
         self.__only_tables = kwargs["only_tables"]
         self.__ignored_tables = kwargs["ignored_tables"]
@@ -642,7 +595,7 @@ class TableMapEvent(BinLogEvent):
 
                     ordinal_pos_loc += 1
                 except IndexError:
-                    # this a dirty hack to prevent row events containing columns which have been dropped prior
+                    # this is a dirty hack to prevent row events containing columns which have been dropped prior
                     # to pymysqlreplication start, but replayed from binlog from blowing up the service.
                     # TODO: this does not address the issue if the column other than the last one is dropped
                     column_schema = {
@@ -669,7 +622,7 @@ class TableMapEvent(BinLogEvent):
         return self.table_obj
 
     def _dump(self):
-        super(TableMapEvent, self)._dump()
+        super()._dump()
         print("Table id: %d" % (self.table_id))
         print("Schema: %s" % (self.schema))
         print("Table: %s" % (self.table))
