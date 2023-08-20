@@ -168,7 +168,8 @@ class BinLogStreamReader(object):
             skip_to_timestamp: Ignore all events until reaching specified
                                timestamp.
             report_slave: Report slave in SHOW SLAVE HOSTS.
-            slave_uuid: Report slave_uuid in SHOW SLAVE HOSTS.
+            slave_uuid: Report slave_uuid or replica_uuid in SHOW SLAVE HOSTS(MySQL 8.0.21-) or
+                        SHOW REPLICAS(MySQL 8.0.22+) depends on your MySQL version.
             fail_on_table_metadata_unavailable: Should raise exception if we
                                                 can't get table information on
                                                 row_events
@@ -306,7 +307,7 @@ class BinLogStreamReader(object):
 
         if self.slave_uuid:
             cur = self._stream_connection.cursor()
-            cur.execute("set @slave_uuid= '%s'" % self.slave_uuid)
+            cur.execute("SET @slave_uuid = %s, @replica_uuid = %s", (self.slave_uuid, self.slave_uuid))
             cur.close()
 
         if self.slave_heartbeat:
