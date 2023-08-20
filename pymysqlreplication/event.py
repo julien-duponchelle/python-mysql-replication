@@ -488,6 +488,35 @@ class RandEvent(BinLogEvent):
         print("seed1: %d" % (self.seed1))
         print("seed2: %d" % (self.seed2))
 
+class MariadbStartEncryptionEvent(BinLogEvent):
+    """
+    Since MariaDB 10.1.7, 
+    the START_ENCRYPTION event is written to every binary log file 
+    if encrypt_binlog is set to ON. Prior to enabling this setting, 
+    additional configuration steps are required in MariaDB. 
+    (Link: https://mariadb.com/kb/en/encrypting-binary-logs/)
+
+    This event is written just once, after the Format Description event
+
+    Attributes:
+        schema: The Encryption scheme, always set to 1 for system files.
+        key_version: The Encryption key version.
+        nonce: Nonce (12 random bytes) of current binlog file.
+    """
+
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(MariadbStartEncryptionEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+
+        self.schema = self.packet.read_uint8()
+        self.key_version = self.packet.read_uint32()
+        self.nonce = self.packet.read(12)
+
+    def _dump(self):
+        print("Schema: %d" % self.schema)
+        print("Key version: %d" % self.key_version)
+        print(f"Nonce: {self.nonce}")
+
+
 class NotImplementedEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(NotImplementedEvent, self).__init__(

@@ -15,7 +15,7 @@ from .event import (
     XidEvent, GtidEvent, StopEvent, XAPrepareEvent,
     BeginLoadQueryEvent, ExecuteLoadQueryEvent,
     HeartbeatLogEvent, NotImplementedEvent, MariadbGtidEvent,
-    MariadbAnnotateRowsEvent, RandEvent)
+    MariadbAnnotateRowsEvent, RandEvent, MariadbStartEncryptionEvent)
 from .exceptions import BinLogNotEnabled
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
@@ -622,7 +622,8 @@ class BinLogStreamReader(object):
                 NotImplementedEvent,
                 MariadbGtidEvent,
                 MariadbAnnotateRowsEvent,
-                RandEvent
+                RandEvent,
+                MariadbStartEncryptionEvent
                 ))
         if ignored_events is not None:
             for e in ignored_events:

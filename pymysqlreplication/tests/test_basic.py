@@ -18,6 +18,7 @@ from pymysqlreplication.event import *
 from pymysqlreplication.exceptions import TableMetadataUnavailableError
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
+from pathlib import Path
 
 __all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader", "TestMariadbBinlogStreamReader", "TestStatementConnectionSetting"]
 
@@ -27,9 +28,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         return [GtidEvent]
 
     def test_allowed_event_list(self):
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 18)
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 17)
-        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 17)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 19)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 18)
+        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 18)
         self.assertEqual(len(self.stream._allowed_event_list([RotateEvent], None, False)), 1)
 
     def test_read_query_event(self):
@@ -1036,6 +1037,42 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         self.assertEqual(event.sql_statement,insert_query)
         self.assertIsInstance(event,MariadbAnnotateRowsEvent)
         
+    def test_start_encryption_event(self):
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        query = "INSERT INTO test (data) VALUES('Hello World')"
+        self.execute(query)
+        self.execute("COMMIT")
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+
+        start_encryption_event = self.stream.fetchone()
+        self.assertIsInstance(start_encryption_event, MariadbStartEncryptionEvent)
+
+        schema = start_encryption_event.schema
+        key_version = start_encryption_event.key_version
+        nonce = start_encryption_event.nonce
+
+        from pathlib import Path
+
+        encryption_key_file_path = Path(__file__).parent.parent.parent
+
+        try:
+            with open(f"{encryption_key_file_path}/.mariadb/no_encryption_key.key", "r") as key_file:
+                first_line = key_file.readline()
+                key_version_from_key_file = int(first_line.split(";")[0])
+        except Exception as e:
+            self.fail("raised unexpected exception: {exception}".format(exception=e))
+        finally:
+            self.resetBinLog()
+
+        # schema is always 1
+        self.assertEqual(schema, 1)
+        self.assertEqual(key_version, key_version_from_key_file)
+        self.assertEqual(type(nonce), bytes)
+        self.assertEqual(len(nonce), 12)        
+        
 class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
     def setUp(self):
         super(TestStatementConnectionSetting, self).setUp()
@@ -1065,8 +1102,8 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
     def tearDown(self):
         self.execute("SET @@binlog_format='ROW'")
         self.assertEqual(self.bin_log_format(), "ROW")
-        super(TestStatementConnectionSetting, self).tearDown()
-        
+        super(TestStatementConnectionSetting, self).tearDown()        
+
 
 if __name__ == "__main__":
     import unittest
