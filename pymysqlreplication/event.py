@@ -111,6 +111,24 @@ class MariadbGtidEvent(BinLogEvent):
         print('GTID:', self.gtid)
 
 
+class MariadbAnnotateRowsEvent(BinLogEvent):
+    """
+    Annotate rows event 
+    If you want to check this binlog, change the value of the flag(line 382 of the 'binlogstream.py') option to 2 
+    https://mariadb.com/kb/en/annotate_rows_event/
+
+    Attributes:
+        sql_statement: The SQL statement
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(MariadbAnnotateRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+        self.sql_statement = self.packet.read(event_size)
+
+    def _dump(self):
+        super(MariadbAnnotateRowsEvent, self)._dump()
+        print("SQL statement :", self.sql_statement)   
+
+
 class RotateEvent(BinLogEvent):
     """Change MySQL bin log file
 

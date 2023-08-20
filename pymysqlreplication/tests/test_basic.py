@@ -17,7 +17,7 @@ from pymysqlreplication.exceptions import TableMetadataUnavailableError
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 
-__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader"]
+__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader","TestMariadbBinlogStreamReader"]
 
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
@@ -25,9 +25,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         return [GtidEvent]
 
     def test_allowed_event_list(self):
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 16)
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 15)
-        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 15)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 17)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 16)
+        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 16)
         self.assertEqual(len(self.stream._allowed_event_list([RotateEvent], None, False)), 1)
 
     def test_read_query_event(self):
@@ -1002,6 +1002,36 @@ class GtidTests(unittest.TestCase):
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-:1")
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
 
+class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
+    
+    def test_annotate_rows_event(self):
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        # Insert first event
+        query = "BEGIN;"
+        self.execute(query)
+        insert_query = b"INSERT INTO test (id, data) VALUES(1, 'Hello')"
+        self.execute(insert_query)
+        query = "COMMIT;"
+        self.execute(query)
+
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database, 
+            server_id=1024, 
+            blocking=False,
+            only_events=[MariadbAnnotateRowsEvent],
+            is_mariadb=True,
+            annotate_rows_event=True,
+            )
+        
+        event = self.stream.fetchone()
+        #Check event type 160,MariadbAnnotateRowsEvent
+        self.assertEqual(event.event_type,160)
+        #Check self.sql_statement
+        self.assertEqual(event.sql_statement,insert_query)
+        self.assertIsInstance(event,MariadbAnnotateRowsEvent)
+        
 
 if __name__ == "__main__":
     import unittest
