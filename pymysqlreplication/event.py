@@ -352,10 +352,11 @@ class QueryEvent(BinLogEvent):
 
 class BeginLoadQueryEvent(BinLogEvent):
     """
+    This event is written into the binary log file for LOAD DATA INFILE events
+    if the server variable binlog_mode was set to "STATEMENT".
 
-    Attributes:
-        file_id
-        block-data
+    :ivar file_id: the id of the file
+    :ivar block-data: data block about "LOAD DATA INFILE"
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(BeginLoadQueryEvent, self).__init__(from_packet, event_size, table_map,
