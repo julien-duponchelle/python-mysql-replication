@@ -454,6 +454,39 @@ class IntvarEvent(BinLogEvent):
         print("type: %d" % (self.type))
         print("Value: %d" % (self.value))
 
+class RandEvent(BinLogEvent):
+    """
+    RandEvent is generated every time a statement uses the RAND() function.
+    Indicates the seed values to use for generating a random number with RAND() in the next statement.
+
+    RandEvent only works in statement-based logging (need to set binlog_format as 'STATEMENT')
+    and only works when the seed number is not specified.
+
+    :ivar seed1: int - value for the first seed
+    :ivar seed2: int - value for the second seed
+    """
+    
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(RandEvent, self).__init__(from_packet, event_size, table_map,
+                                        ctl_connection, **kwargs)
+        # Payload
+        self._seed1 = self.packet.read_uint64()
+        self._seed2 = self.packet.read_uint64()
+
+    @property
+    def seed1(self):
+        """Get the first seed value"""
+        return self._seed1
+
+    @property
+    def seed2(self):
+        """Get the second seed value"""
+        return self._seed2
+
+    def _dump(self):
+        super(RandEvent, self)._dump()
+        print("seed1: %d" % (self.seed1))
+        print("seed2: %d" % (self.seed2))
 
 class NotImplementedEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):

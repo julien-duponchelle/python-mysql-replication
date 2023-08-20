@@ -19,7 +19,7 @@ from pymysqlreplication.exceptions import TableMetadataUnavailableError
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 
-__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader","TestMariadbBinlogStreamReader"]
+__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader", "TestMariadbBinlogStreamReader", "TestStatementConnectionSetting"]
 
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
@@ -27,9 +27,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         return [GtidEvent]
 
     def test_allowed_event_list(self):
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 17)
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 16)
-        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 16)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 18)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 17)
+        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 17)
         self.assertEqual(len(self.stream._allowed_event_list([RotateEvent], None, False)), 1)
 
     def test_read_query_event(self):
@@ -1035,6 +1035,37 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         #Check self.sql_statement
         self.assertEqual(event.sql_statement,insert_query)
         self.assertIsInstance(event,MariadbAnnotateRowsEvent)
+        
+class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super(TestStatementConnectionSetting, self).setUp()
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(RandEvent, QueryEvent),
+            fail_on_table_metadata_unavailable=True
+        )
+        self.execute("SET @@binlog_format='STATEMENT'")
+
+    def test_rand_event(self):
+        self.execute("CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data INT NOT NULL, PRIMARY KEY (id))")
+        self.execute("INSERT INTO test (data) VALUES(RAND())")
+        self.execute("COMMIT")
+
+        self.assertEqual(self.bin_log_format(), "STATEMENT")
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        expect_rand_event = self.stream.fetchone()
+        self.assertIsInstance(expect_rand_event, RandEvent)
+        self.assertEqual(type(expect_rand_event.seed1), int)
+        self.assertEqual(type(expect_rand_event.seed2), int)
+
+    def tearDown(self):
+        self.execute("SET @@binlog_format='ROW'")
+        self.assertEqual(self.bin_log_format(), "ROW")
+        super(TestStatementConnectionSetting, self).tearDown()
         
 
 if __name__ == "__main__":
