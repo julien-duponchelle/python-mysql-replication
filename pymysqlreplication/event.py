@@ -111,6 +111,24 @@ class MariadbGtidEvent(BinLogEvent):
         print('GTID:', self.gtid)
 
 
+class MariadbAnnotateRowsEvent(BinLogEvent):
+    """
+    Annotate rows event 
+    If you want to check this binlog, change the value of the flag(line 382 of the 'binlogstream.py') option to 2 
+    https://mariadb.com/kb/en/annotate_rows_event/
+
+    Attributes:
+        sql_statement: The SQL statement
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(MariadbAnnotateRowsEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+        self.sql_statement = self.packet.read(event_size)
+
+    def _dump(self):
+        super(MariadbAnnotateRowsEvent, self)._dump()
+        print("SQL statement :", self.sql_statement)   
+
+
 class RotateEvent(BinLogEvent):
     """Change MySQL bin log file
 
@@ -133,7 +151,7 @@ class RotateEvent(BinLogEvent):
 
 class XAPrepareEvent(BinLogEvent):
     """An XA prepare event is generated for a XA prepared transaction.
-    Like Xid_event it contans XID of the *prepared* transaction
+    Like Xid_event it contains XID of the *prepared* transaction
 
     Attributes:
         one_phase: current XA transaction commit method
@@ -244,7 +262,7 @@ class QueryEvent(BinLogEvent):
 
         # Payload
         status_vars_end_pos = self.packet.read_bytes + self.status_vars_length
-        while self.packet.read_bytes < status_vars_end_pos: # while 남은 data length가 얼마만큼? OR read_bytes
+        while self.packet.read_bytes < status_vars_end_pos:
             # read KEY for status variable
             status_vars_key = self.packet.read_uint8()
             # read VALUE for status variable
@@ -314,7 +332,7 @@ class QueryEvent(BinLogEvent):
             """
             mts_accessed_dbs < 254:
                 `mts_accessed_dbs` is equal to the number of dbs
-                acessed by the query event.
+                accessed by the query event.
             mts_accessed_dbs == 254:
                 This is the case where the number of dbs accessed
                 is 1 and the name of the only db is ""
@@ -436,6 +454,39 @@ class IntvarEvent(BinLogEvent):
         print("type: %d" % (self.type))
         print("Value: %d" % (self.value))
 
+class RandEvent(BinLogEvent):
+    """
+    RandEvent is generated every time a statement uses the RAND() function.
+    Indicates the seed values to use for generating a random number with RAND() in the next statement.
+
+    RandEvent only works in statement-based logging (need to set binlog_format as 'STATEMENT')
+    and only works when the seed number is not specified.
+
+    :ivar seed1: int - value for the first seed
+    :ivar seed2: int - value for the second seed
+    """
+    
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(RandEvent, self).__init__(from_packet, event_size, table_map,
+                                        ctl_connection, **kwargs)
+        # Payload
+        self._seed1 = self.packet.read_uint64()
+        self._seed2 = self.packet.read_uint64()
+
+    @property
+    def seed1(self):
+        """Get the first seed value"""
+        return self._seed1
+
+    @property
+    def seed2(self):
+        """Get the second seed value"""
+        return self._seed2
+
+    def _dump(self):
+        super(RandEvent, self)._dump()
+        print("seed1: %d" % (self.seed1))
+        print("seed2: %d" % (self.seed2))
 
 class MariadbStartEncryptionEvent(BinLogEvent):
     """
