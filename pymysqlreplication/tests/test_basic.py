@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import os
+
 import pymysql
 import copy
 import time
@@ -768,6 +770,8 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
         ctl_db = copy.copy(self.database)
         ctl_db["db"] = None
         ctl_db["port"] = 3307
+        if os.environ.get("MYSQL_5_7_CTL") is not None:
+            ctl_db["host"] = os.environ.get("MYSQL_5_7_CTL")
         self.ctl_conn_control = pymysql.connect(**ctl_db)
         self.ctl_conn_control.cursor().execute("DROP DATABASE IF EXISTS pymysqlreplication_test")
         self.ctl_conn_control.cursor().execute("CREATE DATABASE pymysqlreplication_test")
