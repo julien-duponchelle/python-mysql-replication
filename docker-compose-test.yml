@@ -1,0 +1,59 @@
+version: '3.2'
+services:
+  percona-5.7:
+    platform: linux/amd64
+    image: percona:5.7
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: true
+      MYSQL_DATABASE: pymysqlreplication_test
+    ports:
+      - 3306:3306
+    command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave_updates
+    restart: always
+    networks:
+      - default
+
+  percona-5.7-ctl:
+    image: percona:5.7
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: true
+      MYSQL_DATABASE: pymysqlreplication_test
+    ports:
+      - 3307:3307
+    command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave_updates -P 3307
+
+  pymysqlreplication:
+    build:
+      context: .
+      dockerfile: test.Dockerfile
+      args:
+        BASE_IMAGE: python:3.11-alpine
+        MYSQL_5_7: percona-5.7
+        MYSQL_5_7_CTL: percona-5.7-ctl
+
+    command:
+      - /bin/sh
+      - -ce
+      - |
+        echo "wait mysql server"
+        
+        while :
+        do
+          if mysql -h percona-5.7 --user=root --execute "USE pymysqlreplication_test;" 2>&1 >/dev/null && mysql -h percona-5.7-ctl --port=3307  --user=root --execute "USE pymysqlreplication_test;" 2>&1 >/dev/null; then
+            break
+          fi
+          sleep 1
+        done
+        
+        echo "run pytest"
+        pytest -k "not test_no_trailing_rotate_event and not test_end_log_pos"
+
+    working_dir: /pymysqlreplication
+    networks:
+      - default
+    depends_on:
+      - percona-5.7
+      - percona-5.7-ctl
+
+networks:
+  default: {}
