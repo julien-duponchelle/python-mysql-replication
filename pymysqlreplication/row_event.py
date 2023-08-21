@@ -3,6 +3,7 @@
 import struct
 import decimal
 import datetime
+import json
 
 from pymysql.charset import charset_by_name
 
