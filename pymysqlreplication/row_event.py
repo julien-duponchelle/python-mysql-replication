@@ -718,9 +718,8 @@ class TableMapEvent(BinLogEvent):
         print(self.optional_metadata.dump())
 
     def sync_column_info(self):
-
+        column_schemas = []
         charset_index = 0
-        geometry_index = 0
         enum_or_set_index = 0
         if len(self.optional_metadata.column_name_list) == 0:
             return
@@ -732,28 +731,44 @@ class TableMapEvent(BinLogEvent):
                 'CHARACTER_OCTET_LENGTH': None,  # we don't know this Info from optional metadata info
                 'DATA_TYPE': None,
                 'COLUMN_COMMENT': None,  # we don't know this Info from optional metadata info
-                'COLUMN_TYPE': None,  # we don't know exact column type info,
+                'COLUMN_TYPE': None,  # self.columns으로부터 추출하기
                 'COLUMN_KEY': None,
+                'ORDINAL_POSITION': None
             }
             column_type = self.columns[column_idx].type
             column_name = self.optional_metadata.column_name_list[column_idx]
+
             column_schema['COLUMN_NAME'] = column_name
             column_schema['DATA_TYPE'] = column_type
             column_schema['COLUMN_TYPE'] = column_type
+            column_schema['ORDINAL_POSITION'] = column_idx
+
+            self.columns[column_idx].name = column_name
 
             if self._is_character_column(column_type):
                 collation_id = self.optional_metadata.charset_collation_list[charset_index]
                 charset_index += 1
                 column_schema['COLLATION_NAME'] = collation_id
                 column_schema['CHARACTER_SET_NAME'] = collation_id  # TO-DO 맵핑
+
+                # self.columns[column_idx].collation_name = "utf8mb4_bin"
+                # self.columns[column_idx].character_set_name = "utf8mb4"
+
             if self._is_enum_or_set_column(column_type):
                 collation_id = self.optional_metadata.enum_and_set_collation_list[enum_or_set_index]
                 enum_or_set_index += 1
-                column_schema['COLLATION_NAME'] = collation_id
-                column_schema['CHARACTER_SET_NAME'] = collation_id  # TO-DO 맵핑
+                column_schema['COLLATION_NAME'] = str(collation_id)
+                column_schema['CHARACTER_SET_NAME'] = str(collation_id)  # TO-DO 맵핑
+
+                # self.columns[column_idx].collation_name = collation_id
+                # self.columns[column_idx].character_set_name = collation_id
+
             if column_idx in self.optional_metadata.simple_primary_key_list:
                 column_schema['COLUMN_KEY'] = 'PRI'
-            print(column_schema)
+            column_schemas.append(column_schema)
+
+        self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
+                               self.table, self.columns)
 
     def get_optional_meta_data(self):  # TLV format data (TYPE, LENGTH, VALUE)
         optional_metadata = OptionalMetaData()
@@ -761,7 +776,7 @@ class TableMapEvent(BinLogEvent):
             option_metadata_type = self.packet.read(1)[0]  # t
             length = self.packet.read_length_coded_binary()  # l
             field_type: MetadataFieldType = MetadataFieldType.by_index(option_metadata_type)
-            print(field_type)
+
             if field_type == MetadataFieldType.SIGNEDNESS:
                 signed_column_list = self._convert_include_non_numeric_column(
                     self._read_bool_list(length, True))

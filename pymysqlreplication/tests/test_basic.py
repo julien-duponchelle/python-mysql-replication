@@ -1132,7 +1132,7 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
             fail_on_table_metadata_unavailable=True
         )
         if not self.isMySQL8014AndMore():
-            self.skipTest("condition is not MySQL8014AndMore so pass Test")
+            self.skipTest("Mysql verision is under 8.0.14 so pass Test")
         self.execute("SET GLOBAL binlog_row_metadata='FULL'")
 
     def test_signedness(self):
