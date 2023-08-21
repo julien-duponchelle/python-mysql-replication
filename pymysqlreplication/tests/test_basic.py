@@ -1027,7 +1027,7 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
             only_events=(TableMapEvent,),
             fail_on_table_metadata_unavailable=True
         )
-        self.isMySQL8014AndMore()
+        assert self.isMySQL8014AndMore()
         self.execute("SET GLOBAL binlog_row_metadata='FULL'")
 
     def test_signedness(self):
