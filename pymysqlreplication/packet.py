@@ -71,6 +71,7 @@ class BinLogPacketWrapper(object):
         constants.HEARTBEAT_LOG_EVENT: event.HeartbeatLogEvent,
         constants.XA_PREPARE_EVENT: event.XAPrepareEvent,
         constants.ROWS_QUERY_LOG_EVENT: event.RowsQueryLogEvent,
+        constants.RAND_EVENT: event.RandEvent,
         # row_event
         constants.UPDATE_ROWS_EVENT_V1: row_event.UpdateRowsEvent,
         constants.WRITE_ROWS_EVENT_V1: row_event.WriteRowsEvent,
@@ -82,13 +83,14 @@ class BinLogPacketWrapper(object):
 
         #5.6 GTID enabled replication events
         constants.ANONYMOUS_GTID_LOG_EVENT: event.NotImplementedEvent,
+        constants.ANONYMOUS_GTID_LOG_EVENT: event.NotImplementedEvent,
         constants.PREVIOUS_GTIDS_LOG_EVENT: event.NotImplementedEvent,
         # MariaDB GTID
-        constants.MARIADB_ANNOTATE_ROWS_EVENT: event.NotImplementedEvent,
+        constants.MARIADB_ANNOTATE_ROWS_EVENT: event.MariadbAnnotateRowsEvent,
         constants.MARIADB_BINLOG_CHECKPOINT_EVENT: event.NotImplementedEvent,
         constants.MARIADB_GTID_EVENT: event.MariadbGtidEvent,
         constants.MARIADB_GTID_GTID_LIST_EVENT: event.NotImplementedEvent,
-        constants.MARIADB_START_ENCRYPTION_EVENT: event.NotImplementedEvent
+        constants.MARIADB_START_ENCRYPTION_EVENT: event.MariadbStartEncryptionEvent
     }
 
     def __init__(self, from_packet, table_map,
