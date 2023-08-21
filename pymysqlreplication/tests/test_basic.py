@@ -26,6 +26,7 @@ __all__ = [
     "TestGtidBinLogStreamReader", "TestMariadbBinlogStreamReader", "TestStatementConnectionSetting", "TestOptionalMetaData"
 ]
 
+
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def ignoredEvents(self):
         return [GtidEvent]
@@ -1130,7 +1131,8 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
             only_events=(TableMapEvent,),
             fail_on_table_metadata_unavailable=True
         )
-        assert self.isMySQL8014AndMore()
+        if not self.isMySQL8014AndMore():
+            return
         self.execute("SET GLOBAL binlog_row_metadata='FULL'")
 
     def test_signedness(self):

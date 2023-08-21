@@ -3,7 +3,6 @@
 import struct
 import decimal
 import datetime
-import json
 
 from pymysql.charset import charset_by_name
 
@@ -596,9 +595,9 @@ class OptionalMetaData:
         print("geometry_type_list : %s" % (self.geometry_type_list))
         print("simple_primary_key_list: %s" % (self.simple_primary_key_list))
         print("primary_keys_with_prefix: %s" % (self.primary_keys_with_prefix))
-        print("enum_and_set_default_charset: " +f'{self.enum_and_set_default_charset}')
+        print("enum_and_set_default_charset: " + f'{self.enum_and_set_default_charset}')
         print("enum_and_set_charset_collation: " + f'{self.enum_and_set_charset_collation}')
-        print("enum_and_set_default_column_charset_list: "+f'{self.enum_and_set_default_column_charset_list}')
+        print("enum_and_set_default_column_charset_list: " + f'{self.enum_and_set_default_column_charset_list}')
         print("visibility_list: %s" % (self.visibility_list))
 
 
@@ -712,23 +711,13 @@ class TableMapEvent(BinLogEvent):
         print("Columns: %s" % (self.column_count))
         print(self.optional_metadata.dump())
 
-    def _numeric_column_index_list(self):
-        numeric_column_idx_list = []
-        for column_idx in range(len(self.columns)):
-            if self.columns[column_idx].type in [FIELD_TYPE.TINY, FIELD_TYPE.SHORT, FIELD_TYPE.INT24, FIELD_TYPE.LONG,
-                                                 FIELD_TYPE.LONGLONG, FIELD_TYPE.NEWDECIMAL, FIELD_TYPE.FLOAT,
-                                                 FIELD_TYPE.DOUBLE,
-                                                 FIELD_TYPE.YEAR]:
-                numeric_column_idx_list.append(column_idx)
-
-        return numeric_column_idx_list
-
     def get_optional_meta_data(self):  # TLV format data (TYPE, LENGTH, VALUE)
         optional_metadata = OptionalMetaData()
         while self.packet.bytes_to_read() > BINLOG.BINLOG_CHECKSUM_LEN:
             option_metadata_type = self.packet.read(1)[0]  # t
             length = self.packet.read_length_coded_binary()  # l
             field_type: MetadataFieldType = MetadataFieldType.by_index(option_metadata_type)
+
             if field_type == MetadataFieldType.SIGNEDNESS:
                 signed_column_list = self._convert_include_non_numeric_column(
                     self._read_bool_list(length, True))
@@ -737,9 +726,13 @@ class TableMapEvent(BinLogEvent):
             elif field_type == MetadataFieldType.DEFAULT_CHARSET:
                 optional_metadata.default_charset_collation, optional_metadata.charset_collation = self._read_default_charset(
                     length)
+                self._parsed_column_charset_by_default_charset(optional_metadata.default_charset_collation,
+                                                               optional_metadata.charset_collation,
+                                                               self._is_character_column)
 
             elif field_type == MetadataFieldType.COLUMN_CHARSET:
                 optional_metadata.column_charset = self._read_ints(length)
+                self._parsed_column_charset_by_column_charset(optional_metadata.column_charset)
 
             elif field_type == MetadataFieldType.COLUMN_NAME:
                 optional_metadata.column_name_list = self._read_column_names(length)
@@ -760,10 +753,16 @@ class TableMapEvent(BinLogEvent):
                 optional_metadata.primary_keys_with_prefix = self._read_primary_keys_with_prefix(length)
 
             elif field_type == MetadataFieldType.ENUM_AND_SET_DEFAULT_CHARSET:
-                optional_metadata.enum_and_set_default_charset, optional_metadata.enum_and_set_charset_collation = self._read_default_charset(length)
+                optional_metadata.enum_and_set_default_charset, optional_metadata.enum_and_set_charset_collation = self._read_default_charset(
+                    length)
+                self._parsed_column_charset_by_default_charset(optional_metadata.enum_and_set_default_charset,
+                                                               optional_metadata.enum_and_set_charset_collation,
+                                                               self._is_enum_or_set_column)
 
             elif field_type == MetadataFieldType.ENUM_AND_SET_COLUMN_CHARSET:
                 optional_metadata.enum_and_set_default_column_charset_list = self._read_ints(length)
+                self._parsed_column_charset_by_column_charset(
+                    optional_metadata.enum_and_set_default_column_charset_list)
 
             elif field_type == MetadataFieldType.VISIBILITY:
                 optional_metadata.visibility_list = self._read_bool_list(length, False)
@@ -773,37 +772,66 @@ class TableMapEvent(BinLogEvent):
     def _convert_include_non_numeric_column(self, signedness_bool_list):
         # The incoming order of columns in the packet represents the indices of the numeric columns.
         # Thus, it transforms non-numeric columns to align with the sorting.
-        bool_list = [False] * self.column_count
-
-        numeric_idx_list = self._numeric_column_index_list()
-        mapping_column = {}
-        for idx, value in enumerate(numeric_idx_list):
-            mapping_column[idx] = value
-
-        for i in range(len(signedness_bool_list)):
-            if signedness_bool_list[i]:
-                bool_list[mapping_column[i]] = True
+        bool_list = []
+        position = 0
+        for i in range(self.column_count):
+            column_type = self.columns[i].type
+            if self._is_numeric_column(column_type):
+                if signedness_bool_list[position]:
+                    bool_list.append(True)
+                else:
+                    bool_list.append(False)
+                position+=1
+            else:
+                bool_list.append(False)
 
         return bool_list
 
-    def _read_bool_list(self, read_byte_length, signedness_flag):
-        bool_list = []
-        column_count = 0
-        if signedness_flag:
-            # if signedness
-            # The order of the index in the packet is only the index between the numeric_columns.
-            # Therefore, we need to use numeric_column_count when calculating bits.
-            column_count = len(self._numeric_column_index_list())
-        else:
-            column_count = self.column_count
+    def _parsed_column_charset_by_default_charset(self, default_charset_collation: int, column_charset_collation: dict,
+                                                  column_type_detect_function):
+        column_charset = []
+        for i in range(self.column_count):
+            column_type = self.columns[i].type
+            if not column_type_detect_function(column_type):
+                column_charset.append(None)
+            elif i not in column_charset_collation.keys():
+                column_charset.append(default_charset_collation)
+            else:
+                column_charset.append(column_charset_collation[i])
 
+        return column_charset
+
+    def _parsed_column_charset_by_column_charset(self, column_charset_list: list):
+        column_charset = []
+        position = 0
+        if len(column_charset_list) == 0:
+            return
+
+        for i in range(self.column_count):
+            column_type = self.columns[i].type
+            if not self._is_character_column(column_type):
+                column_charset.append(None)
+            else:
+                column_charset.append(column_charset_list[position])
+                position += 1
+
+        return column_charset
+
+    def _read_bool_list(self, read_byte_length, signedness_flag):
+        # if signedness_flag true
+        # The order of the index in the packet is only the index between the numeric_columns.
+        # Therefore, we need to use numeric_column_count when calculating bits.
+        bool_list = []
         bytes_data = self.packet.read(read_byte_length)
 
         byte = 0
         byte_idx = 0
         bit_idx = 0
 
-        for i in range(column_count):
+        for i in range(self.column_count):
+            column_type = self.columns[i].type
+            if not self._is_numeric_column(column_type) and signedness_flag:
+                continue
             if bit_idx == 0:
                 byte = bytes_data[byte_idx]
                 byte_idx += 1
@@ -866,6 +894,40 @@ class TableMapEvent(BinLogEvent):
         for i in range(0, len(ints), 2):
             result[ints[i]] = ints[i + 1]
         return result
+
+    @staticmethod
+    def _is_character_column(column_type):
+        if column_type in [FIELD_TYPE.STRING, FIELD_TYPE.VAR_STRING, FIELD_TYPE.BLOB]:
+            # TO-DO : mariadb Geometry Character Type
+            return True
+        return False
+
+    @staticmethod
+    def _is_enum_column(column_type):
+        if column_type == FIELD_TYPE.ENUM:
+            return True
+        return False
+
+    @staticmethod
+    def _is_set_column(column_type):
+        if column_type == FIELD_TYPE.SET:
+            return True
+        return False
+
+    @staticmethod
+    def _is_enum_or_set_column(column_type):
+        if column_type in [FIELD_TYPE.ENUM, FIELD_TYPE.SET]:
+            return True
+        return False
+
+    @staticmethod
+    def _is_numeric_column(column_type):
+        if column_type in [FIELD_TYPE.TINY, FIELD_TYPE.SHORT, FIELD_TYPE.INT24, FIELD_TYPE.LONG,
+                           FIELD_TYPE.LONGLONG, FIELD_TYPE.NEWDECIMAL, FIELD_TYPE.FLOAT,
+                           FIELD_TYPE.DOUBLE,
+                           FIELD_TYPE.YEAR]:
+            return True
+        return False
 
 
 from enum import Enum
