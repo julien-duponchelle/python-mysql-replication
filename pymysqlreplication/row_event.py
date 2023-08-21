@@ -582,6 +582,8 @@ class OptionalMetaData:
         self.enum_and_set_default_charset: int = None
         self.enum_and_set_charset_collation = {}
         self.enum_and_set_default_column_charset_list = []
+        self.charset_collation_list = []
+        self.enum_and_set_collation_list = []
         self.visibility_list = []
 
     def dump(self):
@@ -600,6 +602,8 @@ class OptionalMetaData:
         print("enum_and_set_charset_collation: " + f'{self.enum_and_set_charset_collation}')
         print("enum_and_set_default_column_charset_list: " + f'{self.enum_and_set_default_column_charset_list}')
         print("visibility_list: %s" % (self.visibility_list))
+        print("charset_collation_list", self.charset_collation_list)
+        print("enum_and_set_collation_list", self.enum_and_set_collation_list)
 
 
 class TableMapEvent(BinLogEvent):
@@ -700,6 +704,7 @@ class TableMapEvent(BinLogEvent):
         self.null_bitmask = self.packet.read((self.column_count + 7) / 8)
         # optional meta Data
         self.optional_metadata = self.get_optional_meta_data()
+        self.sync_column_info()
 
     def get_table(self):
         return self.table_obj
@@ -712,13 +717,51 @@ class TableMapEvent(BinLogEvent):
         print("Columns: %s" % (self.column_count))
         print(self.optional_metadata.dump())
 
+    def sync_column_info(self):
+
+        charset_index = 0
+        geometry_index = 0
+        enum_or_set_index = 0
+        if len(self.optional_metadata.column_name_list) == 0:
+            return
+        for column_idx in range(self.column_count):
+            column_schema = {
+                'COLUMN_NAME': None,
+                'COLLATION_NAME': None,
+                'CHARACTER_SET_NAME': None,
+                'CHARACTER_OCTET_LENGTH': None,  # we don't know this Info from optional metadata info
+                'DATA_TYPE': None,
+                'COLUMN_COMMENT': None,  # we don't know this Info from optional metadata info
+                'COLUMN_TYPE': None,  # we don't know exact column type info,
+                'COLUMN_KEY': None,
+            }
+            column_type = self.columns[column_idx].type
+            column_name = self.optional_metadata.column_name_list[column_idx]
+            column_schema['COLUMN_NAME'] = column_name
+            column_schema['DATA_TYPE'] = column_type
+            column_schema['COLUMN_TYPE'] = column_type
+
+            if self._is_character_column(column_type):
+                collation_id = self.optional_metadata.charset_collation_list[charset_index]
+                charset_index += 1
+                column_schema['COLLATION_NAME'] = collation_id
+                column_schema['CHARACTER_SET_NAME'] = collation_id  # TO-DO 맵핑
+            if self._is_enum_or_set_column(column_type):
+                collation_id = self.optional_metadata.enum_and_set_collation_list[enum_or_set_index]
+                enum_or_set_index += 1
+                column_schema['COLLATION_NAME'] = collation_id
+                column_schema['CHARACTER_SET_NAME'] = collation_id  # TO-DO 맵핑
+            if column_idx in self.optional_metadata.simple_primary_key_list:
+                column_schema['COLUMN_KEY'] = 'PRI'
+            print(column_schema)
+
     def get_optional_meta_data(self):  # TLV format data (TYPE, LENGTH, VALUE)
         optional_metadata = OptionalMetaData()
         while self.packet.bytes_to_read() > BINLOG.BINLOG_CHECKSUM_LEN:
             option_metadata_type = self.packet.read(1)[0]  # t
             length = self.packet.read_length_coded_binary()  # l
             field_type: MetadataFieldType = MetadataFieldType.by_index(option_metadata_type)
-
+            print(field_type)
             if field_type == MetadataFieldType.SIGNEDNESS:
                 signed_column_list = self._convert_include_non_numeric_column(
                     self._read_bool_list(length, True))
@@ -727,13 +770,15 @@ class TableMapEvent(BinLogEvent):
             elif field_type == MetadataFieldType.DEFAULT_CHARSET:
                 optional_metadata.default_charset_collation, optional_metadata.charset_collation = self._read_default_charset(
                     length)
-                self._parsed_column_charset_by_default_charset(optional_metadata.default_charset_collation,
-                                                               optional_metadata.charset_collation,
-                                                               self._is_character_column)
+                optional_metadata.charset_collation_list = self._parsed_column_charset_by_default_charset(
+                    optional_metadata.default_charset_collation,
+                    optional_metadata.charset_collation,
+                    self._is_character_column)
 
             elif field_type == MetadataFieldType.COLUMN_CHARSET:
                 optional_metadata.column_charset = self._read_ints(length)
-                self._parsed_column_charset_by_column_charset(optional_metadata.column_charset)
+                optional_metadata.charset_collation_list = self._parsed_column_charset_by_column_charset(
+                    optional_metadata.column_charset)
 
             elif field_type == MetadataFieldType.COLUMN_NAME:
                 optional_metadata.column_name_list = self._read_column_names(length)
@@ -756,18 +801,19 @@ class TableMapEvent(BinLogEvent):
             elif field_type == MetadataFieldType.ENUM_AND_SET_DEFAULT_CHARSET:
                 optional_metadata.enum_and_set_default_charset, optional_metadata.enum_and_set_charset_collation = self._read_default_charset(
                     length)
-                self._parsed_column_charset_by_default_charset(optional_metadata.enum_and_set_default_charset,
-                                                               optional_metadata.enum_and_set_charset_collation,
-                                                               self._is_enum_or_set_column)
+                optional_metadata.enum_and_set_collation_list = self._parsed_column_charset_by_default_charset(
+                    optional_metadata.enum_and_set_default_charset,
+                    optional_metadata.enum_and_set_charset_collation,
+                    self._is_enum_or_set_column)
 
             elif field_type == MetadataFieldType.ENUM_AND_SET_COLUMN_CHARSET:
                 optional_metadata.enum_and_set_default_column_charset_list = self._read_ints(length)
-                self._parsed_column_charset_by_column_charset(
+                optional_metadata.enum_and_set_collation_list = self._parsed_column_charset_by_column_charset(
                     optional_metadata.enum_and_set_default_column_charset_list)
 
             elif field_type == MetadataFieldType.VISIBILITY:
                 optional_metadata.visibility_list = self._read_bool_list(length, False)
-
+            optional_metadata.dump()
         return optional_metadata
 
     def _convert_include_non_numeric_column(self, signedness_bool_list):
@@ -782,7 +828,7 @@ class TableMapEvent(BinLogEvent):
                     bool_list.append(True)
                 else:
                     bool_list.append(False)
-                position+=1
+                position += 1
             else:
                 bool_list.append(False)
 
@@ -794,7 +840,7 @@ class TableMapEvent(BinLogEvent):
         for i in range(self.column_count):
             column_type = self.columns[i].type
             if not column_type_detect_function(column_type):
-                column_charset.append(None)
+                continue
             elif i not in column_charset_collation.keys():
                 column_charset.append(default_charset_collation)
             else:
@@ -811,7 +857,7 @@ class TableMapEvent(BinLogEvent):
         for i in range(self.column_count):
             column_type = self.columns[i].type
             if not self._is_character_column(column_type):
-                column_charset.append(None)
+                continue
             else:
                 column_charset.append(column_charset_list[position])
                 position += 1
