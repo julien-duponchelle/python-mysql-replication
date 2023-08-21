@@ -1116,8 +1116,8 @@ class TestRowsQueryLogEvents(base.PyMySQLReplicationTestCase):
         self.execute("SET SESSION binlog_rows_query_log_events=1")
 
     def tearDown(self):
-        super(TestRowsQueryLogEvents, self).tearDown()
         self.execute("SET SESSION binlog_rows_query_log_events=0")
+        super(TestRowsQueryLogEvents, self).tearDown()
 
     def test_rows_query_log_event(self):
         self.stream.close()
