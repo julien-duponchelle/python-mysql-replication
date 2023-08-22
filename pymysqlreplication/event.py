@@ -439,6 +439,11 @@ class IntvarEvent(BinLogEvent):
 
 
 class NotImplementedEvent(BinLogEvent):
+    """
+    Used as a temporary class for events that have not yet been implemented.
+
+	The event referencing this class skips parsing.
+    """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(NotImplementedEvent, self).__init__(
             from_packet, event_size, table_map, ctl_connection, **kwargs)
