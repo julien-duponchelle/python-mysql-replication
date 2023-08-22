@@ -704,6 +704,7 @@ class TableMapEvent(BinLogEvent):
         self.null_bitmask = self.packet.read((self.column_count + 7) / 8)
         # optional meta Data
         self.optional_metadata = self.get_optional_meta_data()
+        self.REVERSE_FIELD_TYPE = {v: k for k, v in vars(FIELD_TYPE).items() if isinstance(v, int)}
         self.sync_column_info()
 
     def get_table(self):
@@ -739,7 +740,7 @@ class TableMapEvent(BinLogEvent):
             column_name = self.optional_metadata.column_name_list[column_idx]
 
             column_schema['COLUMN_NAME'] = column_name
-            column_schema['DATA_TYPE'] = column_type
+            column_schema['DATA_TYPE'] = self._get_field_type_key(column_type)
             column_schema['COLUMN_TYPE'] = column_type
             column_schema['ORDINAL_POSITION'] = column_idx
 
@@ -766,7 +767,7 @@ class TableMapEvent(BinLogEvent):
             if column_idx in self.optional_metadata.simple_primary_key_list:
                 column_schema['COLUMN_KEY'] = 'PRI'
             column_schemas.append(column_schema)
-
+            print(column_schema)
         self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
                                self.table, self.columns)
 
@@ -990,6 +991,9 @@ class TableMapEvent(BinLogEvent):
                            FIELD_TYPE.YEAR]:
             return True
         return False
+
+    def _get_field_type_key(self, field_type_value):
+        return self.REVERSE_FIELD_TYPE.get(field_type_value, None)
 
 
 from enum import Enum
