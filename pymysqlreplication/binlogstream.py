@@ -653,6 +653,7 @@ class BinLogStreamReader(object):
                         table_schema = %s AND table_name = %s
                     ORDER BY ORDINAL_POSITION
                     """, (schema, table))
+                cur.execute("COMMIT")
 
                 return cur.fetchall()
             except pymysql.OperationalError as error:
