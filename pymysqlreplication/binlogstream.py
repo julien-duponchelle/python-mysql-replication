@@ -655,6 +655,7 @@ class BinLogStreamReader(object):
                     """, (schema, table))
                 result = cur.fetchall()
                 cur.execute("COMMIT")
+                cur.close()
 
                 return result
             except pymysql.OperationalError as error:
