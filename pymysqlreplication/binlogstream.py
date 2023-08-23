@@ -655,7 +655,6 @@ class BinLogStreamReader(object):
                     ORDER BY ORDINAL_POSITION
                     """, (schema, table))
                 result = cur.fetchall()
-                cur.execute("COMMIT")
                 cur.close()
 
                 return result
