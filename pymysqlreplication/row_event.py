@@ -730,10 +730,10 @@ class TableMapEvent(BinLogEvent):
                 'COLUMN_NAME': None,
                 'COLLATION_NAME': None,
                 'CHARACTER_SET_NAME': None,
-                'CHARACTER_OCTET_LENGTH': None,  # we don't know this Info from optional metadata info
+                'CHARACTER_OCTET_LENGTH': None,
                 'DATA_TYPE': None,
                 'COLUMN_COMMENT': '',  # we don't know this Info from optional metadata info
-                'COLUMN_TYPE': None,  # self.columns으로부터 추출하기
+                'COLUMN_TYPE': None,
                 'COLUMN_KEY': '',
                 'ORDINAL_POSITION': None
             }
