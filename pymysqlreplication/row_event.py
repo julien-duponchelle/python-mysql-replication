@@ -6,10 +6,12 @@ import datetime
 import json
 
 from pymysql.charset import charset_by_name
+from enum import Enum
 
 from .event import BinLogEvent
 from .exceptions import TableMetadataUnavailableError
 from .constants import FIELD_TYPE
+from .constants import CHARSET
 from .constants import BINLOG
 from .column import Column
 from .table import Table
@@ -739,35 +741,34 @@ class TableMapEvent(BinLogEvent):
             column_type = self.columns[column_idx].type
             column_name = self.optional_metadata.column_name_list[column_idx]
 
+            self.columns[column_idx].name = column_name
+
             column_schema['COLUMN_NAME'] = column_name
-            column_schema['DATA_TYPE'] = self._get_field_type_key(column_type)
             column_schema['COLUMN_TYPE'] = column_type
             column_schema['ORDINAL_POSITION'] = column_idx
-
-            self.columns[column_idx].name = column_name
+            column_schema['DATA_TYPE'] = self._get_field_type_key(column_type)
 
             if self._is_character_column(column_type):
                 collation_id = self.optional_metadata.charset_collation_list[charset_index]
                 charset_index += 1
-                column_schema['COLLATION_NAME'] = collation_id
-                column_schema['CHARACTER_SET_NAME'] = collation_id  # TO-DO 맵핑
+                column_schema['COLLATION_NAME'] = CHARSET.charset_by_id(collation_id).collation
+                column_schema['CHARACTER_SET_NAME'] = CHARSET.charset_by_id(collation_id).name  # TO-DO 맵핑
 
-                # self.columns[column_idx].collation_name = "utf8mb4_bin"
-                # self.columns[column_idx].character_set_name = "utf8mb4"
+                self.columns[column_idx].collation_name = CHARSET.charset_by_id(collation_id).collation
+                self.columns[column_idx].character_set_name = CHARSET.charset_by_id(collation_id).name
 
             if self._is_enum_or_set_column(column_type):
                 collation_id = self.optional_metadata.enum_and_set_collation_list[enum_or_set_index]
                 enum_or_set_index += 1
-                column_schema['COLLATION_NAME'] = str(collation_id)
-                column_schema['CHARACTER_SET_NAME'] = str(collation_id)  # TO-DO 맵핑
-
-                # self.columns[column_idx].collation_name = collation_id
-                # self.columns[column_idx].character_set_name = collation_id
+                column_schema['COLLATION_NAME'] = CHARSET.charset_by_id(collation_id).collation
+                column_schema['CHARACTER_SET_NAME'] = CHARSET.charset_by_id(collation_id).name
+                self.columns[column_idx].collation_name = CHARSET.charset_by_id(collation_id).collation
+                self.columns[column_idx].character_set_name = CHARSET.charset_by_id(collation_id).name
 
             if column_idx in self.optional_metadata.simple_primary_key_list:
                 column_schema['COLUMN_KEY'] = 'PRI'
             column_schemas.append(column_schema)
-            print(column_schema)
+
         self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
                                self.table, self.columns)
 
@@ -994,9 +995,6 @@ class TableMapEvent(BinLogEvent):
 
     def _get_field_type_key(self, field_type_value):
         return self.REVERSE_FIELD_TYPE.get(field_type_value, None)
-
-
-from enum import Enum
 
 
 class MetadataFieldType(Enum):
