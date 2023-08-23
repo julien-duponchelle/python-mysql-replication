@@ -454,6 +454,7 @@ class IntvarEvent(BinLogEvent):
         print("type: %d" % (self.type))
         print("Value: %d" % (self.value))
 
+
 class RandEvent(BinLogEvent):
     """
     RandEvent is generated every time a statement uses the RAND() function.
@@ -488,6 +489,7 @@ class RandEvent(BinLogEvent):
         print("seed1: %d" % (self.seed1))
         print("seed2: %d" % (self.seed2))
 
+
 class MariadbStartEncryptionEvent(BinLogEvent):
     """
     Since MariaDB 10.1.7, 
@@ -515,6 +517,27 @@ class MariadbStartEncryptionEvent(BinLogEvent):
         print("Schema: %d" % self.schema)
         print("Key version: %d" % self.key_version)
         print(f"Nonce: {self.nonce}")
+
+
+class RowsQueryLogEvent(BinLogEvent):
+    """
+    Record original query for the row events in Row-Based Replication
+
+    More details are available in the MySQL Knowledge Base:
+    https://dev.mysql.com/doc/dev/mysql-server/latest/classRows__query__log__event.html
+
+    :ivar query_length: uint - Length of the SQL statement
+    :ivar query: str - The executed SQL statement
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(RowsQueryLogEvent, self).__init__(from_packet, event_size, table_map,
+                                          ctl_connection, **kwargs)
+        self.query_length = self.packet.read_uint8()
+        self.query = self.packet.read(self.query_length).decode('utf-8')
+    def dump(self):
+        print("=== %s ===" % (self.__class__.__name__))
+        print("Query length: %d" % self.query_length)
+        print("Query: %s" % self.query)
 
 
 class NotImplementedEvent(BinLogEvent):
