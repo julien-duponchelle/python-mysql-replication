@@ -8,7 +8,7 @@ services:
       MYSQL_DATABASE: pymysqlreplication_test
     ports:
       - 3306:3306
-    command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave_updates
+    command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on
     restart: always
     networks:
       - default
@@ -20,7 +20,7 @@ services:
       MYSQL_DATABASE: pymysqlreplication_test
     ports:
       - 3307:3307
-    command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave_updates -P 3307
+    command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on -P 3307
 
   pymysqlreplication:
     build:
