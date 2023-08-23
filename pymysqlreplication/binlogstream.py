@@ -302,7 +302,7 @@ class BinLogStreamReader(object):
         # we support it
         if self.__use_checksum:
             cur = self._stream_connection.cursor()
-            cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")
+            cur.execute("SET @master_binlog_checksum= @@global.binlog_checksum")
             cur.close()
 
         if self.slave_uuid:
@@ -323,7 +323,7 @@ class BinLogStreamReader(object):
             # master_heartbeat_period is nanoseconds
             heartbeat = int(heartbeat * 1000000000)
             cur = self._stream_connection.cursor()
-            cur.execute("set @master_heartbeat_period= %d" % heartbeat)
+            cur.execute("SET @master_heartbeat_period= %d" % heartbeat)
             cur.close()
 
         # When replicating from Mariadb 10.6.12 using binlog coordinates, a slave capability < 4 triggers a bug in
