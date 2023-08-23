@@ -766,7 +766,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
 
     def setUp(self):
-        super(TestCTLConnectionSettings, self).setUp()
+        super().setUp()
         self.stream.close()
         ctl_db = copy.copy(self.database)
         ctl_db["db"] = None
@@ -788,7 +788,7 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
         )
 
     def tearDown(self):
-        super(TestCTLConnectionSettings, self).tearDown()
+        super().tearDown()
         self.ctl_conn_control.close()
 
     def test_separate_ctl_settings_table_metadata_unavailable(self):
@@ -823,7 +823,7 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
 
 class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def setUp(self):
-        super(TestGtidBinLogStreamReader, self).setUp()
+        super().setUp()
         if not self.supportsGTID:
             raise unittest.SkipTest("database does not support GTID, skipping GTID tests")
 
@@ -1075,7 +1075,7 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         
 class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
     def setUp(self):
-        super(TestStatementConnectionSetting, self).setUp()
+        super().setUp()
         self.stream.close()
         self.stream = BinLogStreamReader(
             self.database,
@@ -1102,7 +1102,7 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
     def tearDown(self):
         self.execute("SET @@binlog_format='ROW'")
         self.assertEqual(self.bin_log_format(), "ROW")
-        super(TestStatementConnectionSetting, self).tearDown()        
+        super().tearDown()
 
 
 if __name__ == "__main__":
