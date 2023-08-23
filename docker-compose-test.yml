@@ -1,26 +1,45 @@
-version: '3.2'
+version: '3.4'
+
+x-mysql: &mysql
+  environment:
+    MYSQL_ALLOW_EMPTY_PASSWORD: true
+  command: >
+    mysqld
+    --log-bin=mysql-bin.log
+    --server-id 1
+    --binlog-format=row
+    --gtid_mode=on
+    --enforce-gtid-consistency=on
+    --log_slave_updates
+
+x-mariadb: &mariadb
+  environment:
+    MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 1
+  command: |
+    --server-id=1
+    --default-authentication-plugin=mysql_native_password
+    --log-bin=master-bin
+    --binlog-format=row
+    --log-slave-updates=on
+
 services:
   percona-5.7:
-    platform: linux/amd64
+    <<: *mysql
     image: percona:5.7
-    environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: true
-      MYSQL_DATABASE: pymysqlreplication_test
     ports:
-      - 3306:3306
-    command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on
-    restart: always
-    networks:
-      - default
+      - "3306:3306"
 
   percona-5.7-ctl:
+    <<: *mysql
     image: percona:5.7
-    environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: true
-      MYSQL_DATABASE: pymysqlreplication_test
     ports:
-      - 3307:3307
-    command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on -P 3307
+      - "3307:3306"
+
+  mariadb-10.6:
+    <<: *mariadb
+    image: mariadb:10.6
+    ports:
+      - "3308:3306"
 
   pymysqlreplication:
     build:
