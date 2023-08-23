@@ -662,7 +662,6 @@ class TableMapEvent(BinLogEvent):
             self.column_schemas = table_map[self.table_id].column_schemas
         else:
             self.column_schemas = self._ctl_connection._get_table_information(self.schema, self.table)
-
         ordinal_pos_loc = 0
         if self.column_count != 0:
             # Read columns meta data
@@ -733,20 +732,28 @@ class TableMapEvent(BinLogEvent):
                 'CHARACTER_SET_NAME': None,
                 'CHARACTER_OCTET_LENGTH': None,  # we don't know this Info from optional metadata info
                 'DATA_TYPE': None,
-                'COLUMN_COMMENT': None,  # we don't know this Info from optional metadata info
+                'COLUMN_COMMENT': '',  # we don't know this Info from optional metadata info
                 'COLUMN_TYPE': None,  # self.columns으로부터 추출하기
-                'COLUMN_KEY': None,
+                'COLUMN_KEY': '',
                 'ORDINAL_POSITION': None
             }
             column_type = self.columns[column_idx].type
             column_name = self.optional_metadata.column_name_list[column_idx]
-
-            self.columns[column_idx].name = column_name
+            column_data: Column = self.columns[column_idx]
+            column_data.name = column_name
 
             column_schema['COLUMN_NAME'] = column_name
-            column_schema['COLUMN_TYPE'] = column_type
             column_schema['ORDINAL_POSITION'] = column_idx
             column_schema['DATA_TYPE'] = self._get_field_type_key(column_type)
+
+            max_length = -1
+            if "max_length" in column_data.data:
+                max_length = column_data.max_length
+
+            data_type = self._get_field_type_key(column_type)
+            if max_length != -1:
+                column_schema['COLUMN_TYPE'] = data_type + "(" + str(max_length) + ")"
+                column_schema['CHARACTER_OCTET_LENGTH'] = str(max_length)
 
             if self._is_character_column(column_type):
                 collation_id = self.optional_metadata.charset_collation_list[charset_index]
@@ -830,7 +837,7 @@ class TableMapEvent(BinLogEvent):
 
             elif field_type == MetadataFieldType.VISIBILITY:
                 optional_metadata.visibility_list = self._read_bool_list(length, False)
-            optional_metadata.dump()
+
         return optional_metadata
 
     def _convert_include_non_numeric_column(self, signedness_bool_list):
