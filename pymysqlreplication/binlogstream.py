@@ -256,6 +256,7 @@ class BinLogStreamReader(object):
             self._ctl_connection_settings = dict(self.__connection_settings)
         self._ctl_connection_settings["db"] = "information_schema"
         self._ctl_connection_settings["cursorclass"] = DictCursor
+        self._ctl_connection_settings["autocommit"] = True
         self._ctl_connection = self.pymysql_wrapper(**self._ctl_connection_settings)
         self._ctl_connection._get_table_information = self.__get_table_information
         self.__connected_ctl = True
