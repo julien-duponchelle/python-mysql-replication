@@ -20,7 +20,7 @@ from .bitmap import BitCount, BitGet
 
 class RowsEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(RowsEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                         ctl_connection, **kwargs)
         self.__rows = None
         self.__only_tables = kwargs["only_tables"]
@@ -451,7 +451,7 @@ class RowsEvent(BinLogEvent):
         return binary & mask
 
     def _dump(self):
-        super(RowsEvent, self)._dump()
+        super()._dump()
         print("Table: %s.%s" % (self.schema, self.table))
         print("Affected columns: %d" % self.number_of_columns)
         print("Changed rows: %d" % (len(self.rows)))
@@ -479,7 +479,7 @@ class DeleteRowsEvent(RowsEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(DeleteRowsEvent, self).__init__(from_packet, event_size,
+        super().__init__(from_packet, event_size,
                                               table_map, ctl_connection, **kwargs)
         if self._processed:
             self.columns_present_bitmap = self.packet.read(
@@ -492,7 +492,7 @@ class DeleteRowsEvent(RowsEvent):
         return row
 
     def _dump(self):
-        super(DeleteRowsEvent, self)._dump()
+        super()._dump()
         print("Values:")
         for row in self.rows:
             print("--")
@@ -507,7 +507,7 @@ class WriteRowsEvent(RowsEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(WriteRowsEvent, self).__init__(from_packet, event_size,
+        super().__init__(from_packet, event_size,
                                              table_map, ctl_connection, **kwargs)
         if self._processed:
             self.columns_present_bitmap = self.packet.read(
@@ -520,7 +520,7 @@ class WriteRowsEvent(RowsEvent):
         return row
 
     def _dump(self):
-        super(WriteRowsEvent, self)._dump()
+        super()._dump()
         print("Values:")
         for row in self.rows:
             print("--")
@@ -540,7 +540,7 @@ class UpdateRowsEvent(RowsEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(UpdateRowsEvent, self).__init__(from_packet, event_size,
+        super().__init__(from_packet, event_size,
                                               table_map, ctl_connection, **kwargs)
         if self._processed:
             # Body
@@ -558,7 +558,7 @@ class UpdateRowsEvent(RowsEvent):
         return row
 
     def _dump(self):
-        super(UpdateRowsEvent, self)._dump()
+        super()._dump()
         print("Affected columns: %d" % self.number_of_columns)
         print("Values:")
         for row in self.rows:
@@ -612,7 +612,7 @@ class TableMapEvent(BinLogEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(TableMapEvent, self).__init__(from_packet, event_size,
+        super().__init__(from_packet, event_size,
                                             table_map, ctl_connection, **kwargs)
         self.__only_tables = kwargs["only_tables"]
         self.__ignored_tables = kwargs["ignored_tables"]
@@ -713,7 +713,7 @@ class TableMapEvent(BinLogEvent):
         return self.table_obj
 
     def _dump(self):
-        super(TableMapEvent, self)._dump()
+        super()._dump()
         print("Table id: %d" % (self.table_id))
         print("Schema: %s" % (self.schema))
         print("Table: %s" % (self.table))

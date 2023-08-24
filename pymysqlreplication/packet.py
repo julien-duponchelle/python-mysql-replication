@@ -70,6 +70,7 @@ class BinLogPacketWrapper(object):
         constants.EXECUTE_LOAD_QUERY_EVENT: event.ExecuteLoadQueryEvent,
         constants.HEARTBEAT_LOG_EVENT: event.HeartbeatLogEvent,
         constants.XA_PREPARE_EVENT: event.XAPrepareEvent,
+        constants.ROWS_QUERY_LOG_EVENT: event.RowsQueryLogEvent,
         constants.RAND_EVENT: event.RandEvent,
         # row_event
         constants.UPDATE_ROWS_EVENT_V1: row_event.UpdateRowsEvent,
@@ -81,6 +82,7 @@ class BinLogPacketWrapper(object):
         constants.TABLE_MAP_EVENT: row_event.TableMapEvent,
 
         #5.6 GTID enabled replication events
+        constants.ANONYMOUS_GTID_LOG_EVENT: event.NotImplementedEvent,
         constants.ANONYMOUS_GTID_LOG_EVENT: event.NotImplementedEvent,
         constants.PREVIOUS_GTIDS_LOG_EVENT: event.NotImplementedEvent,
         # MariaDB GTID

@@ -113,16 +113,16 @@ class PyMySQLReplicationTestCase(base):
         """set sql_mode to test with same sql_mode (mysql 5.7 sql_mode default is changed)"""
         version = float(self.getMySQLVersion().rsplit('.', 1)[0])
         if version == 5.7:
-            self.execute("set @@sql_mode='NO_ENGINE_SUBSTITUTION'")
+            self.execute("SET @@sql_mode='NO_ENGINE_SUBSTITUTION'")
 
     def bin_log_format(self):
-        query = "select @@binlog_format"
+        query = "SELECT @@binlog_format"
         cursor = self.execute(query)
         result = cursor.fetchone()
         return result[0]
 
     def bin_log_basename(self):
-        cursor = self.execute('select @@log_bin_basename')
+        cursor = self.execute('SELECT @@log_bin_basename')
         bin_log_basename = cursor.fetchone()[0]
         bin_log_basename = bin_log_basename.split("/")[-1]
         return bin_log_basename
