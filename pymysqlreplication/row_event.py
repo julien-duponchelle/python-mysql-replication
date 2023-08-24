@@ -624,7 +624,7 @@ class TableMapEvent(BinLogEvent):
 
         ordinal_pos_loc = 0
 
-        if len(self.column_schemas) != 0:
+        if self.column_count != 0:
             # Read columns meta data
             column_types = bytearray(self.packet.read(self.column_count))
             self.packet.read_length_coded_binary()
