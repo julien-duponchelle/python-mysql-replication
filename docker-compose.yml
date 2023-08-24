@@ -28,3 +28,10 @@ services:
       --log-bin=master-bin
       --binlog-format=row
       --log-slave-updates=on
+    volumes:
+      - type: bind
+        source: ./.mariadb
+        target: /opt/key_file
+      - type: bind
+        source: ./.mariadb/my.cnf
+        target: /etc/mysql/my.cnf  

@@ -19,7 +19,7 @@ bitCountInByte = [
     4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8,
 ]
 
-# Calculate totol bit counts in a bitmap
+# Calculate total bit counts in a bitmap
 def BitCount(bitmap):
     n = 0
     for i in range(0, len(bitmap)):
