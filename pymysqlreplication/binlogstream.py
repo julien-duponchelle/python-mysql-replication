@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 
-import pymysql
 import struct
 from distutils.version import LooseVersion
 
+import pymysql
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE
 from pymysql.cursors import DictCursor
 
-from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT, FORMAT_DESCRIPTION_EVENT
-from .gtid import GtidSet
 from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
     XidEvent, GtidEvent, StopEvent, XAPrepareEvent,
     BeginLoadQueryEvent, ExecuteLoadQueryEvent,
     HeartbeatLogEvent, NotImplementedEvent, MariadbGtidEvent,
-    MariadbAnnotateRowsEvent, RandEvent, MariadbStartEncryptionEvent)
+    MariadbAnnotateRowsEvent, RandEvent, MariadbStartEncryptionEvent, RowsQueryLogEvent)
 from .exceptions import BinLogNotEnabled
+from .gtid import GtidSet
+from .packet import BinLogPacketWrapper
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
 
@@ -33,7 +33,6 @@ MYSQL_EXPECTED_ERROR_CODES = [2013, 2006]
 
 
 class ReportSlave(object):
-
     """Represent the values that you may report when connecting as a slave
     to a master. SHOW SLAVE HOSTS related"""
 
@@ -68,7 +67,7 @@ class ReportSlave(object):
             self.hostname = value
 
     def __repr__(self):
-        return '<ReportSlave hostname=%s username=%s password=%s port=%d>' %\
+        return '<ReportSlave hostname=%s username=%s password=%s port=%d>' % \
             (self.hostname, self.username, self.password, self.port)
 
     def encoded(self, server_id, master_id=0):
@@ -123,7 +122,6 @@ class ReportSlave(object):
 
 
 class BinLogStreamReader(object):
-
     """Connect to replication stream and read event
     """
     report_slave = None
@@ -256,6 +254,7 @@ class BinLogStreamReader(object):
             self._ctl_connection_settings = dict(self.__connection_settings)
         self._ctl_connection_settings["db"] = "information_schema"
         self._ctl_connection_settings["cursorclass"] = DictCursor
+        self._ctl_connection_settings["autocommit"] = True
         self._ctl_connection = self.pymysql_wrapper(**self._ctl_connection_settings)
         self._ctl_connection._get_table_information = self.__get_table_information
         self.__connected_ctl = True
@@ -316,7 +315,7 @@ class BinLogStreamReader(object):
                                                                4294967))
             # If heartbeat is too low, the connection will disconnect before,
             # this is also the behavior in mysql
-            heartbeat = float(min(net_timeout/2., self.slave_heartbeat))
+            heartbeat = float(min(net_timeout / 2., self.slave_heartbeat))
             if heartbeat > 4294967:
                 heartbeat = 4294967
 
@@ -352,7 +351,7 @@ class BinLogStreamReader(object):
                     cur.close()
 
                 prelude = struct.pack('<i', len(self.log_file) + 11) \
-                    + bytes(bytearray([COM_BINLOG_DUMP]))
+                          + bytes(bytearray([COM_BINLOG_DUMP]))
 
                 if self.__resume_stream:
                     prelude += struct.pack('<I', self.log_pos)
@@ -369,7 +368,7 @@ class BinLogStreamReader(object):
                 prelude += self.log_file.encode()
         else:
             if self.is_mariadb:
-                prelude = self.__set_mariadb_settings()        
+                prelude = self.__set_mariadb_settings()
             else:
                 # Format for mysql packet master_auto_position
                 #
@@ -416,8 +415,8 @@ class BinLogStreamReader(object):
                                8 +  # binlog_pos_info_size
                                4)  # encoded_data_size
 
-                prelude = b'' + struct.pack('<i', header_size + encoded_data_size)\
-                    + bytes(bytearray([COM_BINLOG_DUMP_GTID]))
+                prelude = b'' + struct.pack('<i', header_size + encoded_data_size) \
+                          + bytes(bytearray([COM_BINLOG_DUMP_GTID]))
 
                 flags = 0
                 if not self.__blocking:
@@ -454,7 +453,7 @@ class BinLogStreamReader(object):
     def __set_mariadb_settings(self):
         # https://mariadb.com/kb/en/5-slave-registration/
         cur = self._stream_connection.cursor()
-        if self.auto_position != None : 
+        if self.auto_position != None:
             cur.execute("SET @slave_connect_state='%s'" % self.auto_position)
         cur.execute("SET @slave_gtid_strict_mode=1")
         cur.execute("SET @slave_gtid_ignore_duplicates=0")
@@ -465,7 +464,7 @@ class BinLogStreamReader(object):
                 4 +  # binlog pos
                 2 +  # binlog flags
                 4 +  # slave server_id,
-                4    # requested binlog file name , set it to empty
+                4  # requested binlog file name , set it to empty
         )
 
         prelude = struct.pack('<i', header_size) + bytes(bytearray([COM_BINLOG_DUMP]))
@@ -477,11 +476,11 @@ class BinLogStreamReader(object):
 
         # Enable annotate rows event 
         if self.__annotate_rows_event:
-            flags |= 0x02 # BINLOG_SEND_ANNOTATE_ROWS_EVENT
+            flags |= 0x02  # BINLOG_SEND_ANNOTATE_ROWS_EVENT
 
         if not self.__blocking:
             flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
-        
+
         # binlog flags
         prelude += struct.pack('<H', flags)
 
@@ -621,10 +620,11 @@ class BinLogStreamReader(object):
                 HeartbeatLogEvent,
                 NotImplementedEvent,
                 MariadbGtidEvent,
+                RowsQueryLogEvent,
                 MariadbAnnotateRowsEvent,
                 RandEvent,
-                MariadbStartEncryptionEvent
-                ))
+                MariadbStartEncryptionEvent,
+            ))
         if ignored_events is not None:
             for e in ignored_events:
                 events.remove(e)
@@ -653,8 +653,10 @@ class BinLogStreamReader(object):
                         table_schema = %s AND table_name = %s
                     ORDER BY ORDINAL_POSITION
                     """, (schema, table))
+                result = cur.fetchall()
+                cur.close()
 
-                return cur.fetchall()
+                return result
             except pymysql.OperationalError as error:
                 code, message = error.args
                 if code in MYSQL_EXPECTED_ERROR_CODES:
