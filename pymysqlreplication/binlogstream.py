@@ -652,7 +652,7 @@ class BinLogStreamReader(object):
                     WHERE
                         table_schema = %s AND table_name = %s
                     """, (schema, table))
-                result = cur.fetchall()
+                result = sorted(cur.fetchall(), key=lambda x: x['ORDINAL_POSITION'])
                 cur.close()
 
                 return result
