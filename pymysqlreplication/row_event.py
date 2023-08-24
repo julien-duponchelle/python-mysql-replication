@@ -964,15 +964,6 @@ class TableMapEvent(BinLogEvent):
             result.append(type_value_list)
         return result
 
-    def _read_int_pairs(self, length):
-        result = {}
-        read_until = self.packet.read_bytes + length
-        while self.packet.read_bytes < read_until:
-            column_index = self.packet.read_length_coded_binary()
-            column_charset = self.packet.read_length_coded_binary()
-            result[column_index] = column_charset
-        return result
-
     def _read_primary_keys_with_prefix(self, length):
         ints = self._read_ints(length)
         result = {}
