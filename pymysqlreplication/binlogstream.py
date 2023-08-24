@@ -258,6 +258,7 @@ class BinLogStreamReader(object):
         self._ctl_connection_settings["cursorclass"] = DictCursor
         self._ctl_connection = self.pymysql_wrapper(**self._ctl_connection_settings)
         self._ctl_connection._get_table_information = self.__get_table_information
+        self._ctl_connection._get_dbms = self.__get_dbms
         self.__connected_ctl = True
 
     def __checksum_enabled(self):
@@ -662,6 +663,18 @@ class BinLogStreamReader(object):
                     continue
                 else:
                     raise error
+
+    def __get_dbms(self):
+        if not self.__connected_ctl:
+            self.__connect_to_ctl()
+
+        cur = self._ctl_connection.cursor()
+        cur.execute("SELECT VERSION();")
+        version_info = cur.fetchone().get('VERSION()', '')
+
+        if 'MariaDB' in version_info:
+            return 'mariadb'
+        return 'mysql'
 
     def __iter__(self):
         return iter(self.fetchone, None)

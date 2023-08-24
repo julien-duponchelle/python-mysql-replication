@@ -659,6 +659,9 @@ class TableMapEvent(BinLogEvent):
             self.column_schemas = table_map[self.table_id].column_schemas
         else:
             self.column_schemas = self._ctl_connection._get_table_information(self.schema, self.table)
+
+        self.dbms = self._ctl_connection._get_dbms()
+
         ordinal_pos_loc = 0
         if self.column_count != 0:
             # Read columns meta data
@@ -823,12 +826,12 @@ class TableMapEvent(BinLogEvent):
                 column_schema['COLUMN_TYPE'] = data_type + f'({str(max_length)})'
                 column_schema['CHARACTER_OCTET_LENGTH'] = str(max_length)
 
-            if self._is_character_column(column_type):
+            if self._is_character_column(column_type, dbms=self.dbms):
                 collation_id = self.optional_metadata.charset_collation_list[charset_index]
                 charset_index += 1
 
-                collation_name = CHARSET.charset_by_id(collation_id).collation
-                charset_name = CHARSET.charset_by_id(collation_id).collation
+                collation_name = CHARSET.charset_by_id(collation_id, dbms=self.dbms).collation
+                charset_name = CHARSET.charset_by_id(collation_id, dbms=self.dbms).collation
                 column_schema['COLLATION_NAME'] = collation_name
                 column_schema['CHARACTER_SET_NAME'] = charset_name  # TO-DO 맵핑
 
@@ -839,8 +842,8 @@ class TableMapEvent(BinLogEvent):
                 collation_id = self.optional_metadata.enum_and_set_collation_list[enum_or_set_index]
                 enum_or_set_index += 1
 
-                collation_name = CHARSET.charset_by_id(collation_id).collation
-                charset_name = CHARSET.charset_by_id(collation_id).collation
+                collation_name = CHARSET.charset_by_id(collation_id, dbms=self.dbms).collation
+                charset_name = CHARSET.charset_by_id(collation_id, dbms=self.dbms).collation
                 column_schema['COLLATION_NAME'] = collation_name
                 column_schema['CHARACTER_SET_NAME'] = charset_name  # TO-DO 맵핑
 
@@ -878,7 +881,7 @@ class TableMapEvent(BinLogEvent):
         column_charset = []
         for i in range(self.column_count):
             column_type = self.columns[i].type
-            if not column_type_detect_function(column_type):
+            if not column_type_detect_function(column_type, dbms=self.dbms):
                 continue
             elif i not in column_charset_collation.keys():
                 column_charset.append(default_charset_collation)
@@ -895,7 +898,7 @@ class TableMapEvent(BinLogEvent):
 
         for i in range(self.column_count):
             column_type = self.columns[i].type
-            if not self._is_character_column(column_type):
+            if not self._is_character_column(column_type, dbms=self.dbms):
                 continue
             else:
                 column_charset.append(column_charset_list[position])
@@ -973,9 +976,10 @@ class TableMapEvent(BinLogEvent):
         return result
 
     @staticmethod
-    def _is_character_column(column_type):
+    def _is_character_column(column_type, dbms='mysql'):
         if column_type in [FIELD_TYPE.STRING, FIELD_TYPE.VAR_STRING, FIELD_TYPE.BLOB]:
-            # TO-DO : mariadb Geometry Character Type
+            return True
+        if column_type == FIELD_TYPE.GEOMETRY and dbms == 'mariadb':
             return True
         return False
 
@@ -992,7 +996,7 @@ class TableMapEvent(BinLogEvent):
         return False
 
     @staticmethod
-    def _is_enum_or_set_column(column_type):
+    def _is_enum_or_set_column(column_type, dbms='mysql'):
         if column_type in [FIELD_TYPE.ENUM, FIELD_TYPE.SET]:
             return True
         return False

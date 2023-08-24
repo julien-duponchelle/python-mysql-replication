@@ -1157,7 +1157,10 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
-        self.assertEqual(event.optional_metadata.default_charset_collation, 255)
+        if self.isMariaDB():
+            self.assertEqual(event.optional_metadata.default_charset_collation, 45)
+        else:
+            self.assertEqual(event.optional_metadata.default_charset_collation, 255)
 
     def test_column_charset(self):
         create_query = "CREATE TABLE test_column_charset (col1 VARCHAR(50), col2 VARCHAR(50) CHARACTER SET binary, col3 VARCHAR(50) CHARACTER SET latin1);"
@@ -1169,7 +1172,10 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
 
         table_map_event = self.stream.fetchone()
         self.assertIsInstance(table_map_event, TableMapEvent)
-        self.assertEqual(table_map_event.optional_metadata.column_charset, [255, 63, 8])
+        if self.isMariaDB():
+            self.assertEqual(table_map_event.optional_metadata.column_charset, [45, 63, 8])
+        else:
+            self.assertEqual(table_map_event.optional_metadata.column_charset, [255, 63, 8])
 
     def test_column_name(self):
         create_query = "CREATE TABLE test_column_name (col_int INT, col_varchar VARCHAR(30), col_bool BOOL);"
