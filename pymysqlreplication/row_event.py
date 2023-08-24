@@ -702,7 +702,8 @@ class TableMapEvent(BinLogEvent):
         self.null_bitmask = self.packet.read((self.column_count + 7) / 8)
         # optional meta Data
         self.optional_metadata = self._get_optional_meta_data()
-        self.REVERSE_FIELD_TYPE = {v: k for k, v in vars(FIELD_TYPE).items() if isinstance(v, int)}
+        # We exclude 'CHAR' and 'INTERVAL' as they map to 'TINY' and 'ENUM' respectively
+        self.reverse_field_type = {v: k for k, v in vars(FIELD_TYPE).items() if isinstance(v, int) and k not in ['CHAR', 'INTERVAL']}
         self._sync_column_info()
 
     def get_table(self):
@@ -714,7 +715,7 @@ class TableMapEvent(BinLogEvent):
         print("Schema: %s" % (self.schema))
         print("Table: %s" % (self.table))
         print("Columns: %s" % (self.column_count))
-        print(self.optional_metadata.dump())
+        self.optional_metadata.dump()
 
     def _get_optional_meta_data(self):
         """
@@ -1006,7 +1007,7 @@ class TableMapEvent(BinLogEvent):
         return False
 
     def _get_field_type_key(self, field_type_value):
-        return self.REVERSE_FIELD_TYPE.get(field_type_value, None)
+        return self.reverse_field_type.get(field_type_value, None)
 
 
 class MetadataFieldType(Enum):
