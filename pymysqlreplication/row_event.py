@@ -659,6 +659,7 @@ class TableMapEvent(BinLogEvent):
             self.column_schemas = table_map[self.table_id].column_schemas
         else:
             self.column_schemas = self._ctl_connection._get_table_information(self.schema, self.table)
+            print(self.column_schemas)
         ordinal_pos_loc = 0
         if self.column_count != 0:
             # Read columns meta data
@@ -812,8 +813,7 @@ class TableMapEvent(BinLogEvent):
 
             column_schema['COLUMN_NAME'] = column_name
             column_schema['ORDINAL_POSITION'] = column_idx
-            column_schema['DATA_TYPE'] = self._get_field_type_key(column_type)
-
+            column_schema['DATA_TYPE'] =self._get_field_type_key(column_type).lower()
             max_length = -1
             if "max_length" in column_data.data:
                 max_length = column_data.max_length
@@ -852,7 +852,7 @@ class TableMapEvent(BinLogEvent):
 
             column_schemas.append(column_schema)
 
-        self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
+        self.table_obj = Table(column_schemas, self.table_id, self.schema,
                                self.table, self.columns)
 
     def _convert_include_non_numeric_column(self, signedness_bool_list):
