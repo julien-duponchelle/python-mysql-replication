@@ -40,6 +40,13 @@ services:
     image: mariadb:10.6
     ports:
       - "3308:3306"
+    volumes:
+      - type: bind
+        source: ./.mariadb
+        target: /opt/key_file
+      - type: bind
+        source: ./.mariadb/my.cnf
+        target: /etc/mysql/my.cnf
 
   pymysqlreplication:
     build:
