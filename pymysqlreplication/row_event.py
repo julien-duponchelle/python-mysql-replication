@@ -1033,12 +1033,6 @@ class MetadataFieldType(Enum):
     VISIBILITY = 12
     UNKNOWN_METADATA_FIELD_TYPE = 128
 
-    def __init__(self, code):
-        self.code = code
-
-    def get_code(self):
-        return self.code
-
     @staticmethod
     def by_index(index):
         return MetadataFieldType(index)
