@@ -15,7 +15,7 @@ x-mysql: &mysql
 x-mariadb: &mariadb
   environment:
     MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 1
-  command: |
+  command: >
     --server-id=1
     --default-authentication-plugin=mysql_native_password
     --log-bin=master-bin
