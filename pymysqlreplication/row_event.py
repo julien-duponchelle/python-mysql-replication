@@ -572,7 +572,7 @@ class UpdateRowsEvent(RowsEvent):
 class OptionalMetaData:
     def __init__(self):
         self.unsigned_column_list = []
-        self.default_charset_collation: int = None
+        self.default_charset_collation = None
         self.charset_collation = {}
         self.column_charset = []
         self.column_name_list = []
@@ -581,7 +581,7 @@ class OptionalMetaData:
         self.geometry_type_list = []
         self.simple_primary_key_list = []
         self.primary_keys_with_prefix = {}
-        self.enum_and_set_default_charset: int = None
+        self.enum_and_set_default_charset = None
         self.enum_and_set_charset_collation = {}
         self.enum_and_set_default_column_charset_list = []
         self.charset_collation_list = []
@@ -589,23 +589,20 @@ class OptionalMetaData:
         self.visibility_list = []
 
     def dump(self):
-        print("=== %s ===" % (self.__class__.__name__))
+        print("=== %s ===" % self.__class__.__name__)
         print("unsigned_column_list: %s" % self.unsigned_column_list)
-        print("default_charset_collation: %s" % (self.default_charset_collation))
-        print("charset_collation: %s" % (self.charset_collation))
-        print("column_charset: %s" % (self.column_charset))
-        print("column_name_list: %s" % (self.column_name_list))
-        print("set_str_value_list : %s" % (self.set_str_value_list))
-        print("set_enum_str_value_list : %s" % (self.set_enum_str_value_list))
-        print("geometry_type_list : %s" % (self.geometry_type_list))
-        print("simple_primary_key_list: %s" % (self.simple_primary_key_list))
-        print("primary_keys_with_prefix: %s" % (self.primary_keys_with_prefix))
-        print("enum_and_set_default_charset: " + f'{self.enum_and_set_default_charset}')
-        print("enum_and_set_charset_collation: " + f'{self.enum_and_set_charset_collation}')
-        print("enum_and_set_default_column_charset_list: " + f'{self.enum_and_set_default_column_charset_list}')
-        print("visibility_list: %s" % (self.visibility_list))
-        print("charset_collation_list", self.charset_collation_list)
-        print("enum_and_set_collation_list", self.enum_and_set_collation_list)
+        print("default_charset_collation: %s" % self.default_charset_collation)
+        print("charset_collation: %s" % self.charset_collation)
+        print("column_charset: %s" % self.column_charset)
+        print("column_name_list: %s" % self.column_name_list)
+        print("set_str_value_list : %s" % self.set_str_value_list)
+        print("set_enum_str_value_list : %s" % self.set_enum_str_value_list)
+        print("geometry_type_list : %s" % self.geometry_type_list)
+        print("simple_primary_key_list: %s" % self.simple_primary_key_list)
+        print("primary_keys_with_prefix: %s" % self.primary_keys_with_prefix)
+        print("visibility_list: %s" % self.visibility_list)
+        print("charset_collation_list: %s" % self.charset_collation_list)
+        print("enum_and_set_collation_list: %s" % self.enum_and_set_collation_list)
 
 
 class TableMapEvent(BinLogEvent):
@@ -704,9 +701,9 @@ class TableMapEvent(BinLogEvent):
         ## Refer to definition of and call to row.event._is_null() to interpret bitmap corresponding to columns
         self.null_bitmask = self.packet.read((self.column_count + 7) / 8)
         # optional meta Data
-        self.optional_metadata = self.get_optional_meta_data()
+        self.optional_metadata = self._get_optional_meta_data()
         self.REVERSE_FIELD_TYPE = {v: k for k, v in vars(FIELD_TYPE).items() if isinstance(v, int)}
-        self.sync_column_info()
+        self._sync_column_info()
 
     def get_table(self):
         return self.table_obj
@@ -719,71 +716,19 @@ class TableMapEvent(BinLogEvent):
         print("Columns: %s" % (self.column_count))
         print(self.optional_metadata.dump())
 
-    def sync_column_info(self):
-        column_schemas = []
-        charset_index = 0
-        enum_or_set_index = 0
-        if len(self.optional_metadata.column_name_list) == 0:
-            return
-        for column_idx in range(self.column_count):
-            column_schema = {
-                'COLUMN_NAME': None,
-                'COLLATION_NAME': None,
-                'CHARACTER_SET_NAME': None,
-                'CHARACTER_OCTET_LENGTH': None,
-                'DATA_TYPE': None,
-                'COLUMN_COMMENT': '',  # we don't know this Info from optional metadata info
-                'COLUMN_TYPE': None,
-                'COLUMN_KEY': '',
-                'ORDINAL_POSITION': None
-            }
-            column_type = self.columns[column_idx].type
-            column_name = self.optional_metadata.column_name_list[column_idx]
-            column_data: Column = self.columns[column_idx]
-            column_data.name = column_name
+    def _get_optional_meta_data(self):
+        """
+        DEFAULT_CHARSET and COLUMN_CHARSET don't appear together,
+        and ENUM_AND_SET_DEFAULT_CHARSET and ENUM_AND_SET_COLUMN_CHARSET don't appear together.
+        They are just alternative ways to pack character set information.
+        When binlogging, it logs character sets in the way that occupies least storage.
 
-            column_schema['COLUMN_NAME'] = column_name
-            column_schema['ORDINAL_POSITION'] = column_idx
-            column_schema['DATA_TYPE'] = self._get_field_type_key(column_type)
-
-            max_length = -1
-            if "max_length" in column_data.data:
-                max_length = column_data.max_length
-
-            data_type = self._get_field_type_key(column_type)
-            if max_length != -1:
-                column_schema['COLUMN_TYPE'] = data_type + "(" + str(max_length) + ")"
-                column_schema['CHARACTER_OCTET_LENGTH'] = str(max_length)
-
-            if self._is_character_column(column_type):
-                collation_id = self.optional_metadata.charset_collation_list[charset_index]
-                charset_index += 1
-                column_schema['COLLATION_NAME'] = CHARSET.charset_by_id(collation_id).collation
-                column_schema['CHARACTER_SET_NAME'] = CHARSET.charset_by_id(collation_id).name  # TO-DO 맵핑
-
-                self.columns[column_idx].collation_name = CHARSET.charset_by_id(collation_id).collation
-                self.columns[column_idx].character_set_name = CHARSET.charset_by_id(collation_id).name
-
-            if self._is_enum_or_set_column(column_type):
-                collation_id = self.optional_metadata.enum_and_set_collation_list[enum_or_set_index]
-                enum_or_set_index += 1
-                column_schema['COLLATION_NAME'] = CHARSET.charset_by_id(collation_id).collation
-                column_schema['CHARACTER_SET_NAME'] = CHARSET.charset_by_id(collation_id).name
-                self.columns[column_idx].collation_name = CHARSET.charset_by_id(collation_id).collation
-                self.columns[column_idx].character_set_name = CHARSET.charset_by_id(collation_id).name
-
-            if column_idx in self.optional_metadata.simple_primary_key_list:
-                column_schema['COLUMN_KEY'] = 'PRI'
-            column_schemas.append(column_schema)
-
-        self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
-                               self.table, self.columns)
-
-    def get_optional_meta_data(self):  # TLV format data (TYPE, LENGTH, VALUE)
+        TLV format data (TYPE, LENGTH, VALUE)
+        """
         optional_metadata = OptionalMetaData()
         while self.packet.bytes_to_read() > BINLOG.BINLOG_CHECKSUM_LEN:
-            option_metadata_type = self.packet.read(1)[0]  # t
-            length = self.packet.read_length_coded_binary()  # l
+            option_metadata_type = self.packet.read(1)[0]
+            length = self.packet.read_length_coded_binary()
             field_type: MetadataFieldType = MetadataFieldType.by_index(option_metadata_type)
 
             if field_type == MetadataFieldType.SIGNEDNESS:
@@ -839,6 +784,76 @@ class TableMapEvent(BinLogEvent):
                 optional_metadata.visibility_list = self._read_bool_list(length, False)
 
         return optional_metadata
+
+    def _sync_column_info(self):
+        column_schemas = []
+        if len(self.optional_metadata.column_name_list) == 0:
+            return
+
+        charset_index = 0
+        enum_or_set_index = 0
+
+        for column_idx in range(self.column_count):
+            column_schema = {
+                'COLUMN_NAME': None,
+                'COLLATION_NAME': None,
+                'CHARACTER_SET_NAME': None,
+                'CHARACTER_OCTET_LENGTH': None,
+                'DATA_TYPE': None,
+                'COLUMN_COMMENT': '',  # we don't know this Info from optional metadata info
+                'COLUMN_TYPE': None,
+                'COLUMN_KEY': '',
+                'ORDINAL_POSITION': None
+            }
+            column_type = self.columns[column_idx].type
+            column_name = self.optional_metadata.column_name_list[column_idx]
+            column_data: Column = self.columns[column_idx]
+            column_data.name = column_name
+
+            column_schema['COLUMN_NAME'] = column_name
+            column_schema['ORDINAL_POSITION'] = column_idx
+            column_schema['DATA_TYPE'] = self._get_field_type_key(column_type)
+
+            max_length = -1
+            if "max_length" in column_data.data:
+                max_length = column_data.max_length
+
+            data_type = self._get_field_type_key(column_type)
+            if max_length != -1:
+                column_schema['COLUMN_TYPE'] = data_type + f'({str(max_length)})'
+                column_schema['CHARACTER_OCTET_LENGTH'] = str(max_length)
+
+            if self._is_character_column(column_type):
+                collation_id = self.optional_metadata.charset_collation_list[charset_index]
+                charset_index += 1
+
+                collation_name = CHARSET.charset_by_id(collation_id).collation
+                charset_name = CHARSET.charset_by_id(collation_id).collation
+                column_schema['COLLATION_NAME'] = collation_name
+                column_schema['CHARACTER_SET_NAME'] = charset_name  # TO-DO 맵핑
+
+                self.columns[column_idx].collation_name = collation_name
+                self.columns[column_idx].character_set_name = charset_name
+
+            if self._is_enum_or_set_column(column_type):
+                collation_id = self.optional_metadata.enum_and_set_collation_list[enum_or_set_index]
+                enum_or_set_index += 1
+
+                collation_name = CHARSET.charset_by_id(collation_id).collation
+                charset_name = CHARSET.charset_by_id(collation_id).collation
+                column_schema['COLLATION_NAME'] = collation_name
+                column_schema['CHARACTER_SET_NAME'] = charset_name  # TO-DO 맵핑
+
+                self.columns[column_idx].collation_name = collation_name
+                self.columns[column_idx].character_set_name = charset_name
+
+            if column_idx in self.optional_metadata.simple_primary_key_list:
+                column_schema['COLUMN_KEY'] = 'PRI'
+
+            column_schemas.append(column_schema)
+
+        self.table_obj = Table(self.column_schemas, self.table_id, self.schema,
+                               self.table, self.columns)
 
     def _convert_include_non_numeric_column(self, signedness_bool_list):
         # The incoming order of columns in the packet represents the indices of the numeric columns.
