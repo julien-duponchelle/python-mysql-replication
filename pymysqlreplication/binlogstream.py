@@ -651,7 +651,6 @@ class BinLogStreamReader(object):
                         information_schema.columns
                     WHERE
                         table_schema = %s AND table_name = %s
-                    ORDER BY ORDINAL_POSITION
                     """, (schema, table))
                 result = cur.fetchall()
                 cur.close()
