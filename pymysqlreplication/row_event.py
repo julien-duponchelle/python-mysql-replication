@@ -5,13 +5,14 @@ import decimal
 import datetime
 import json
 
-from pymysql.charset import charset_by_name, charset_by_id, Charset
+from pymysql.charset import charset_by_name
 from enum import Enum
 
 from .event import BinLogEvent
 from .exceptions import TableMetadataUnavailableError
 from .constants import FIELD_TYPE
 from .constants import BINLOG
+from .constants import CHARSET
 from .column import Column
 from .table import Table
 from .bitmap import BitCount, BitGet
@@ -257,7 +258,11 @@ class RowsEvent(BinLogEvent):
         if column.character_set_name is not None:
             encoding = self.charset_to_encoding(column.character_set_name)
             decode_errors = "ignore" if self._ignore_decode_errors else "strict"
-            string = string.decode(encoding, decode_errors)
+            try:
+                string = string.decode(encoding, decode_errors)
+            except LookupError:
+                # If python does not support Mysql encoding type ex)swe7 it will not decoding
+                pass
         return string
 
     def __read_bit(self, column):
@@ -783,7 +788,7 @@ class TableMapEvent(BinLogEvent):
                 optional_metadata.enum_and_set_default_column_charset_list = self._read_ints(length)
 
                 optional_metadata.enum_and_set_collation_list = self._parsed_column_charset_by_column_charset(
-                    optional_metadata.enum_and_set_default_column_charset_list,self._is_enum_or_set_column)
+                    optional_metadata.enum_and_set_default_column_charset_list, self._is_enum_or_set_column)
 
             elif field_type == MetadataFieldType.VISIBILITY:
                 optional_metadata.visibility_list = self._read_bool_list(length, False)
@@ -833,10 +838,10 @@ class TableMapEvent(BinLogEvent):
                 charset_id = self.optional_metadata.charset_collation_list[charset_index]
                 charset_index += 1
 
-                charset_name, collation_name = find_charset(charset_id)
+                charset_name, collation_name = find_charset(charset_id, dbms=self.dbms)
                 column_schema['COLLATION_NAME'] = collation_name
                 column_schema['CHARACTER_SET_NAME'] = charset_name
-                
+
                 self.columns[column_idx].collation_name = collation_name
                 self.columns[column_idx].character_set_name = charset_name
 
@@ -844,7 +849,7 @@ class TableMapEvent(BinLogEvent):
                 charset_id = self.optional_metadata.enum_and_set_collation_list[enum_or_set_index]
                 enum_or_set_index += 1
 
-                charset_name, collation_name = find_charset(charset_id)
+                charset_name, collation_name = find_charset(charset_id, dbms=self.dbms)
                 column_schema['COLLATION_NAME'] = collation_name
                 column_schema['CHARACTER_SET_NAME'] = charset_name
 
@@ -907,7 +912,7 @@ class TableMapEvent(BinLogEvent):
 
         return column_charset
 
-    def _parsed_column_charset_by_column_charset(self, column_charset_list: list,column_type_detect_function):
+    def _parsed_column_charset_by_column_charset(self, column_charset_list: list, column_type_detect_function):
         column_charset = []
         position = 0
         if len(column_charset_list) == 0:
@@ -1037,7 +1042,7 @@ class TableMapEvent(BinLogEvent):
         return self.reverse_field_type.get(field_type_value, None)
 
 
-def find_encoding(charset: Charset):
+def find_encoding(charset: CHARSET.Charset):
     encode = None
     if charset.is_binary:
         encode = "utf-8"
@@ -1046,15 +1051,15 @@ def find_encoding(charset: Charset):
     return encode
 
 
-def find_charset(charset_id):
+def find_charset(charset_id, dbms="mysql"):
     encode = None
     collation_name = None
-    try:
-        charset: Charset = charset_by_id(charset_id)
+    charset: CHARSET.Charset = CHARSET.charset_by_id(charset_id, dbms)
+    if charset is None:
+        encode = "utf-8"
+    else:
         encode = find_encoding(charset)
         collation_name = charset.collation
-    except LookupError:  # Not supported Pymysql charset May be raise Error
-        encode = "utf-8"
 
     return encode, collation_name
 
