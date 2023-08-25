@@ -10,7 +10,6 @@ x-mysql: &mysql
     --binlog-format=row
     --gtid_mode=on
     --enforce-gtid-consistency=on
-    --log_slave_updates
 
 x-mariadb: &mariadb
   environment:
@@ -20,7 +19,6 @@ x-mariadb: &mariadb
     --default-authentication-plugin=mysql_native_password
     --log-bin=master-bin
     --binlog-format=row
-    --log-slave-updates=on
 
 services:
   percona-5.7:
