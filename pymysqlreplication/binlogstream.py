@@ -18,7 +18,7 @@ from .event import (
 from .exceptions import BinLogNotEnabled
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
-
+from .logging import RenderingLog
 try:
     from pymysql.constants.COMMAND import COM_BINLOG_DUMP_GTID
 except ImportError:
@@ -141,7 +141,8 @@ class BinLogStreamReader(object):
                  fail_on_table_metadata_unavailable=False,
                  slave_heartbeat=None,
                  is_mariadb=False,
-                 ignore_decode_errors=False):
+                 ignore_decode_errors=False,
+                 logging=True):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -219,6 +220,8 @@ class BinLogStreamReader(object):
         self.auto_position = auto_position
         self.skip_to_timestamp = skip_to_timestamp
         self.is_mariadb = is_mariadb
+        if logging:
+            self.__set_logging()
 
         if end_log_pos:
             self.is_past_end_log_pos = False
@@ -639,6 +642,9 @@ class BinLogStreamReader(object):
                     continue
                 else:
                     raise error
+                
+    def __set_logging(self):
+        RenderingLog(self.__dict__)
 
     def __iter__(self):
         return iter(self.fetchone, None)
