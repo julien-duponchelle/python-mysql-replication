@@ -262,7 +262,7 @@ class RowsEvent(BinLogEvent):
                 string = string.decode(encoding, decode_errors)
             except LookupError:
                 # If python does not support Mysql encoding type ex)swe7 it will not decoding
-                pass
+                string = string.decode(errors=decode_errors)
         return string
 
     def __read_bit(self, column):
