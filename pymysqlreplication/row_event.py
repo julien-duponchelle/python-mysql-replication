@@ -703,6 +703,10 @@ class TableMapEvent(BinLogEvent):
         self.null_bitmask = self.packet.read((self.column_count + 7) / 8)
         # optional meta Data
         self.optional_metadata = self._get_optional_meta_data()
+        # We exclude 'CHAR' and 'INTERVAL' as they map to 'TINY' and 'ENUM' respectively
+        self.reverse_field_type = {v: k for k, v in vars(FIELD_TYPE).items() if
+                                   isinstance(v, int) and k not in ['CHAR', 'INTERVAL']}
+        self._sync_column_info()
 
     def get_table(self):
         return self.table_obj
@@ -779,12 +783,97 @@ class TableMapEvent(BinLogEvent):
                 optional_metadata.enum_and_set_default_column_charset_list = self._read_ints(length)
 
                 optional_metadata.enum_and_set_collation_list = self._parsed_column_charset_by_column_charset(
-                    optional_metadata.enum_and_set_default_column_charset_list, self._is_enum_or_set_column)
+                    optional_metadata.enum_and_set_default_column_charset_list,self._is_enum_or_set_column)
 
             elif field_type == MetadataFieldType.VISIBILITY:
                 optional_metadata.visibility_list = self._read_bool_list(length, False)
 
         return optional_metadata
+
+    def _sync_column_info(self):
+        column_schemas = []
+        if len(self.optional_metadata.column_name_list) == 0:
+            return
+
+        charset_index = 0
+        enum_or_set_index = 0
+        enum_index = 0
+        set_index = 0
+
+        for column_idx in range(self.column_count):
+            column_schema = {
+                'COLUMN_NAME': None,
+                'COLLATION_NAME': None,
+                'CHARACTER_SET_NAME': None,
+                'CHARACTER_OCTET_LENGTH': None,
+                'DATA_TYPE': None,
+                'COLUMN_COMMENT': '',  # we don't know this Info from optional metadata info
+                'COLUMN_TYPE': None,
+                'COLUMN_KEY': '',
+                'ORDINAL_POSITION': None
+            }
+            column_type = self.columns[column_idx].type
+            column_name = self.optional_metadata.column_name_list[column_idx]
+            column_data: Column = self.columns[column_idx]
+            column_data.name = column_name
+
+            column_schema['COLUMN_NAME'] = column_name
+            column_schema['ORDINAL_POSITION'] = column_idx
+            column_schema['DATA_TYPE'] = self._get_field_type_key(column_type).lower()
+            max_length = -1
+            if "max_length" in column_data.data:
+                max_length = column_data.max_length
+
+            data_type = self._get_field_type_key(column_type)
+            if max_length != -1:
+                column_schema['COLUMN_TYPE'] = data_type + f'({str(max_length)})'
+                column_schema['CHARACTER_OCTET_LENGTH'] = str(max_length)
+
+            if self._is_character_column(column_type, dbms=self.dbms):
+                charset_id = self.optional_metadata.charset_collation_list[charset_index]
+                charset_index += 1
+
+                charset_name, collation_name = find_charset(charset_id)
+                column_schema['COLLATION_NAME'] = collation_name
+                column_schema['CHARACTER_SET_NAME'] = charset_name
+                
+                self.columns[column_idx].collation_name = collation_name
+                self.columns[column_idx].character_set_name = charset_name
+
+            if self._is_enum_or_set_column(column_type):
+                charset_id = self.optional_metadata.enum_and_set_collation_list[enum_or_set_index]
+                enum_or_set_index += 1
+
+                charset_name, collation_name = find_charset(charset_id)
+                column_schema['COLLATION_NAME'] = collation_name
+                column_schema['CHARACTER_SET_NAME'] = charset_name
+
+                self.columns[column_idx].collation_name = collation_name
+                self.columns[column_idx].character_set_name = charset_name
+
+                if self._is_enum_column(column_type):
+                    enum_column_info = self.optional_metadata.set_enum_str_value_list[enum_index]
+                    enum_values = ",".join(enum_column_info)
+                    enum_format = f"enum({enum_values})"
+                    column_schema['COLUMN_TYPE'] = enum_format
+                    self.columns[column_idx].enum_values = [''] + enum_column_info
+                    enum_index += 1
+
+                if self._is_set_column(column_type):
+                    set_column_info = self.optional_metadata.set_str_value_list[set_index]
+                    set_values = ",".join(set_column_info)
+                    set_format = f"set({set_values})"
+                    column_schema['COLUMN_TYPE'] = set_format
+                    self.columns[column_idx].set_values = set_column_info
+                    set_index += 1
+
+            if column_idx in self.optional_metadata.simple_primary_key_list:
+                column_schema['COLUMN_KEY'] = 'PRI'
+
+            column_schemas.append(column_schema)
+
+        self.table_obj = Table(column_schemas, self.table_id, self.schema,
+                               self.table, self.columns)
 
     def _convert_include_non_numeric_column(self, signedness_bool_list):
         # The incoming order of columns in the packet represents the indices of the numeric columns.
@@ -818,7 +907,7 @@ class TableMapEvent(BinLogEvent):
 
         return column_charset
 
-    def _parsed_column_charset_by_column_charset(self, column_charset_list: list, column_type_detect_function):
+    def _parsed_column_charset_by_column_charset(self, column_charset_list: list,column_type_detect_function):
         column_charset = []
         position = 0
         if len(column_charset_list) == 0:
@@ -918,6 +1007,18 @@ class TableMapEvent(BinLogEvent):
         return False
 
     @staticmethod
+    def _is_enum_column(column_type):
+        if column_type == FIELD_TYPE.ENUM:
+            return True
+        return False
+
+    @staticmethod
+    def _is_set_column(column_type):
+        if column_type == FIELD_TYPE.SET:
+            return True
+        return False
+
+    @staticmethod
     def _is_enum_or_set_column(column_type, dbms='mysql'):
         if column_type in [FIELD_TYPE.ENUM, FIELD_TYPE.SET]:
             return True
@@ -931,6 +1032,31 @@ class TableMapEvent(BinLogEvent):
                            FIELD_TYPE.YEAR]:
             return True
         return False
+
+    def _get_field_type_key(self, field_type_value):
+        return self.reverse_field_type.get(field_type_value, None)
+
+
+def find_encoding(charset: Charset):
+    encode = None
+    if charset.is_binary:
+        encode = "utf-8"
+    else:
+        encode = charset.encoding
+    return encode
+
+
+def find_charset(charset_id):
+    encode = None
+    collation_name = None
+    try:
+        charset: Charset = charset_by_id(charset_id)
+        encode = find_encoding(charset)
+        collation_name = charset.collation
+    except LookupError:  # Not supported Pymysql charset May be raise Error
+        encode = "utf-8"
+
+    return encode, collation_name
 
 
 class MetadataFieldType(Enum):
