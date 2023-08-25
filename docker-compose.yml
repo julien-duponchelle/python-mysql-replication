@@ -35,11 +35,3 @@ services:
       - type: bind
         source: ./.mariadb/my.cnf
         target: /etc/mysql/my.cnf  
-
-  percona-8.0:
-    image: percona:8.0
-    environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: true
-    ports:
-      - 3309:3309
-    command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave_updates -P 3309

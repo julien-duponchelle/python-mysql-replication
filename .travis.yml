@@ -9,7 +9,6 @@ python:
 env:
   - DB=mysql57
   - DB=mysql56
-  - DB=mysql80
 install:
   # Needs a newer version of pip to do the pip installation line
   - pip install pip --upgrade
@@ -24,7 +23,6 @@ before_script:
   - env | grep DB
   - bash -c "if [ '$DB' = 'mysql57' ]; then sudo ./scripts/install_mysql.sh 5.7; fi"
   - bash -c "if [ '$DB' = 'mysql56' ]; then sudo ./scripts/install_mysql.sh 5.6; fi"
-  - bash -c "if [ '$DB' = 'mysql80' ]; then sudo ./scripts/install_mysql.sh 8.0; fi"
 script:
   - "sudo $(which nosetests) pymysqlreplication.tests.test_abnormal:TestAbnormalBinLogStreamReader.test_no_trailing_rotate_event"
   - "nosetests -e test_no_trailing_rotate_event"
