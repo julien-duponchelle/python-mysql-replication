@@ -130,10 +130,12 @@ class MariadbGtidEvent(BinLogEvent):
 
 class RotateEvent(BinLogEvent):
     """Change MySQL bin log file
+    Represents information for the slave to know the name of the binary log it is going to receive.
 
-    Attributes:
-        position: Position inside next binlog
-        next_binlog: Name of next binlog file
+    For more information: `[see details] <https://dev.mysql.com/doc/dev/mysql-server/latest/classbinary__log_1_1Rotate__event.html>`_.
+
+    :ivar position: int - Position inside next binlog
+    :ivar next_binlog: str - Name of next binlog file
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(RotateEvent, self).__init__(from_packet, event_size, table_map,
