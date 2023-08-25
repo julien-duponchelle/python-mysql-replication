@@ -92,8 +92,15 @@ class GtidEvent(BinLogEvent):
 
 class MariadbGtidEvent(BinLogEvent):
     """
-    GTID change in binlog event in MariaDB
-    https://mariadb.com/kb/en/gtid_event/
+    GTID(Global Transaction Identifier) change in binlog event in MariaDB
+
+    for more information: `[see details] <https://mariadb.com/kb/en/gtid_event/>`_.
+
+    :ivar server_id: int - The ID of the server where the GTID event occurred.
+    :ivar gtid_seq_no: int - The sequence number of the GTID event.
+    :ivar domain_id: int - The domain ID associated with the GTID event.
+    :ivar flags: int - Flags related to the GTID event.
+    :ivar gtid: str - The Global Transaction Identifier in the format ‘domain_id-server_id-gtid_seq_no’.
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
 
