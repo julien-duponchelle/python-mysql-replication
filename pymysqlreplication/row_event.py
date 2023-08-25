@@ -81,8 +81,9 @@ class RowsEvent(BinLogEvent):
         # Body
         self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns = self.table_map[self.table_id].columns
+        column_schemas = self.table_map[self.table_id].column_schemas
 
-        if len(self.columns) == 0:  # could not read the table metadata, probably already dropped
+        if len(column_schemas) == 0:  # could not read the table metadata, probably already dropped
             self.complete = False
             if self._fail_on_table_metadata_unavailable:
                 raise TableMetadataUnavailableError(self.table)
