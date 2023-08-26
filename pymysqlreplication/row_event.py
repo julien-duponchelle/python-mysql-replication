@@ -801,10 +801,10 @@ class TableMapEvent(BinLogEvent):
         if len(self.optional_metadata.column_name_list) == 0:
             return
 
-        charset_index = 0
-        enum_or_set_index = 0
-        enum_index = 0
-        set_index = 0
+        charset_pos = 0
+        enum_or_set_pos = 0
+        enum_pos = 0
+        set_pos = 0
 
         for column_idx in range(self.column_count):
             column_schema = {
@@ -820,24 +820,25 @@ class TableMapEvent(BinLogEvent):
             }
             column_type = self.columns[column_idx].type
             column_name = self.optional_metadata.column_name_list[column_idx]
+            data_type = self._get_field_type_key(column_type)
             column_data: Column = self.columns[column_idx]
             column_data.name = column_name
 
             column_schema['COLUMN_NAME'] = column_name
             column_schema['ORDINAL_POSITION'] = column_idx
-            column_schema['DATA_TYPE'] = self._get_field_type_key(column_type).lower()
-            max_length = -1
+
+            if data_type is not None:
+                data_type = data_type.lower()
+                column_schema['DATA_TYPE'] = data_type
+
             if "max_length" in column_data.data:
                 max_length = column_data.max_length
-
-            data_type = self._get_field_type_key(column_type)
-            if max_length != -1:
                 column_schema['COLUMN_TYPE'] = data_type + f'({str(max_length)})'
                 column_schema['CHARACTER_OCTET_LENGTH'] = str(max_length)
 
             if self._is_character_column(column_type, dbms=self.dbms):
-                charset_id = self.optional_metadata.charset_collation_list[charset_index]
-                charset_index += 1
+                charset_id = self.optional_metadata.charset_collation_list[charset_pos]
+                charset_pos += 1
 
                 charset_name, collation_name = find_charset(charset_id, dbms=self.dbms)
                 column_schema['COLLATION_NAME'] = collation_name
@@ -847,8 +848,8 @@ class TableMapEvent(BinLogEvent):
                 self.columns[column_idx].character_set_name = charset_name
 
             if self._is_enum_or_set_column(column_type):
-                charset_id = self.optional_metadata.enum_and_set_collation_list[enum_or_set_index]
-                enum_or_set_index += 1
+                charset_id = self.optional_metadata.enum_and_set_collation_list[enum_or_set_pos]
+                enum_or_set_pos += 1
 
                 charset_name, collation_name = find_charset(charset_id, dbms=self.dbms)
                 column_schema['COLLATION_NAME'] = collation_name
@@ -858,20 +859,20 @@ class TableMapEvent(BinLogEvent):
                 self.columns[column_idx].character_set_name = charset_name
 
                 if self._is_enum_column(column_type):
-                    enum_column_info = self.optional_metadata.set_enum_str_value_list[enum_index]
+                    enum_column_info = self.optional_metadata.set_enum_str_value_list[enum_pos]
                     enum_values = ",".join(enum_column_info)
                     enum_format = f"enum({enum_values})"
                     column_schema['COLUMN_TYPE'] = enum_format
                     self.columns[column_idx].enum_values = [''] + enum_column_info
-                    enum_index += 1
+                    enum_pos += 1
 
                 if self._is_set_column(column_type):
-                    set_column_info = self.optional_metadata.set_str_value_list[set_index]
+                    set_column_info = self.optional_metadata.set_str_value_list[set_pos]
                     set_values = ",".join(set_column_info)
                     set_format = f"set({set_values})"
                     column_schema['COLUMN_TYPE'] = set_format
                     self.columns[column_idx].set_values = set_column_info
-                    set_index += 1
+                    set_pos += 1
 
             if column_idx in self.optional_metadata.simple_primary_key_list:
                 column_schema['COLUMN_KEY'] = 'PRI'
