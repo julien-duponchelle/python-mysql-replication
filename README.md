@@ -63,6 +63,7 @@ Featured
 
 [Streaming Changes in a Database with Amazon Kinesis](https://aws.amazon.com/blogs/database/streaming-changes-in-a-database-with-amazon-kinesis/) (by Emmanuel Espina, Amazon Web Services)
 
+
 Projects using this library
 ===========================
 
@@ -86,6 +87,7 @@ Projects using this library
 * MySQL to Kafka (https://github.com/scottpersinger/mysql-to-kafka/)
 * Aventri MySQL Monitor (https://github.com/aventri/mysql-monitor)
 * BitSwanPump: A real-time stream processor  (https://github.com/LibertyAces/BitSwanPump)
+* clickhouse-mysql-data-reader: https://github.com/Altinity/clickhouse-mysql-data-reader
 
 MySQL server settings
 =========================
