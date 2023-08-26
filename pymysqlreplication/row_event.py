@@ -825,7 +825,7 @@ class TableMapEvent(BinLogEvent):
             column_data.name = column_name
 
             column_schema['COLUMN_NAME'] = column_name
-            column_schema['ORDINAL_POSITION'] = column_idx
+            column_schema['ORDINAL_POSITION'] = column_idx + 1
 
             if data_type is not None:
                 data_type = data_type.lower()
@@ -1007,7 +1007,7 @@ class TableMapEvent(BinLogEvent):
 
     @staticmethod
     def _is_character_column(column_type, dbms='mysql'):
-        if column_type in [FIELD_TYPE.STRING, FIELD_TYPE.VAR_STRING, FIELD_TYPE.BLOB]:
+        if column_type in [FIELD_TYPE.STRING, FIELD_TYPE.VAR_STRING, FIELD_TYPE.VARCHAR, FIELD_TYPE.BLOB]:
             return True
         if column_type == FIELD_TYPE.GEOMETRY and dbms == 'mariadb':
             return True
@@ -1058,7 +1058,7 @@ def find_charset(charset_id, dbms="mysql"):
     collation_name = None
     charset: CHARSET.Charset = CHARSET.charset_by_id(charset_id, dbms)
     if charset is None:
-        encode = "utf-8"
+        encode = "utf8"
     else:
         encode = find_encoding(charset)
         collation_name = charset.collation
