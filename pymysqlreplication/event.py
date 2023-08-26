@@ -110,6 +110,25 @@ class MariadbGtidEvent(BinLogEvent):
         print("Flags:", self.flags)
         print('GTID:', self.gtid)
 
+class MariadbBinLogCheckPointEvent(BinLogEvent):
+    """
+    Represents a checkpoint in a binlog event in MariaDB.
+
+    More details are available in the MariaDB Knowledge Base:
+    https://mariadb.com/kb/en/binlog_checkpoint_event/
+
+    :ivar filename_length:  int - The length of the filename.
+    :ivar filename: str - The name of the file saved at the checkpoint.
+    """
+
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(MariadbBinLogCheckPointEvent, self).__init__(from_packet, event_size, table_map, ctl_connection,
+                                                           **kwargs)
+        filename_length = self.packet.read_uint32()
+        self.filename = self.packet.read(filename_length).decode()
+
+    def _dump(self):
+        print('Filename:', self.filename)
 
 class MariadbAnnotateRowsEvent(BinLogEvent):
     """
