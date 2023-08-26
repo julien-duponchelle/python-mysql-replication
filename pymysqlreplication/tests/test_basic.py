@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
+import copy
+import io
 import os
+import sys
+import time
 
 import pymysql
-import copy
-import time
-import sys
-import io
+
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
@@ -15,12 +16,10 @@ from pymysqlreplication.tests import base
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.gtid import GtidSet, Gtid
 from pymysqlreplication.event import *
-from pymysqlreplication.exceptions import TableMetadataUnavailableError
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
-from pathlib import Path
 
-__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader", "TestMariadbBinlogStreamReader", "TestStatementConnectionSetting"]
+__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader", "TestMariadbBinlogStreamReader", "TestStatementConnectionSetting", "TestRowsQueryLogEvents"]
 
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
@@ -28,9 +27,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         return [GtidEvent]
 
     def test_allowed_event_list(self):
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 19)
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 18)
-        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 18)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 22)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 21)
+        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 21)
         self.assertEqual(len(self.stream._allowed_event_list([RotateEvent], None, False)), 1)
 
     def test_read_query_event(self):
@@ -523,6 +522,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(last_log_pos, 888)
         self.assertEqual(last_event_type, TABLE_MAP_EVENT)
 
+
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def ignoredEvents(self):
         return [GtidEvent]
@@ -763,16 +763,16 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["data"], 'A value')
         self.stream.fetchone()  # insert with three values
 
+
 class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
 
     def setUp(self):
-        super(TestCTLConnectionSettings, self).setUp()
+        super().setUp()
         self.stream.close()
         ctl_db = copy.copy(self.database)
         ctl_db["db"] = None
-        ctl_db["port"] = 3307
-        if os.environ.get("MYSQL_5_7_CTL") is not None:
-            ctl_db["host"] = os.environ.get("MYSQL_5_7_CTL")
+        ctl_db["port"] = int(os.environ.get("MYSQL_5_7_CTL_PORT") or 3307)
+        ctl_db["host"] = os.environ.get("MYSQL_5_7_CTL") or "localhost"
         self.ctl_conn_control = pymysql.connect(**ctl_db)
         self.ctl_conn_control.cursor().execute("DROP DATABASE IF EXISTS pymysqlreplication_test")
         self.ctl_conn_control.cursor().execute("CREATE DATABASE pymysqlreplication_test")
@@ -788,7 +788,7 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
         )
 
     def tearDown(self):
-        super(TestCTLConnectionSettings, self).tearDown()
+        super().tearDown()
         self.ctl_conn_control.close()
 
     def test_separate_ctl_settings_table_metadata_unavailable(self):
@@ -821,9 +821,10 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
         finally:
             self.resetBinLog()
 
+
 class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def setUp(self):
-        super(TestGtidBinLogStreamReader, self).setUp()
+        super().setUp()
         if not self.supportsGTID:
             raise unittest.SkipTest("database does not support GTID, skipping GTID tests")
 
@@ -940,6 +941,7 @@ class TestGtidRepresentation(unittest.TestCase):
 
         self.assertEqual(str(myset), str(parsedset))
 
+
 class GtidTests(unittest.TestCase):
     def test_ordering(self):
         gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
@@ -1008,6 +1010,33 @@ class GtidTests(unittest.TestCase):
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
 
 class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
+    def test_binlog_checkpoint_event(self):
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database, 
+            server_id=1023,
+            blocking=False,
+            is_mariadb=True
+        )
+
+        query = "DROP TABLE IF EXISTS test"
+        self.execute(query)
+
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        self.stream.close()
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, RotateEvent)  
+        
+        event = self.stream.fetchone()
+        self.assertIsInstance(event,FormatDescriptionEvent)
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, MariadbBinLogCheckPointEvent)
+        self.assertEqual(event.filename, self.bin_log_basename()+".000001")
+
+class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
     
     def test_annotate_rows_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -1071,11 +1100,45 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         self.assertEqual(schema, 1)
         self.assertEqual(key_version, key_version_from_key_file)
         self.assertEqual(type(nonce), bytes)
-        self.assertEqual(len(nonce), 12)        
+        self.assertEqual(len(nonce), 12)  
+
+    def test_gtid_list_event(self):
+        # set max_binlog_size to create new binlog file
+        query = 'SET GLOBAL max_binlog_size=4096'
+        self.execute(query)
+        # parse only Maradb GTID list event
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database, 
+            server_id=1024, 
+            blocking=False,
+            only_events=[MariadbGtidListEvent],
+            is_mariadb=True,
+        )
+
+        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        query = "INSERT INTO test (data) VALUES('Hello World')"
         
+        for cnt in range(0,15):
+            self.execute(query)
+            self.execute("COMMIT")
+
+        # 'mariadb gtid list event' of first binlog file
+        event = self.stream.fetchone()
+        self.assertEqual(event.event_type,163)
+        self.assertIsInstance(event,MariadbGtidListEvent)    
+
+        # 'mariadb gtid list event' of second binlog file
+        event = self.stream.fetchone()
+        self.assertEqual(event.event_type,163)
+        self.assertEqual(event.gtid_list[0].gtid, '0-1-15')
+        
+
+
 class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
     def setUp(self):
-        super(TestStatementConnectionSetting, self).setUp()
+        super().setUp()
         self.stream.close()
         self.stream = BinLogStreamReader(
             self.database,
@@ -1102,7 +1165,30 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
     def tearDown(self):
         self.execute("SET @@binlog_format='ROW'")
         self.assertEqual(self.bin_log_format(), "ROW")
-        super(TestStatementConnectionSetting, self).tearDown()        
+        super().tearDown()
+
+
+class TestRowsQueryLogEvents(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super(TestRowsQueryLogEvents, self).setUp()
+        self.execute("SET SESSION binlog_rows_query_log_events=1")
+
+    def tearDown(self):
+        self.execute("SET SESSION binlog_rows_query_log_events=0")
+        super(TestRowsQueryLogEvents, self).tearDown()
+
+    def test_rows_query_log_event(self):
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=[RowsQueryLogEvent],
+        )
+        self.execute("CREATE TABLE IF NOT EXISTS test (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))")
+        self.execute("INSERT INTO test (name) VALUES ('Soul Lee')")
+        self.execute("COMMIT")
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, RowsQueryLogEvent)
 
 
 if __name__ == "__main__":
