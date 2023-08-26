@@ -21,17 +21,21 @@ x-mariadb: &mariadb
     --binlog-format=row
 
 services:
-  percona-5.7:
-    <<: *mysql
-    image: percona:5.7
-    ports:
-      - "3306:3306"
-
   percona-5.7-ctl:
     <<: *mysql
     image: percona:5.7
     ports:
       - "3307:3306"
+    networks:
+      - default
+
+  percona-5.7:
+    <<: *mysql
+    image: percona:5.7
+    ports:
+      - "3306:3306"
+    networks:
+      - default
 
   mariadb-10.6:
     <<: *mariadb
@@ -45,6 +49,8 @@ services:
       - type: bind
         source: ./.mariadb/my.cnf
         target: /etc/mysql/my.cnf
+    networks:
+      - default
 
   pymysqlreplication:
     build:
@@ -54,6 +60,9 @@ services:
         BASE_IMAGE: python:3.11-alpine
         MYSQL_5_7: percona-5.7
         MYSQL_5_7_CTL: percona-5.7-ctl
+        MYSQL_5_7_CTL_PORT: 3306
+        MARIADB_10_6: mariadb-10.6
+        MARIADB_10_6_PORT: 3306
 
     command:
       - /bin/sh
@@ -63,7 +72,7 @@ services:
         
         while :
         do
-          if mysql -h percona-5.7 --user=root --execute "SELECT version();" 2>&1 >/dev/null && mysql -h percona-5.7-ctl --port=3307  --user=root --execute "USE pymysqlreplication_test;" 2>&1 >/dev/null; then
+          if mysql -h percona-5.7 --user=root --execute "SELECT version();" 2>&1 >/dev/null && mysql -h percona-5.7-ctl --user=root --execute "SELECT version();" 2>&1 >/dev/null; then
             break
           fi
           sleep 1
@@ -80,4 +89,5 @@ services:
       - percona-5.7-ctl
 
 networks:
-  default: {}
+  default:
+    driver: bridge
