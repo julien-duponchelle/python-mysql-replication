@@ -125,10 +125,10 @@ class PyMySQLReplicationMariaDbTestCase(PyMySQLReplicationTestCase):
     def setUp(self):
         # default
         self.database = {
-            "host": "localhost",
+            "host": os.environ.get("MARIADB_10_6") or "localhost",
             "user": "root",
             "passwd": "",
-            "port": 3308,
+            "port": int(os.environ.get("MARIADB_10_6_PORT") or 3308),
             "use_unicode": True,
             "charset": "utf8",
             "db": "pymysqlreplication_test"
