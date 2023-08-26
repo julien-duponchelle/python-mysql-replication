@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 usage(){
-    echo "Usage: bash .extract_charset_list.sh (mysql|mariadb) >> .charset_list.csv"
+    echo "Usage: bash .extract_charset_list.sh (mysql|mariadb) >> charset_list.csv"
 }
 
 dbms=$1
