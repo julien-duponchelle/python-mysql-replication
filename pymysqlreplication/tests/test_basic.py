@@ -771,7 +771,7 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
         self.stream.close()
         ctl_db = copy.copy(self.database)
         ctl_db["db"] = None
-        ctl_db["port"] = int(os.environ.get("MYSQL_5_7_CTL_PORT")) or 3307
+        ctl_db["port"] = int(os.environ.get("MYSQL_5_7_CTL_PORT") or 3307)
         ctl_db["host"] = os.environ.get("MYSQL_5_7_CTL") or "localhost"
         self.ctl_conn_control = pymysql.connect(**ctl_db)
         self.ctl_conn_control.cursor().execute("DROP DATABASE IF EXISTS pymysqlreplication_test")
