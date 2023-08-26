@@ -1332,9 +1332,10 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
         self.assertEqual(event.table_obj.data['column_schemas'][0]['COLUMN_NAME'], column_schemas[0][0])
+        self.assertEqual(event.table_obj.data['column_schemas'][0]['COLUMN_COMMENT'], "")
 
     def test_sync_column_drop_event_table_schema(self):
-        create_query = "CREATE TABLE test_sync (drop_column1 VARCHAR(50) comment 'test_sync', drop_column2 VARCHAR(50) comment 'test_sync2', drop_column3 VARCHAR(50) comment 'test_sync2');"
+        create_query = "CREATE TABLE test_sync (drop_column1 VARCHAR(50) , drop_column2 VARCHAR(50) , drop_column3 VARCHAR(50));"
         insert_query = "INSERT INTO test_sync VALUES('Audrey','Sean','Test');"
         self.execute(create_query)
         self.execute(insert_query)
