@@ -1307,6 +1307,20 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         if not self.isMariaDB():
             self.assertEqual(event.optional_metadata.visibility_list, [True, False])
 
+    def test_sync_table_map_event_table_schema(self):
+        create_query = "CREATE TABLE test_sync (name VARCHAR(50) comment 'test_sync');"
+        insert_query = "INSERT INTO test_sync VALUES('Audrey');"
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        drop_query = "DROP TABLE test_sync;"
+        self.execute(drop_query)
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        self.assertEqual(event.table_obj.data['column_schemas'][0]['COLUMN_NAME'], "name")
+
     def tearDown(self):
         self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")
         super(TestOptionalMetaData, self).tearDown()
