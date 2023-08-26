@@ -1314,6 +1314,8 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         self.execute(insert_query)
 
         self.execute("COMMIT")
+        drop_query = "DROP TABLE test_sync;"
+        self.execute(drop_query)
         select_query = """
                     SELECT
                         COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME,
@@ -1326,13 +1328,12 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
                     ORDER BY ORDINAL_POSITION
                     """
         column_schemas = self.execute(select_query).fetchall()
-        drop_query = "DROP TABLE test_sync;"
-        self.execute(drop_query)
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
-        self.assertEqual(event.table_obj.data['column_schemas'][0]['COLUMN_NAME'], column_schemas[0][0])
+        self.assertEqual(event.table_obj.data['column_schemas'][0]['COLUMN_NAME'], 'name')
         self.assertEqual(event.table_obj.data['column_schemas'][0]['COLUMN_COMMENT'], "")
+        self.assertEqual(len(column_schemas), 0)
 
     def test_sync_column_drop_event_table_schema(self):
         create_query = "CREATE TABLE test_sync (drop_column1 VARCHAR(50) , drop_column2 VARCHAR(50) , drop_column3 VARCHAR(50));"
