@@ -800,6 +800,11 @@ class TableMapEvent(BinLogEvent):
         column_schemas = []
         if len(self.optional_metadata.column_name_list) == 0:
             return
+        if len(self.column_schemas) == self.column_count:
+            # If the column schema length matches the number of columns,
+            # updating column schema information from optional metadata is not advisable.
+            # The reason is that the information obtained from optional metadata is not sufficient.
+            return
 
         charset_pos = 0
         enum_or_set_pos = 0
@@ -812,9 +817,9 @@ class TableMapEvent(BinLogEvent):
                 'COLLATION_NAME': None,
                 'CHARACTER_SET_NAME': None,
                 'CHARACTER_OCTET_LENGTH': None,
-                'DATA_TYPE': None,
+                'DATA_TYPE': None,     # not sufficient data
                 'COLUMN_COMMENT': '',  # we don't know this Info from optional metadata info
-                'COLUMN_TYPE': None,
+                'COLUMN_TYPE': None,   # not sufficient data
                 'COLUMN_KEY': '',
                 'ORDINAL_POSITION': None
             }
@@ -833,30 +838,29 @@ class TableMapEvent(BinLogEvent):
 
             if "max_length" in column_data.data:
                 max_length = column_data.max_length
-                column_schema['COLUMN_TYPE'] = data_type + f'({str(max_length)})'
                 column_schema['CHARACTER_OCTET_LENGTH'] = str(max_length)
 
             if self._is_character_column(column_type, dbms=self.dbms):
                 charset_id = self.optional_metadata.charset_collation_list[charset_pos]
                 charset_pos += 1
 
-                charset_name, collation_name = find_charset(charset_id, dbms=self.dbms)
+                encode_name, collation_name, charset_name = find_charset(charset_id, dbms=self.dbms)
                 column_schema['COLLATION_NAME'] = collation_name
                 column_schema['CHARACTER_SET_NAME'] = charset_name
 
                 self.columns[column_idx].collation_name = collation_name
-                self.columns[column_idx].character_set_name = charset_name
+                self.columns[column_idx].character_set_name = encode_name
 
             if self._is_enum_or_set_column(column_type):
                 charset_id = self.optional_metadata.enum_and_set_collation_list[enum_or_set_pos]
                 enum_or_set_pos += 1
 
-                charset_name, collation_name = find_charset(charset_id, dbms=self.dbms)
+                encode_name, collation_name, charset_name = find_charset(charset_id, dbms=self.dbms)
                 column_schema['COLLATION_NAME'] = collation_name
                 column_schema['CHARACTER_SET_NAME'] = charset_name
 
                 self.columns[column_idx].collation_name = collation_name
-                self.columns[column_idx].character_set_name = charset_name
+                self.columns[column_idx].character_set_name = encode_name
 
                 if self._is_enum_column(column_type):
                     enum_column_info = self.optional_metadata.set_enum_str_value_list[enum_pos]
@@ -873,6 +877,9 @@ class TableMapEvent(BinLogEvent):
                     column_schema['COLUMN_TYPE'] = set_format
                     self.columns[column_idx].set_values = set_column_info
                     set_pos += 1
+
+            if self.optional_metadata.unsigned_column_list and self.optional_metadata.unsigned_column_list[column_idx]:
+                self.columns[column_idx].unsigned = True
 
             if column_idx in self.optional_metadata.simple_primary_key_list:
                 column_schema['COLUMN_KEY'] = 'PRI'
@@ -1047,7 +1054,7 @@ class TableMapEvent(BinLogEvent):
 def find_encoding(charset: CHARSET.Charset):
     encode = None
     if charset.is_binary:
-        encode = "utf-8"
+        encode = "utf8"
     else:
         encode = charset.encoding
     return encode
@@ -1056,14 +1063,16 @@ def find_encoding(charset: CHARSET.Charset):
 def find_charset(charset_id, dbms="mysql"):
     encode = None
     collation_name = None
+    charset_name = None
     charset: CHARSET.Charset = CHARSET.charset_by_id(charset_id, dbms)
     if charset is None:
         encode = "utf8"
+        charset_name = "utf8"
     else:
         encode = find_encoding(charset)
         collation_name = charset.collation
-
-    return encode, collation_name
+        charset_name = charset.name
+    return encode, collation_name, charset_name
 
 
 class MetadataFieldType(Enum):
