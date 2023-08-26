@@ -1307,19 +1307,63 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         if not self.isMariaDB():
             self.assertEqual(event.optional_metadata.visibility_list, [True, False])
 
-    def test_sync_table_map_event_table_schema(self):
+    def test_sync_drop_table_map_event_table_schema(self):
         create_query = "CREATE TABLE test_sync (name VARCHAR(50) comment 'test_sync');"
         insert_query = "INSERT INTO test_sync VALUES('Audrey');"
         self.execute(create_query)
         self.execute(insert_query)
-        self.execute("COMMIT")
 
+        self.execute("COMMIT")
+        select_query = """
+                    SELECT
+                        COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME,
+                        COLUMN_COMMENT, COLUMN_TYPE, COLUMN_KEY, ORDINAL_POSITION,
+                        DATA_TYPE, CHARACTER_OCTET_LENGTH
+                    FROM
+                        information_schema.columns
+                    WHERE
+                        table_name = "test_sync"
+                    ORDER BY ORDINAL_POSITION
+                    """
+        column_schemas = self.execute(select_query).fetchall()
         drop_query = "DROP TABLE test_sync;"
         self.execute(drop_query)
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
-        self.assertEqual(event.table_obj.data['column_schemas'][0]['COLUMN_NAME'], "name")
+        self.assertEqual(event.table_obj.data['column_schemas'][0]['COLUMN_NAME'], column_schemas[0][0])
+
+    def test_sync_column_drop_event_table_schema(self):
+        create_query = "CREATE TABLE test_sync (drop_column1 VARCHAR(50) comment 'test_sync', drop_column2 VARCHAR(50) comment 'test_sync2', drop_column3 VARCHAR(50) comment 'test_sync2');"
+        insert_query = "INSERT INTO test_sync VALUES('Audrey','Sean','Test');"
+        self.execute(create_query)
+        self.execute(insert_query)
+
+        self.execute("COMMIT")
+        alter_query = "ALTER TABLE test_sync DROP drop_column2;"
+        self.execute(alter_query)
+        select_query = """
+                    SELECT
+                        COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME,
+                        COLUMN_COMMENT, COLUMN_TYPE, COLUMN_KEY, ORDINAL_POSITION,
+                        DATA_TYPE, CHARACTER_OCTET_LENGTH
+                    FROM
+                        information_schema.columns
+                    WHERE
+                        table_name = "test_sync"
+                    ORDER BY ORDINAL_POSITION
+                    """
+        column_schemas = self.execute(select_query).fetchall()
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        self.assertEqual(len(column_schemas), 2)
+        self.assertEqual(len(event.table_obj.data['column_schemas']), 3)
+        self.assertEqual(column_schemas[0][0], 'drop_column1')
+        self.assertEqual(column_schemas[1][0], 'drop_column3')
+        self.assertEqual(event.table_obj.data['column_schemas'][0]['COLUMN_NAME'], 'drop_column1')
+        self.assertEqual(event.table_obj.data['column_schemas'][1]['COLUMN_NAME'], 'drop_column2')
+        self.assertEqual(event.table_obj.data['column_schemas'][2]['COLUMN_NAME'], 'drop_column3')
 
     def tearDown(self):
         self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")
