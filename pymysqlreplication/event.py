@@ -39,7 +39,7 @@ class BinLogEvent(object):
 
     def dump(self):
         print("=== %s ===" % (self.__class__.__name__))
-        print("Date: %s" % (datetime.datetime.fromtimestamp(self.timestamp)
+        print("Date: %s" % (datetime.datetime.utcfromtimestamp(self.timestamp)
                             .isoformat()))
         print("Log position: %d" % self.packet.log_pos)
         print("Event size: %d" % (self.event_size))

@@ -174,7 +174,7 @@ class RowsEvent(BinLogEvent):
             elif column.type == FIELD_TYPE.DATE:
                 values[name] = self.__read_date()
             elif column.type == FIELD_TYPE.TIMESTAMP:
-                values[name] = datetime.datetime.fromtimestamp(
+                values[name] = datetime.datetime.utcfromtimestamp(
                     self.packet.read_uint32())
 
             # For new date format:
@@ -184,7 +184,7 @@ class RowsEvent(BinLogEvent):
                 values[name] = self.__read_time2(column)
             elif column.type == FIELD_TYPE.TIMESTAMP2:
                 values[name] = self.__add_fsp_to_time(
-                    datetime.datetime.fromtimestamp(
+                    datetime.datetime.utcfromtimestamp(
                         self.packet.read_int_be_by_size(4)), column)
             elif column.type == FIELD_TYPE.LONGLONG:
                 if unsigned:
