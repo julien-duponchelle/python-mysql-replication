@@ -1,6 +1,7 @@
 ARG BASE_IMAGE=${BASE_IMAGE:-python:3.11-alpine}
 FROM ${BASE_IMAGE}
 
+COPY .mariadb .mariadb
 COPY pymysqlreplication pymysqlreplication
 COPY README.md README.md
 COPY setup.py setup.py
