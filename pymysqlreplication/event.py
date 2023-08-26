@@ -154,7 +154,7 @@ class MariadbGtidListEvent(BinLogEvent):
             def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
                 super(MariadbGtidObejct, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
                 self.domain_id = self.packet.read_uint32()
-                self.server_id = self.packet.server_id
+                self.server_id = self.packet.read_uint32()
                 self.gtid_seq_no = self.packet.read_uint64()
                 self.gtid = "%d-%d-%d" % (self.domain_id, self.server_id, self.gtid_seq_no)
 
