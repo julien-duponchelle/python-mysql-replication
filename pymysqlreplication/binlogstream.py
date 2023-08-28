@@ -2,6 +2,7 @@
 
 import pymysql
 import struct
+import logging
 from distutils.version import LooseVersion
 
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE
@@ -18,7 +19,6 @@ from .event import (
 from .exceptions import BinLogNotEnabled
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
-from .logging import RenderingLog
 try:
     from pymysql.constants.COMMAND import COM_BINLOG_DUMP_GTID
 except ImportError:
@@ -142,7 +142,7 @@ class BinLogStreamReader(object):
                  slave_heartbeat=None,
                  is_mariadb=False,
                  ignore_decode_errors=False,
-                 logging=True):
+                 parma_logging=True,):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -220,8 +220,8 @@ class BinLogStreamReader(object):
         self.auto_position = auto_position
         self.skip_to_timestamp = skip_to_timestamp
         self.is_mariadb = is_mariadb
-        if logging:
-            self.__set_logging()
+        if parma_logging:
+            self.__log_valid_parameters()
 
         if end_log_pos:
             self.is_past_end_log_pos = False
@@ -643,8 +643,15 @@ class BinLogStreamReader(object):
                 else:
                     raise error
                 
-    def __set_logging(self):
-        RenderingLog(self.__dict__)
+    def __log_valid_parameters(self):
+        ignore_list = ["allowed_events_in_packet","table_map"]
+        
+        for parameter,value in self.__dict__.items():
+            if parameter.startswith("_BinLogStreamReader__") :
+                parameter = parameter.replace("_BinLogStreamReader__","")
+            if value != None and value != False and parameter not in ignore_list:
+                comment = "Set parameter - {} , value - {}".format(parameter,value)
+                logging.info(comment)
 
     def __iter__(self):
         return iter(self.fetchone, None)
