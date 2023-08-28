@@ -54,7 +54,7 @@ charset_by_name = charsets.by_name
 charset_by_id = charsets.by_id
 
 with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'charset_list.csv'), 'r') as f:
-    f.read()  # pass header
+    f.readline()  # pass header
     for line in f:
         lines = line.split(',')
         if len(lines) != 5:
