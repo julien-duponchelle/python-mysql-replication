@@ -3,6 +3,7 @@
 import binascii
 import struct
 import datetime
+import zlib
 from pymysqlreplication.constants.STATUS_VAR_KEY import *
 from pymysqlreplication.exceptions import StatusVariableMismatch
 
@@ -16,7 +17,8 @@ class BinLogEvent(object):
                  ignored_schemas=None,
                  freeze_schema=False,
                  fail_on_table_metadata_unavailable=False,
-                 ignore_decode_errors=False):
+                 ignore_decode_errors=False,
+                 use_crc32=False,):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
@@ -26,16 +28,31 @@ class BinLogEvent(object):
         self.mysql_version = mysql_version
         self._fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
         self._ignore_decode_errors = ignore_decode_errors
+        self._use_crc32 = use_crc32
+        self._is_event_valid = None
         # The event have been fully processed, if processed is false
         # the event will be skipped
         self._processed = True
         self.complete = True
+        self._validate_event()
 
     def _read_table_id(self):
         # Table ID is 6 byte
         # pad little-endian number
         table_id = self.packet.read(6) + b"\x00\x00"
         return struct.unpack('<Q', table_id)[0]
+
+    def _validate_event(self):
+        if not self._use_crc32:
+            return
+
+        self.packet.rewind(1)
+        data = self.packet.read(19 + self.event_size)
+        footer = self.packet.read(4)
+        byte_data = zlib.crc32(data).to_bytes(4, byteorder='little')
+        self._is_event_valid = True if byte_data == footer else False
+        self.packet.read_bytes -= (19 + self.event_size + 4)
+        self.packet.rewind(20)
 
     def dump(self):
         print("=== %s ===" % (self.__class__.__name__))
