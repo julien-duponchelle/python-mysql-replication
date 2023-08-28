@@ -1088,6 +1088,12 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         self.assertIsInstance(event, FormatDescriptionEvent)
 
         event = self.stream.fetchone()
+        self.assertIsInstance(event, MariadbStartEncryptionEvent)
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, MariadbGtidListEvent)
+
+        event = self.stream.fetchone()
         self.assertIsInstance(event, MariadbBinLogCheckPointEvent)
         self.assertEqual(event.filename, self.bin_log_basename() + ".000001")
 
