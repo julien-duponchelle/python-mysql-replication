@@ -87,7 +87,7 @@ class RowsEvent(BinLogEvent):
     @staticmethod
     def _is_null(null_bitmap, position):
         bit = null_bitmap[int(position / 8)]
-        if type(bit) is str:
+        if isinstance(bit, str):
             bit = ord(bit)
         return bit & (1 << (position % 8))
 
