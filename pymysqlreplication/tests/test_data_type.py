@@ -8,6 +8,7 @@ if sys.version_info < (2, 7):
 else:
     import unittest
 
+import json
 from decimal import Decimal
 
 from pymysqlreplication.tests import base
