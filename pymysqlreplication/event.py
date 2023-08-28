@@ -416,9 +416,6 @@ class ExecuteLoadQueryEvent(BinLogEvent):
     :ivar slave_proxy_id: int - The id of the thread that issued this statement on the master server
     :ivar execution_time: int - The number of seconds that the statement took to execute
     :ivar schema_length: int - The length of the default database's name when the statement was executed.
-    This name appears later, in the variable data part.
-    It is necessary for statements such as INSERT INTO t VALUES(1) that don't specify the database
-    and rely on the default database previously selected by USE
     :ivar error_code: int - The error code resulting from execution of the statement on the master
     :ivar status_vars_length: int - The length of the status variable block
     :ivar file_id: int - The id of the loaded file
