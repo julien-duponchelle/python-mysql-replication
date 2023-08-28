@@ -9,23 +9,12 @@ from pymysql.cursors import DictCursor
 
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT, FORMAT_DESCRIPTION_EVENT
 from .event import (
-    QueryEvent,
-    RotateEvent,
-    FormatDescriptionEvent,
-    XidEvent,
-    GtidEvent,
-    StopEvent,
-    XAPrepareEvent,
-    BeginLoadQueryEvent,
-    ExecuteLoadQueryEvent,
-    HeartbeatLogEvent,
-    NotImplementedEvent,
-    MariadbGtidEvent,
-    MariadbAnnotateRowsEvent,
-    RandEvent,
-    MariadbStartEncryptionEvent,
-    RowsQueryLogEvent,
-)
+    QueryEvent, RotateEvent, FormatDescriptionEvent,
+    XidEvent, GtidEvent, StopEvent, XAPrepareEvent,
+    BeginLoadQueryEvent, ExecuteLoadQueryEvent,
+    HeartbeatLogEvent, NotImplementedEvent, MariadbGtidEvent,
+    MariadbAnnotateRowsEvent, RandEvent, MariadbStartEncryptionEvent, RowsQueryLogEvent,
+    MariadbGtidListEvent, MariadbBinLogCheckPointEvent)
 from .exceptions import BinLogNotEnabled
 from .gtid import GtidSet
 from .packet import BinLogPacketWrapper
@@ -660,30 +649,30 @@ class BinLogStreamReader(object):
         if only_events is not None:
             events = set(only_events)
         else:
-            events = set(
-                (
-                    QueryEvent,
-                    RotateEvent,
-                    StopEvent,
-                    FormatDescriptionEvent,
-                    XAPrepareEvent,
-                    XidEvent,
-                    GtidEvent,
-                    BeginLoadQueryEvent,
-                    ExecuteLoadQueryEvent,
-                    UpdateRowsEvent,
-                    WriteRowsEvent,
-                    DeleteRowsEvent,
-                    TableMapEvent,
-                    HeartbeatLogEvent,
-                    NotImplementedEvent,
-                    MariadbGtidEvent,
-                    RowsQueryLogEvent,
-                    MariadbAnnotateRowsEvent,
-                    RandEvent,
-                    MariadbStartEncryptionEvent,
-                )
-            )
+            events = set((
+                QueryEvent,
+                RotateEvent,
+                StopEvent,
+                FormatDescriptionEvent,
+                XAPrepareEvent,
+                XidEvent,
+                GtidEvent,
+                BeginLoadQueryEvent,
+                ExecuteLoadQueryEvent,
+                UpdateRowsEvent,
+                WriteRowsEvent,
+                DeleteRowsEvent,
+                TableMapEvent,
+                HeartbeatLogEvent,
+                NotImplementedEvent,
+                MariadbGtidEvent,
+                RowsQueryLogEvent,
+                MariadbAnnotateRowsEvent,
+                RandEvent,
+                MariadbStartEncryptionEvent,
+                MariadbGtidListEvent,
+                MariadbBinLogCheckPointEvent
+            ))
         if ignored_events is not None:
             for e in ignored_events:
                 events.remove(e)
@@ -711,11 +700,8 @@ class BinLogStreamReader(object):
                         information_schema.columns
                     WHERE
                         table_schema = %s AND table_name = %s
-                    ORDER BY ORDINAL_POSITION
-                    """,
-                    (schema, table),
-                )
-                result = cur.fetchall()
+                    """, (schema, table))
+                result = sorted(cur.fetchall(), key=lambda x: x['ORDINAL_POSITION'])
                 cur.close()
 
                 return result
