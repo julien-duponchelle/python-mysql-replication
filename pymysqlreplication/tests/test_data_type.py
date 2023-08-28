@@ -3,10 +3,7 @@
 import copy
 import platform
 import sys
-if sys.version_info < (2, 7):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 import json
 from decimal import Decimal
@@ -654,10 +651,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         db["charset"] = "latin1"
         self.connect_conn_control(db)
 
-        if platform.python_version_tuple()[0] == "2":
-            string = unichr(233)
-        else:
-            string = "\u00e9"
+        string = "\u00e9"
 
         create_query = "CREATE TABLE test (test CHAR(12)) CHARACTER SET latin1 COLLATE latin1_bin;"
         insert_query = b"INSERT INTO test VALUES('" + string.encode('latin-1') + b"');"
@@ -665,10 +659,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["test"], string)
 
     def test_encoding_utf8(self):
-        if platform.python_version_tuple()[0] == "2":
-            string = unichr(0x20ac)
-        else:
-            string = "\u20ac"
+        string = "\u20ac"
 
         create_query = "CREATE TABLE test (test CHAR(12)) CHARACTER SET utf8 COLLATE utf8_bin;"
         insert_query = b"INSERT INTO test VALUES('" + string.encode('utf-8') + b"')"
