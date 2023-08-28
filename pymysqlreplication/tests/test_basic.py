@@ -19,7 +19,7 @@ from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 
-__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader", "TestMariadbBinlogStreamReader", "TestStatementConnectionSetting", "TestRowsQueryLogEvents"]
+__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader", "TestMariadbBinlogStreamReader", "TestMariadbBinlogStreamReader2", "TestStatementConnectionSetting", "TestRowsQueryLogEvents"]
 
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
@@ -1036,7 +1036,7 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         self.assertIsInstance(event, MariadbBinLogCheckPointEvent)
         self.assertEqual(event.filename, self.bin_log_basename()+".000001")
 
-class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
+class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationMariaDbTestCase):
     
     def test_annotate_rows_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
