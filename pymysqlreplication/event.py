@@ -305,8 +305,7 @@ class QueryEvent(BinLogEvent):
         Parsing logic from mysql-server source code edited by dongwook-chan
         https://github.com/mysql/mysql-server/blob/beb865a960b9a8a16cf999c323e46c5b0c67f21f/libbinlogevents/src/statement_events.cpp#L181-L336
 
-        Args:
-            key: key for status variable
+        :ivar key: key for status variable
         """
         if key == Q_FLAGS2_CODE:                      # 0x00
             self.flags2 = self.packet.read_uint32()
@@ -409,18 +408,23 @@ class BeginLoadQueryEvent(BinLogEvent):
 
 class ExecuteLoadQueryEvent(BinLogEvent):
     """
+    This event handles "LOAD DATA INFILE" statement.
+    LOAD DATA INFILE statement reads data from file and insert into database's table.
+    Since QueryEvent cannot explain this special action, ExecuteLoadQueryEvent is needed.
+    So it is similar to a QUERY_EVENT except that it has extra static fields.
 
-    Attributes:
-        slave_proxy_id
-        execution_time
-        schema_length
-        error_code
-        status_vars_length
-
-        file_id
-        start_pos
-        end_pos
-        dup_handling_flags
+    :ivar slave_proxy_id: int - The id of the thread that issued this statement on the master server
+    :ivar execution_time: int - The number of seconds that the statement took to execute
+    :ivar schema_length: int - The length of the default database's name when the statement was executed.
+    This name appears later, in the variable data part.
+    It is necessary for statements such as INSERT INTO t VALUES(1) that don't specify the database
+    and rely on the default database previously selected by USE
+    :ivar error_code: int - The error code resulting from execution of the statement on the master
+    :ivar status_vars_length: int - The length of the status variable block
+    :ivar file_id: int - The id of the loaded file
+    :ivar start_pos: int - Offset from the start of the statement to the beginning of the filename
+    :ivar end_pos: int - Offset from the start of the statement to the end of the filename
+    :ivar dup_handling_flags: int - How LOAD DATA INFILE handles duplicated data (0x0: error, 0x1: ignore, 0x2: replace)
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super(ExecuteLoadQueryEvent, self).__init__(from_packet, event_size, table_map,
