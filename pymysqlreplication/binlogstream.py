@@ -143,7 +143,7 @@ class BinLogStreamReader(object):
                  is_mariadb=False,
                  annotate_rows_event=False,
                  ignore_decode_errors=False,
-                 use_crc32=False,):
+                 verify_checksum=False,):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -185,7 +185,7 @@ class BinLogStreamReader(object):
                     used with 'is_mariadb'
             ignore_decode_errors: If true, any decode errors encountered 
                                   when reading column data will be ignored.
-            use_crc32: If true, use CRC32 4-byte for events validation, ensuring data integrity.
+            verify_checksum: If true, verify events read from the binary log by examining checksums.
         """
 
         self.__connection_settings = connection_settings
@@ -208,7 +208,7 @@ class BinLogStreamReader(object):
             only_events, ignored_events, filter_non_implemented_events)
         self.__fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
         self.__ignore_decode_errors = ignore_decode_errors
-        self.__use_crc32 = use_crc32
+        self.__verify_checksum = verify_checksum
 
         # We can't filter on packet level TABLE_MAP and rotate event because
         # we need them for handling other operations
@@ -539,7 +539,7 @@ class BinLogStreamReader(object):
                                                self.__freeze_schema,
                                                self.__fail_on_table_metadata_unavailable,
                                                self.__ignore_decode_errors,
-                                               self.__use_crc32,)
+                                               self.__verify_checksum,)
 
             if binlog_event.event_type == ROTATE_EVENT:
                 self.log_pos = binlog_event.event.position

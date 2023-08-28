@@ -18,7 +18,7 @@ class BinLogEvent(object):
                  freeze_schema=False,
                  fail_on_table_metadata_unavailable=False,
                  ignore_decode_errors=False,
-                 use_crc32=False,):
+                 verify_checksum=False,):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
@@ -28,13 +28,13 @@ class BinLogEvent(object):
         self.mysql_version = mysql_version
         self._fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
         self._ignore_decode_errors = ignore_decode_errors
-        self._use_crc32 = use_crc32
+        self._verify_checksum = verify_checksum
         self._is_event_valid = None
         # The event have been fully processed, if processed is false
         # the event will be skipped
         self._processed = True
         self.complete = True
-        self._validate_event()
+        self._verify_event()
 
     def _read_table_id(self):
         # Table ID is 6 byte
@@ -42,8 +42,8 @@ class BinLogEvent(object):
         table_id = self.packet.read(6) + b"\x00\x00"
         return struct.unpack('<Q', table_id)[0]
 
-    def _validate_event(self):
-        if not self._use_crc32:
+    def _verify_event(self):
+        if not self._verify_checksum:
             return
 
         self.packet.rewind(1)

@@ -539,13 +539,13 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
                                        self.stream._BinLogStreamReader__freeze_schema,
                                        self.stream._BinLogStreamReader__fail_on_table_metadata_unavailable,
                                        self.stream._BinLogStreamReader__ignore_decode_errors,
-                                       self.stream._BinLogStreamReader__use_crc32,)
+                                       self.stream._BinLogStreamReader__verify_checksum,)
         self.stream.close()
         self.stream = BinLogStreamReader(
             self.database,
             server_id=1024,
             blocking=False,
-            use_crc32=True
+            verify_checksum=True
         )
         # For event data, refer to the official document example data of mariaDB.
         # https://mariadb.com/kb/en/query_event/#example-with-crc32
