@@ -151,7 +151,7 @@ class BinLogPacketWrapper(object):
                                  freeze_schema=freeze_schema,
                                  fail_on_table_metadata_unavailable=fail_on_table_metadata_unavailable,
                                  ignore_decode_errors=ignore_decode_errors)
-        if self.event._processed == False:
+        if self.event._processed is False:
             self.event = None
 
     def read(self, size):

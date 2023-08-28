@@ -7,11 +7,9 @@
 
 import pymysql
 import time
-import random
 import os
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.row_event import *
-import cProfile
 
 
 def execute(con, query):
