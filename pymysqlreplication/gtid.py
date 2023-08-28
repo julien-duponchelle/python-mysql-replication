@@ -6,11 +6,14 @@ import binascii
 from copy import deepcopy
 from io import BytesIO
 
+
 def overlap(i1, i2):
     return i1[0] < i2[1] and i1[1] > i2[0]
 
+
 def contains(i1, i2):
     return i2[0] >= i1[0] and i2[1] <= i1[1]
+
 
 class Gtid(object):
     """A mysql GTID is composed of a server-id and a set of right-open
@@ -48,6 +51,7 @@ class Gtid(object):
         Exception: Adding an already present transaction number (one that overlaps).
         Exception: Adding a Gtid with a different SID.
     """
+
     @staticmethod
     def parse_interval(interval):
         """
@@ -57,12 +61,12 @@ class Gtid(object):
         Raises:
             - ValueError if GTID format is incorrect
         """
-        m = re.search('^([0-9]+)(?:-([0-9]+))?$', interval)
+        m = re.search("^([0-9]+)(?:-([0-9]+))?$", interval)
         if not m:
-            raise ValueError('GTID format is incorrect: %r' % (interval, ))
+            raise ValueError("GTID format is incorrect: %r" % (interval,))
         a = int(m.group(1))
         b = int(m.group(2) or a)
-        return (a, b+1)
+        return (a, b + 1)
 
     @staticmethod
     def parse(gtid):
@@ -71,16 +75,18 @@ class Gtid(object):
         Raises:
             - ValueError: if GTID format is incorrect.
         """
-        m = re.search('^([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})'
-                      '((?::[0-9-]+)+)$', gtid)
+        m = re.search(
+            "^([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})"
+            "((?::[0-9-]+)+)$",
+            gtid,
+        )
         if not m:
-            raise ValueError('GTID format is incorrect: %r' % (gtid, ))
+            raise ValueError("GTID format is incorrect: %r" % (gtid,))
 
         sid = m.group(1)
         intervals = m.group(2)
 
-        intervals_parsed = [Gtid.parse_interval(x)
-                            for x in intervals.split(':')[1:]]
+        intervals_parsed = [Gtid.parse_interval(x) for x in intervals.split(":")[1:]]
 
         return (sid, intervals_parsed)
 
@@ -95,10 +101,10 @@ class Gtid(object):
         new = []
 
         if itvl[0] > itvl[1]:
-            raise Exception('Malformed interval %s' % (itvl,))
+            raise Exception("Malformed interval %s" % (itvl,))
 
         if any(overlap(x, itvl) for x in self.intervals):
-            raise Exception('Overlapping interval %s' % (itvl,))
+            raise Exception("Overlapping interval %s" % (itvl,))
 
         ## Merge: arrange interval to fit existing set
         for existing in sorted(self.intervals):
@@ -121,7 +127,7 @@ class Gtid(object):
         new = []
 
         if itvl[0] > itvl[1]:
-            raise Exception('Malformed interval %s' % (itvl,))
+            raise Exception("Malformed interval %s" % (itvl,))
 
         if not any(overlap(x, itvl) for x in self.intervals):
             # No raise
@@ -149,8 +155,9 @@ class Gtid(object):
         if other.sid != self.sid:
             return False
 
-        return all(any(contains(me, them) for me in self.intervals)
-                   for them in other.intervals)
+        return all(
+            any(contains(me, them) for me in self.intervals) for them in other.intervals
+        )
 
     def __init__(self, gtid, sid=None, intervals=[]):
         if sid:
@@ -169,8 +176,9 @@ class Gtid(object):
         Raises:
            Exception: if the attempted merge has different SID"""
         if self.sid != other.sid:
-            raise Exception('Attempt to merge different SID'
-                            '%s != %s' % (self.sid, other.sid))
+            raise Exception(
+                "Attempt to merge different SID" "%s != %s" % (self.sid, other.sid)
+            )
 
         result = deepcopy(self)
 
@@ -194,21 +202,26 @@ class Gtid(object):
     def __str__(self):
         """We represent the human value here - a single number
         for one transaction, or a closed interval (decrementing b)"""
-        return '%s:%s' % (self.sid,
-                          ':'.join(('%d-%d' % (x[0], x[1]-1)) if x[0] +1 != x[1]
-                                   else str(x[0])
-                                   for x in self.intervals))
+        return "%s:%s" % (
+            self.sid,
+            ":".join(
+                ("%d-%d" % (x[0], x[1] - 1)) if x[0] + 1 != x[1] else str(x[0])
+                for x in self.intervals
+            ),
+        )
 
     def __repr__(self):
         return '<Gtid "%s">' % self
 
     @property
     def encoded_length(self):
-        return (16 +  # sid
-                8 +  # n_intervals
-                2 *  # stop/start
-                8 *  # stop/start mark encoded as int64
-                len(self.intervals))
+        return (
+            16
+            + 8  # sid
+            + 2  # n_intervals
+            * 8  # stop/start
+            * len(self.intervals)  # stop/start mark encoded as int64
+        )
 
     def encode(self):
         """Encode a Gtid in binary
@@ -236,17 +249,17 @@ class Gtid(object):
         - - - - - - - - - - -
         ```
         """
-        buffer = b''
+        buffer = b""
         # sid
-        buffer += binascii.unhexlify(self.sid.replace('-', ''))
+        buffer += binascii.unhexlify(self.sid.replace("-", ""))
         # n_intervals
-        buffer += struct.pack('<Q', len(self.intervals))
+        buffer += struct.pack("<Q", len(self.intervals))
 
         for interval in self.intervals:
             # Start position
-            buffer += struct.pack('<Q', interval[0])
+            buffer += struct.pack("<Q", interval[0])
             # Stop position
-            buffer += struct.pack('<Q', interval[1])
+            buffer += struct.pack("<Q", interval[1])
 
         return buffer
 
@@ -256,30 +269,36 @@ class Gtid(object):
 
         :param BytesIO payload to decode
         """
-        assert isinstance(payload, BytesIO), \
-            'payload is expected to be a BytesIO'
-        sid = b''
+        assert isinstance(payload, BytesIO), "payload is expected to be a BytesIO"
+        sid = b""
         sid = sid + binascii.hexlify(payload.read(4))
-        sid = sid + b'-'
+        sid = sid + b"-"
         sid = sid + binascii.hexlify(payload.read(2))
-        sid = sid + b'-'
+        sid = sid + b"-"
         sid = sid + binascii.hexlify(payload.read(2))
-        sid = sid + b'-'
+        sid = sid + b"-"
         sid = sid + binascii.hexlify(payload.read(2))
-        sid = sid + b'-'
+        sid = sid + b"-"
         sid = sid + binascii.hexlify(payload.read(6))
 
-        (n_intervals,) = struct.unpack('<Q', payload.read(8))
+        (n_intervals,) = struct.unpack("<Q", payload.read(8))
         intervals = []
         for i in range(0, n_intervals):
-            start, end = struct.unpack('<QQ', payload.read(16))
-            intervals.append((start, end-1))
+            start, end = struct.unpack("<QQ", payload.read(16))
+            intervals.append((start, end - 1))
 
-        return cls('%s:%s' % (sid.decode('ascii'), ':'.join([
-            '%d-%d' % x
-            if isinstance(x, tuple)
-            else '%d' % x
-            for x in intervals])))
+        return cls(
+            "%s:%s"
+            % (
+                sid.decode("ascii"),
+                ":".join(
+                    [
+                        "%d-%d" % x if isinstance(x, tuple) else "%d" % x
+                        for x in intervals
+                    ]
+                ),
+            )
+        )
 
     def __eq__(self, other):
         if other.sid != self.sid:
@@ -309,6 +328,7 @@ class Gtid(object):
 
 class GtidSet(object):
     """Represents a set of Gtid"""
+
     def __init__(self, gtid_set):
         """
         Construct a GtidSet initial state depends of the nature of `gtid_set` param.
@@ -328,14 +348,14 @@ class GtidSet(object):
         def _to_gtid(element):
             if isinstance(element, Gtid):
                 return element
-            return Gtid(element.strip(' \n'))
+            return Gtid(element.strip(" \n"))
 
         if not gtid_set:
             self.gtids = []
         elif isinstance(gtid_set, (list, set)):
             self.gtids = [_to_gtid(x) for x in gtid_set]
         else:
-            self.gtids = [Gtid(x.strip(' \n')) for x in gtid_set.split(',')]
+            self.gtids = [Gtid(x.strip(" \n")) for x in gtid_set.split(",")]
 
     def merge_gtid(self, gtid):
         """Insert a Gtid in current GtidSet."""
@@ -388,15 +408,14 @@ class GtidSet(object):
         """
         Returns a comma separated string of gtids.
         """
-        return ','.join(str(x) for x in self.gtids)
+        return ",".join(str(x) for x in self.gtids)
 
     def __repr__(self):
-        return '<GtidSet %r>' % self.gtids
+        return "<GtidSet %r>" % self.gtids
 
     @property
     def encoded_length(self):
-        return (8 +  # n_sids
-                sum(x.encoded_length for x in self.gtids))
+        return 8 + sum(x.encoded_length for x in self.gtids)  # n_sids
 
     def encoded(self):
         """Encode a GtidSet in binary
@@ -415,8 +434,10 @@ class GtidSet(object):
         - - - - - - - - - - -
         ```
         """
-        return b'' + (struct.pack('<Q', len(self.gtids)) +
-                      b''.join(x.encode() for x in self.gtids))
+        return b"" + (
+            struct.pack("<Q", len(self.gtids))
+            + b"".join(x.encode() for x in self.gtids)
+        )
 
     encode = encoded
 
@@ -426,9 +447,8 @@ class GtidSet(object):
 
         :param BytesIO payload to decode
         """
-        assert isinstance(payload, BytesIO), \
-            'payload is expected to be a BytesIO'
-        (n_sid,) = struct.unpack('<Q', payload.read(8))
+        assert isinstance(payload, BytesIO), "payload is expected to be a BytesIO"
+        (n_sid,) = struct.unpack("<Q", payload.read(8))
 
         return cls([Gtid.decode(payload) for _ in range(0, n_sid)])
 
