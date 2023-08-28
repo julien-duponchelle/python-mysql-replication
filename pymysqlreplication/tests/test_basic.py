@@ -539,7 +539,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
                                        self.stream._BinLogStreamReader__freeze_schema,
                                        self.stream._BinLogStreamReader__fail_on_table_metadata_unavailable,
                                        self.stream._BinLogStreamReader__ignore_decode_errors,
-                                       self.stream._BinLogStreamReader__verify_crc32)
+                                       self.stream._BinLogStreamReader__use_crc32)
 
         self.stream.close()
         self.stream = BinLogStreamReader(
