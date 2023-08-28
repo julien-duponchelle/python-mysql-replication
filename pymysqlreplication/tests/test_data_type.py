@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import copy
-import platform
-import sys
 import unittest
 
 import json
