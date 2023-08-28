@@ -673,7 +673,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         )
         had_error = False
         try:
-            event = self.stream.fetchone()
+            self.stream.fetchone()
         except TableMetadataUnavailableError as e:
             had_error = True
             assert "test" in e.args[0]
@@ -697,7 +697,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         )
         event = self.stream.fetchone()
         event = self.stream.fetchone()
-        with self.assertRaises(UnicodeError) as exception:
+        with self.assertRaises(UnicodeError):
             event = self.stream.fetchone()
             data = event.rows[0]["values"]["data"]
 
@@ -798,7 +798,7 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
 
         had_error = False
         try:
-            event = self.stream.fetchone()
+            self.stream.fetchone()
         except TableMetadataUnavailableError as e:
             had_error = True
             assert "test" in e.args[0]
@@ -902,7 +902,7 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), GtidEvent)
         event = self.stream.fetchone()
 
-        self.assertEqual(event.query, 'CREATE TABLE test2 (id INT NOT NULL, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))');
+        self.assertEqual(event.query, 'CREATE TABLE test2 (id INT NOT NULL, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))')
 
 
 class TestGtidRepresentation(unittest.TestCase):
@@ -999,15 +999,15 @@ class GtidTests(unittest.TestCase):
         assert (gtid - within).intervals == [(1, 25), (27, 57)]
 
     def test_parsing(self):
-        with self.assertRaises(ValueError) as exc:
-            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-5 57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
-            gtid = Gtid("NNNNNNNN-20d3-11e5-a393-4a63946f7eac:1-5")
-            gtid = Gtid("-20d3-11e5-a393-4a63946f7eac:1-5")
-            gtid = Gtid("-20d3-11e5-a393-4a63946f7eac:1-")
-            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:A-1")
-            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:-1")
-            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-:1")
-            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
+        with self.assertRaises(ValueError):
+            Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-5 57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+            Gtid("NNNNNNNN-20d3-11e5-a393-4a63946f7eac:1-5")
+            Gtid("-20d3-11e5-a393-4a63946f7eac:1-5")
+            Gtid("-20d3-11e5-a393-4a63946f7eac:1-")
+            Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:A-1")
+            Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:-1")
+            Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-:1")
+            Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
 
 class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
     def test_binlog_checkpoint_event(self):

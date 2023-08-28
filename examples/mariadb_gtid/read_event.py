@@ -1,7 +1,7 @@
 import pymysql
 
 from pymysqlreplication import BinLogStreamReader, gtid
-from pymysqlreplication.event import GtidEvent, RotateEvent, MariadbGtidEvent, QueryEvent,MariadbAnnotateRowsEvent, MariadbBinLogCheckPointEvent
+from pymysqlreplication.event import RotateEvent, MariadbGtidEvent, MariadbAnnotateRowsEvent, MariadbBinLogCheckPointEvent
 from pymysqlreplication.row_event import WriteRowsEvent, UpdateRowsEvent, DeleteRowsEvent
 
 MARIADB_SETTINGS = {
