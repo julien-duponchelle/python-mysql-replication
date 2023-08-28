@@ -1,8 +1,17 @@
 import pymysql
 
-from pymysqlreplication import BinLogStreamReader, gtid
-from pymysqlreplication.event import GtidEvent, RotateEvent, MariadbGtidEvent, QueryEvent,MariadbAnnotateRowsEvent, MariadbBinLogCheckPointEvent
-from pymysqlreplication.row_event import WriteRowsEvent, UpdateRowsEvent, DeleteRowsEvent
+from pymysqlreplication import BinLogStreamReader
+from pymysqlreplication.event import (
+    RotateEvent,
+    MariadbGtidEvent,
+    MariadbAnnotateRowsEvent,
+    MariadbBinLogCheckPointEvent,
+)
+from pymysqlreplication.row_event import (
+    WriteRowsEvent,
+    UpdateRowsEvent,
+    DeleteRowsEvent,
+)
 
 MARIADB_SETTINGS = {
     "host": "127.0.0.1",
