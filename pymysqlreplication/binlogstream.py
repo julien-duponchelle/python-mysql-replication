@@ -13,7 +13,8 @@ from .event import (
     XidEvent, GtidEvent, StopEvent, XAPrepareEvent,
     BeginLoadQueryEvent, ExecuteLoadQueryEvent,
     HeartbeatLogEvent, NotImplementedEvent, MariadbGtidEvent,
-    MariadbAnnotateRowsEvent, RandEvent, MariadbStartEncryptionEvent, RowsQueryLogEvent)
+    MariadbAnnotateRowsEvent, RandEvent, MariadbStartEncryptionEvent, RowsQueryLogEvent,
+    MariadbGtidListEvent, MariadbBinLogCheckPointEvent)
 from .exceptions import BinLogNotEnabled
 from .gtid import GtidSet
 from .packet import BinLogPacketWrapper
@@ -628,6 +629,8 @@ class BinLogStreamReader(object):
                 MariadbAnnotateRowsEvent,
                 RandEvent,
                 MariadbStartEncryptionEvent,
+                MariadbGtidListEvent,
+                MariadbBinLogCheckPointEvent
             ))
         if ignored_events is not None:
             for e in ignored_events:
@@ -655,9 +658,8 @@ class BinLogStreamReader(object):
                         information_schema.columns
                     WHERE
                         table_schema = %s AND table_name = %s
-                    ORDER BY ORDINAL_POSITION
                     """, (schema, table))
-                result = cur.fetchall()
+                result = sorted(cur.fetchall(), key=lambda x: x['ORDINAL_POSITION'])
                 cur.close()
 
                 return result
