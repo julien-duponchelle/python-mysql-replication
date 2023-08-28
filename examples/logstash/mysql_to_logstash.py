@@ -44,7 +44,7 @@ def main():
             elif isinstance(binlogevent, WriteRowsEvent):
                 event["action"] = "insert"
                 event = dict(event.items() + row["values"].items())
-            print json.dumps(event)
+            print(json.dumps(event))
             sys.stdout.flush()
 
 
