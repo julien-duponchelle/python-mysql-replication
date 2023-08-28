@@ -3,6 +3,7 @@
 import copy
 import platform
 import sys
+import json
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
