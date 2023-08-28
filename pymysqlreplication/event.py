@@ -45,8 +45,10 @@ class BinLogEvent(object):
 
     def dump(self):
         print("=== %s ===" % (self.__class__.__name__))
-        print("Date: %s" % (datetime.datetime.utcfromtimestamp(self.timestamp)
-                            .isoformat()))
+        print(
+            "Date: %s"
+            % (datetime.datetime.utcfromtimestamp(self.timestamp).isoformat())
+        )
         print("Log position: %d" % self.packet.log_pos)
         print("Event size: %d" % (self.event_size))
         print("Read bytes: %d" % (self.packet.read_bytes))
@@ -120,6 +122,7 @@ class MariadbGtidEvent(BinLogEvent):
         print("Flags:", self.flags)
         print("GTID:", self.gtid)
 
+
 class MariadbBinLogCheckPointEvent(BinLogEvent):
     """
     Represents a checkpoint in a binlog event in MariaDB.
@@ -132,13 +135,15 @@ class MariadbBinLogCheckPointEvent(BinLogEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(MariadbBinLogCheckPointEvent, self).__init__(from_packet, event_size, table_map, ctl_connection,
-                                                           **kwargs)
+        super(MariadbBinLogCheckPointEvent, self).__init__(
+            from_packet, event_size, table_map, ctl_connection, **kwargs
+        )
         filename_length = self.packet.read_uint32()
         self.filename = self.packet.read(filename_length).decode()
 
     def _dump(self):
-        print('Filename:', self.filename)
+        print("Filename:", self.filename)
+
 
 class MariadbAnnotateRowsEvent(BinLogEvent):
     """
@@ -158,6 +163,7 @@ class MariadbAnnotateRowsEvent(BinLogEvent):
         super()._dump()
         print("SQL statement :", self.sql_statement)
 
+
 class MariadbGtidListEvent(BinLogEvent):
     """
     GTID List event
@@ -173,24 +179,39 @@ class MariadbGtidListEvent(BinLogEvent):
             gtid_seq_no: GTID sequence
             gtid: 'domain_id'+ 'server_id' + 'gtid_seq_no'
     """
-    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
 
-        super(MariadbGtidListEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(MariadbGtidListEvent, self).__init__(
+            from_packet, event_size, table_map, ctl_connection, **kwargs
+        )
 
         class MariadbGtidObejct(BinLogEvent):
             """
             Information class of elements in GTID list
             """
-            def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-                super(MariadbGtidObejct, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+
+            def __init__(
+                self, from_packet, event_size, table_map, ctl_connection, **kwargs
+            ):
+                super(MariadbGtidObejct, self).__init__(
+                    from_packet, event_size, table_map, ctl_connection, **kwargs
+                )
                 self.domain_id = self.packet.read_uint32()
                 self.server_id = self.packet.read_uint32()
                 self.gtid_seq_no = self.packet.read_uint64()
-                self.gtid = "%d-%d-%d" % (self.domain_id, self.server_id, self.gtid_seq_no)
-
+                self.gtid = "%d-%d-%d" % (
+                    self.domain_id,
+                    self.server_id,
+                    self.gtid_seq_no,
+                )
 
         self.gtid_length = self.packet.read_uint32()
-        self.gtid_list = [MariadbGtidObejct(from_packet, event_size, table_map, ctl_connection, **kwargs) for i in range(self.gtid_length)]
+        self.gtid_list = [
+            MariadbGtidObejct(
+                from_packet, event_size, table_map, ctl_connection, **kwargs
+            )
+            for i in range(self.gtid_length)
+        ]
 
 
 class RotateEvent(BinLogEvent):

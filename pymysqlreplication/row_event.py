@@ -89,7 +89,9 @@ class RowsEvent(BinLogEvent):
         self.columns = self.table_map[self.table_id].columns
         column_schemas = self.table_map[self.table_id].column_schemas
 
-        if len(column_schemas) == 0:  # could not read the table metadata, probably already dropped
+        if (
+            len(column_schemas) == 0
+        ):  # could not read the table metadata, probably already dropped
             self.complete = False
             if self._fail_on_table_metadata_unavailable:
                 raise TableMetadataUnavailableError(self.table)
@@ -121,18 +123,33 @@ class RowsEvent(BinLogEvent):
             fixed_binary_length = (
                 self.table_map[self.table_id].columns[i].fixed_binary_length
             )
-            values[name] = self.__read_values_name(column, null_bitmap, null_bitmap_index,
-                                                   cols_bitmap, unsigned, zerofill,
-                                                   fixed_binary_length, i)
+            values[name] = self.__read_values_name(
+                column,
+                null_bitmap,
+                null_bitmap_index,
+                cols_bitmap,
+                unsigned,
+                zerofill,
+                fixed_binary_length,
+                i,
+            )
 
             if BitGet(cols_bitmap, i) != 0:
                 null_bitmap_index += 1
 
         return values
 
-    def __read_values_name(self, column, null_bitmap, null_bitmap_index, cols_bitmap, unsigned, zerofill,
-                           fixed_binary_length, i):
-
+    def __read_values_name(
+        self,
+        column,
+        null_bitmap,
+        null_bitmap_index,
+        cols_bitmap,
+        unsigned,
+        zerofill,
+        fixed_binary_length,
+        i,
+    ):
         if BitGet(cols_bitmap, i) == 0:
             return None
 
@@ -143,7 +160,7 @@ class RowsEvent(BinLogEvent):
             if unsigned:
                 ret = struct.unpack("<B", self.packet.read(1))[0]
                 if zerofill:
-                    ret = format(ret, '03d')
+                    ret = format(ret, "03d")
                 return ret
             else:
                 return struct.unpack("<b", self.packet.read(1))[0]
@@ -151,7 +168,7 @@ class RowsEvent(BinLogEvent):
             if unsigned:
                 ret = struct.unpack("<H", self.packet.read(2))[0]
                 if zerofill:
-                    ret = format(ret, '05d')
+                    ret = format(ret, "05d")
                 return ret
             else:
                 return struct.unpack("<h", self.packet.read(2))[0]
@@ -159,7 +176,7 @@ class RowsEvent(BinLogEvent):
             if unsigned:
                 ret = struct.unpack("<I", self.packet.read(4))[0]
                 if zerofill:
-                    ret = format(ret, '010d')
+                    ret = format(ret, "010d")
                 return ret
             else:
                 return struct.unpack("<i", self.packet.read(4))[0]
@@ -167,7 +184,7 @@ class RowsEvent(BinLogEvent):
             if unsigned:
                 ret = self.packet.read_uint24()
                 if zerofill:
-                    ret = format(ret, '08d')
+                    ret = format(ret, "08d")
                 return ret
             else:
                 return self.packet.read_int24()
@@ -175,16 +192,19 @@ class RowsEvent(BinLogEvent):
             return struct.unpack("<f", self.packet.read(4))[0]
         elif column.type == FIELD_TYPE.DOUBLE:
             return struct.unpack("<d", self.packet.read(8))[0]
-        elif column.type == FIELD_TYPE.VARCHAR or \
-                column.type == FIELD_TYPE.STRING:
-            ret = self.__read_string(2, column) if column.max_length > 255 else self.__read_string(1, column)
+        elif column.type == FIELD_TYPE.VARCHAR or column.type == FIELD_TYPE.STRING:
+            ret = (
+                self.__read_string(2, column)
+                if column.max_length > 255
+                else self.__read_string(1, column)
+            )
 
             if fixed_binary_length and len(ret) < fixed_binary_length:
                 # Fixed-length binary fields are stored in the binlog
                 # without trailing zeros and must be padded with zeros up
                 # to the specified length at read time.
                 nr_pad = fixed_binary_length - len(ret)
-                ret += b'\x00' * nr_pad
+                ret += b"\x00" * nr_pad
             return ret
         elif column.type == FIELD_TYPE.NEWDECIMAL:
             return self.__read_new_decimal(column)
@@ -197,8 +217,7 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.DATE:
             return self.__read_date()
         elif column.type == FIELD_TYPE.TIMESTAMP:
-            return datetime.datetime.fromtimestamp(
-                self.packet.read_uint32())
+            return datetime.datetime.fromtimestamp(self.packet.read_uint32())
 
         # For new date format:
         elif column.type == FIELD_TYPE.DATETIME2:
@@ -207,40 +226,42 @@ class RowsEvent(BinLogEvent):
             return self.__read_time2(column)
         elif column.type == FIELD_TYPE.TIMESTAMP2:
             return self.__add_fsp_to_time(
-                datetime.datetime.fromtimestamp(
-                    self.packet.read_int_be_by_size(4)), column)
+                datetime.datetime.fromtimestamp(self.packet.read_int_be_by_size(4)),
+                column,
+            )
         elif column.type == FIELD_TYPE.LONGLONG:
             if unsigned:
                 ret = self.packet.read_uint64()
                 if zerofill:
-                    ret = format(ret, '020d')
+                    ret = format(ret, "020d")
                 return ret
             else:
                 return self.packet.read_int64()
         elif column.type == FIELD_TYPE.YEAR:
             return self.packet.read_uint8() + 1900
         elif column.type == FIELD_TYPE.ENUM:
-            return column.enum_values[
-                self.packet.read_uint_by_size(column.size)]
+            return column.enum_values[self.packet.read_uint_by_size(column.size)]
         elif column.type == FIELD_TYPE.SET:
             # We read set columns as a bitmap telling us which options
             # are enabled
             bit_mask = self.packet.read_uint_by_size(column.size)
-            return set(
-                val for idx, val in enumerate(column.set_values)
-                if bit_mask & 2 ** idx
-            ) or None
+            return (
+                set(
+                    val
+                    for idx, val in enumerate(column.set_values)
+                    if bit_mask & 2**idx
+                )
+                or None
+            )
 
         elif column.type == FIELD_TYPE.BIT:
             return self.__read_bit(column)
         elif column.type == FIELD_TYPE.GEOMETRY:
-            return self.packet.read_length_coded_pascal_string(
-                column.length_size)
+            return self.packet.read_length_coded_pascal_string(column.length_size)
         elif column.type == FIELD_TYPE.JSON:
             return self.packet.read_binary_json(column.length_size)
         else:
-            raise NotImplementedError("Unknown MySQL column type: %d" %
-                                      (column.type))
+            raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
 
     def __add_fsp_to_time(self, time, column):
         """Read and add the fractional part of time
