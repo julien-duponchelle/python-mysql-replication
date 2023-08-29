@@ -213,9 +213,11 @@ class StopEvent(BinLogEvent):
 
 class XidEvent(BinLogEvent):
     """A COMMIT event
+    Generated when COMMIT of a transaction that modifies one or more tables of an XA-capable storage engine occurs.
 
-    Attributes:
-        xid: Transaction ID for 2PC
+    For more information : `[see details] <https://mariadb.com/kb/en/xid_event/>`_. 
+
+    :ivar xid: uint - Transaction ID for 2 Phrase Commit.
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
