@@ -19,6 +19,7 @@ from .event import (
 from .exceptions import BinLogNotEnabled
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
+
 try:
     from pymysql.constants.COMMAND import COM_BINLOG_DUMP_GTID
 except ImportError:
@@ -32,7 +33,6 @@ MYSQL_EXPECTED_ERROR_CODES = [2013, 2006]
 
 
 class ReportSlave(object):
-
     """Represent the values that you may report when connecting as a slave
     to a master. SHOW SLAVE HOSTS related"""
 
@@ -67,7 +67,7 @@ class ReportSlave(object):
             self.hostname = value
 
     def __repr__(self):
-        return '<ReportSlave hostname=%s username=%s password=%s port=%d>' %\
+        return '<ReportSlave hostname=%s username=%s password=%s port=%d>' % \
             (self.hostname, self.username, self.password, self.port)
 
     def encoded(self, server_id, master_id=0):
@@ -122,7 +122,6 @@ class ReportSlave(object):
 
 
 class BinLogStreamReader(object):
-
     """Connect to replication stream and read event
     """
     report_slave = None
@@ -142,7 +141,7 @@ class BinLogStreamReader(object):
                  slave_heartbeat=None,
                  is_mariadb=False,
                  ignore_decode_errors=False,
-                 parma_logging=True,):
+                 parma_logging=True, ):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -313,7 +312,7 @@ class BinLogStreamReader(object):
                                                                4294967))
             # If heartbeat is too low, the connection will disconnect before,
             # this is also the behavior in mysql
-            heartbeat = float(min(net_timeout/2., self.slave_heartbeat))
+            heartbeat = float(min(net_timeout / 2., self.slave_heartbeat))
             if heartbeat > 4294967:
                 heartbeat = 4294967
 
@@ -346,7 +345,7 @@ class BinLogStreamReader(object):
                 cur.close()
 
             prelude = struct.pack('<i', len(self.log_file) + 11) \
-                + bytes(bytearray([COM_BINLOG_DUMP]))
+                      + bytes(bytearray([COM_BINLOG_DUMP]))
 
             if self.__resume_stream:
                 prelude += struct.pack('<I', self.log_pos)
@@ -374,7 +373,7 @@ class BinLogStreamReader(object):
                         4 +  # binlog pos
                         2 +  # binlog flags
                         4 +  # slave server_id,
-                        4    # requested binlog file name , set it to empty
+                        4  # requested binlog file name , set it to empty
                 )
 
                 prelude = struct.pack('<i', header_size) + bytes(bytearray([COM_BINLOG_DUMP]))
@@ -385,7 +384,7 @@ class BinLogStreamReader(object):
                 flags = 0
                 if not self.__blocking:
                     flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
-                
+
                 # binlog flags
                 prelude += struct.pack('<H', flags)
 
@@ -394,7 +393,7 @@ class BinLogStreamReader(object):
 
                 # empty_binlog_name (4 bytes)
                 prelude += b'\0\0\0\0'
-                
+
             else:
                 # Format for mysql packet master_auto_position
                 #
@@ -441,8 +440,8 @@ class BinLogStreamReader(object):
                                8 +  # binlog_pos_info_size
                                4)  # encoded_data_size
 
-                prelude = b'' + struct.pack('<i', header_size + encoded_data_size)\
-                    + bytes(bytearray([COM_BINLOG_DUMP_GTID]))
+                prelude = b'' + struct.pack('<i', header_size + encoded_data_size) \
+                          + bytes(bytearray([COM_BINLOG_DUMP_GTID]))
 
                 flags = 0
                 if not self.__blocking:
@@ -587,6 +586,7 @@ class BinLogStreamReader(object):
         if only_events is not None:
             events = set(only_events)
         else:
+            a = QueryEvent
             events = set((
                 QueryEvent,
                 RotateEvent,
@@ -604,7 +604,7 @@ class BinLogStreamReader(object):
                 HeartbeatLogEvent,
                 NotImplementedEvent,
                 MariadbGtidEvent
-                ))
+            ))
         if ignored_events is not None:
             for e in ignored_events:
                 events.remove(e)
@@ -642,16 +642,24 @@ class BinLogStreamReader(object):
                     continue
                 else:
                     raise error
-                
+
     def __log_valid_parameters(self):
-        ignore_list = ["allowed_events_in_packet","table_map"]
-        
-        for parameter,value in self.__dict__.items():
-            if parameter.startswith("_BinLogStreamReader__") :
-                parameter = parameter.replace("_BinLogStreamReader__","")
-            if value != None and value != False and parameter not in ignore_list:
-                comment = "Set parameter - {} , value - {}".format(parameter,value)
-                logging.info(comment)
+        # ignore_list = ["allowed_events_in_packet", "table_map"]
+        logging.basicConfig(level=logging.INFO)
+        for parameter, value in self.__dict__.items():
+            if not value:
+                continue
+            if parameter.startswith("_BinLogStreamReader__"):
+                parameter = parameter.replace("_BinLogStreamReader__", "")
+            if type(value) == bool or type(value) == int:
+                comment = f"{parameter} is {value}"
+            elif type(value) == frozenset:
+                string_list = [str(item).split()[-1][:-2].split('.')[2] for item in value]
+                items = ", ".join(string_list)
+                comment = f"{parameter}: [{items}]"
+            else:
+                comment = "Set parameter - {}, value - {}".format(parameter, value)
+            logging.info(comment)
 
     def __iter__(self):
         return iter(self.fetchone, None)
