@@ -59,7 +59,7 @@ class GtidEvent(BinLogEvent):
 
     :ivar commit_flag: 1byte - 00000001 = Transaction may have changes logged with SBR.
             In 5.6, 5.7.0-5.7.18, and 8.0.0-8.0.1, this flag is always set. Starting in 5.7.19 and 8.0.2, this flag is cleared if the transaction only contains row events. It is set if any part of the transaction is written in statement format.
-    :ivar sid: 	16 byte sequence - UUID representing the SID
+    :ivar sid: 16 byte sequence - UUID representing the SID
     :ivar gno: int - Group number, second component of GTID.
     :ivar lt_type: int(1 byte) - The type of logical timestamp used in the logical clock fields.
     :ivar last_committed: Store the transaction's commit parent sequence_number
@@ -313,7 +313,7 @@ class HeartbeatLogEvent(BinLogEvent):
     This is because to make the slave bump its position so that 
     if a disconnection occurs, the slave will only reconnects from the lasted skipped position. (Baloo's idea)
 
-    (see Binlog_sender::send_events in sql/rpl_binlog_sender.cc).  
+    (see Binlog_sender::send_events in sql/rpl_binlog_sender.cc)
 
     Warning:
     That makes 106 bytes of data for skipped event in the binlog. 
@@ -543,7 +543,7 @@ class IntvarEvent(BinLogEvent):
     This event will be created just before a QueryEvent.
     
     :ivar type: int - 1 byte identifying the type of variable stored. 
-	Can be either LAST_INSERT_ID_EVENT (1) or INSERT_ID_EVENT (2).
+    Can be either LAST_INSERT_ID_EVENT (1) or INSERT_ID_EVENT (2).
     :ivar value: int - The value of the variable
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
@@ -649,7 +649,7 @@ class NotImplementedEvent(BinLogEvent):
     """
     Used as a temporary class for events that have not yet been implemented.
 
-	The event referencing this class skips parsing.
+    The event referencing this class skips parsing.
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(
