@@ -288,7 +288,7 @@ class XidEvent(BinLogEvent):
 
     For more information : `[see details] <https://mariadb.com/kb/en/xid_event/>`_. 
 
-    :ivar xid: uint - Transaction ID for 2 Phrase Commit.
+    :ivar xid: uint - Transaction ID for 2 Phase Commit.
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
