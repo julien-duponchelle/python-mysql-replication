@@ -28,9 +28,17 @@ jobs:
         run: |
           docker compose create
           docker compose start
-          # Wait for the services to accept connections,
-          # TODO: do that smarter, poll connection attempt until it succeeds
-          sleep 30
+          echo "wait mysql server"
+        
+          while :
+          do
+            if mysql -h 127.0.0.1 --user=root --execute "SELECT version();" 2>&1 >/dev/null && mysql -h 127.0.0.1 --port=3307  --user=root --execute "SELECT version();" 2>&1 >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          
+          echo "run pytest"
 
       - name: Install dependencies
         run: |

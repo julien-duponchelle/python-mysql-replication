@@ -39,7 +39,7 @@ class BinLogEvent(object):
 
     def dump(self):
         print("=== %s ===" % (self.__class__.__name__))
-        print("Date: %s" % (datetime.datetime.fromtimestamp(self.timestamp)
+        print("Date: %s" % (datetime.datetime.utcfromtimestamp(self.timestamp)
                             .isoformat()))
         print("Log position: %d" % self.packet.log_pos)
         print("Event size: %d" % (self.event_size))
@@ -66,7 +66,7 @@ class GtidEvent(BinLogEvent):
     :ivar sequence_number: The transaction's logical timestamp assigned at prepare phase
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(GtidEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
 
         self.commit_flag = struct.unpack("!B", self.packet.read(1))[0] == 1
@@ -114,7 +114,7 @@ class MariadbGtidEvent(BinLogEvent):
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
 
-        super(MariadbGtidEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+        super().__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
 
         self.server_id = self.packet.server_id
         self.gtid_seq_no = self.packet.read_uint64()
@@ -123,9 +123,80 @@ class MariadbGtidEvent(BinLogEvent):
         self.gtid = "%d-%d-%d" % (self.domain_id, self.server_id, self.gtid_seq_no)
 
     def _dump(self):
-        super(MariadbGtidEvent, self)._dump()
+        super()._dump()
         print("Flags:", self.flags)
         print('GTID:', self.gtid)
+
+class MariadbBinLogCheckPointEvent(BinLogEvent):
+    """
+    Represents a checkpoint in a binlog event in MariaDB.
+
+    More details are available in the MariaDB Knowledge Base:
+    https://mariadb.com/kb/en/binlog_checkpoint_event/
+
+    :ivar filename_length:  int - The length of the filename.
+    :ivar filename: str - The name of the file saved at the checkpoint.
+    """
+
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(MariadbBinLogCheckPointEvent, self).__init__(from_packet, event_size, table_map, ctl_connection,
+                                                           **kwargs)
+        filename_length = self.packet.read_uint32()
+        self.filename = self.packet.read(filename_length).decode()
+
+    def _dump(self):
+        print('Filename:', self.filename)
+
+class MariadbAnnotateRowsEvent(BinLogEvent):
+    """
+    Annotate rows event 
+    If you want to check this binlog, change the value of the flag(line 382 of the 'binlogstream.py') option to 2 
+    https://mariadb.com/kb/en/annotate_rows_event/
+
+    Attributes:
+        sql_statement: The SQL statement
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super().__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+        self.sql_statement = self.packet.read(event_size)
+
+    def _dump(self):
+        super()._dump()
+        print("SQL statement :", self.sql_statement)
+
+class MariadbGtidListEvent(BinLogEvent):
+    """
+    GTID List event
+    https://mariadb.com/kb/en/gtid_list_event/
+
+    Attributes:
+        gtid_length: Number of GTIDs
+        gtid_list: list of 'MariadbGtidObejct'
+
+        'MariadbGtidObejct' Attributes:
+            domain_id: Replication Domain ID
+            server_id: Server_ID
+            gtid_seq_no: GTID sequence
+            gtid: 'domain_id'+ 'server_id' + 'gtid_seq_no'
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+
+        super(MariadbGtidListEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+
+        class MariadbGtidObejct(BinLogEvent):
+            """
+            Information class of elements in GTID list
+            """
+            def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+                super(MariadbGtidObejct, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+                self.domain_id = self.packet.read_uint32()
+                self.server_id = self.packet.read_uint32()
+                self.gtid_seq_no = self.packet.read_uint64()
+                self.gtid = "%d-%d-%d" % (self.domain_id, self.server_id, self.gtid_seq_no)
+
+
+        self.gtid_length = self.packet.read_uint32()
+        self.gtid_list = [MariadbGtidObejct(from_packet, event_size, table_map, ctl_connection, **kwargs) for i in range(self.gtid_length)]
 
 
 class RotateEvent(BinLogEvent):
@@ -138,7 +209,7 @@ class RotateEvent(BinLogEvent):
     :ivar next_binlog: str - Name of next binlog file
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(RotateEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
         self.position = struct.unpack('<Q', self.packet.read(8))[0]
         self.next_binlog = self.packet.read(event_size - 8).decode()
@@ -161,7 +232,7 @@ class XAPrepareEvent(BinLogEvent):
     :ivar xid: serialized XID representation of XA transaction (xid_gtrid + xid_bqual)
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(XAPrepareEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
 
         # one_phase is True: XA COMMIT ... ONE PHASE
@@ -195,7 +266,7 @@ class FormatDescriptionEvent(BinLogEvent):
     """
     
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(FormatDescriptionEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
         self.binlog_version = struct.unpack('<H', self.packet.read(2))
         self.mysql_version_str = self.packet.read(50).rstrip(b'\0').decode()
@@ -221,12 +292,12 @@ class XidEvent(BinLogEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(XidEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                        ctl_connection, **kwargs)
         self.xid = struct.unpack('<Q', self.packet.read(8))[0]
 
     def _dump(self):
-        super(XidEvent, self)._dump()
+        super()._dump()
         print("Transaction ID: %d" % (self.xid))
 
 
@@ -255,13 +326,13 @@ class HeartbeatLogEvent(BinLogEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(HeartbeatLogEvent, self).__init__(from_packet, event_size,
+        super().__init__(from_packet, event_size,
                                                 table_map, ctl_connection,
                                                 **kwargs)
         self.ident = self.packet.read(event_size).decode()
 
     def _dump(self):
-        super(HeartbeatLogEvent, self)._dump()
+        super()._dump()
         print("Current binlog: %s" % (self.ident))
 
 
@@ -280,7 +351,7 @@ class QueryEvent(BinLogEvent):
     :ivar query: str - The query executed.
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(QueryEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                          ctl_connection, **kwargs)
 
         # Post-header
@@ -306,7 +377,7 @@ class QueryEvent(BinLogEvent):
         #string[EOF]    query
 
     def _dump(self):
-        super(QueryEvent, self)._dump()
+        super()._dump()
         print("Schema: %s" % (self.schema))
         print("Execution time: %d" % (self.execution_time))
         print("Query: %s" % (self.query))
@@ -406,7 +477,7 @@ class BeginLoadQueryEvent(BinLogEvent):
     :ivar block-data: data block about "LOAD DATA INFILE"
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(BeginLoadQueryEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                                      ctl_connection, **kwargs)
 
         # Payload
@@ -414,7 +485,7 @@ class BeginLoadQueryEvent(BinLogEvent):
         self.block_data = self.packet.read(event_size - 4)
 
     def _dump(self):
-        super(BeginLoadQueryEvent, self)._dump()
+        super()._dump()
         print("File id: %d" % (self.file_id))
         print("Block data: %s" % (self.block_data))
 
@@ -437,7 +508,7 @@ class ExecuteLoadQueryEvent(BinLogEvent):
     :ivar dup_handling_flags: int - How LOAD DATA INFILE handles duplicated data (0x0: error, 0x1: ignore, 0x2: replace)
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(ExecuteLoadQueryEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                                         ctl_connection, **kwargs)
 
         # Post-header
@@ -476,7 +547,7 @@ class IntvarEvent(BinLogEvent):
     :ivar value: int - The value of the variable
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(IntvarEvent, self).__init__(from_packet, event_size, table_map,
+        super().__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
 
         # Payload
@@ -484,9 +555,94 @@ class IntvarEvent(BinLogEvent):
         self.value = self.packet.read_uint32()
 
     def _dump(self):
-        super(IntvarEvent, self)._dump()
+        super()._dump()
         print("type: %d" % (self.type))
         print("Value: %d" % (self.value))
+
+
+class RandEvent(BinLogEvent):
+    """
+    RandEvent is generated every time a statement uses the RAND() function.
+    Indicates the seed values to use for generating a random number with RAND() in the next statement.
+
+    RandEvent only works in statement-based logging (need to set binlog_format as 'STATEMENT')
+    and only works when the seed number is not specified.
+
+    :ivar seed1: int - value for the first seed
+    :ivar seed2: int - value for the second seed
+    """
+    
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super().__init__(from_packet, event_size, table_map,
+                                        ctl_connection, **kwargs)
+        # Payload
+        self._seed1 = self.packet.read_uint64()
+        self._seed2 = self.packet.read_uint64()
+
+    @property
+    def seed1(self):
+        """Get the first seed value"""
+        return self._seed1
+
+    @property
+    def seed2(self):
+        """Get the second seed value"""
+        return self._seed2
+
+    def _dump(self):
+        super()._dump()
+        print("seed1: %d" % (self.seed1))
+        print("seed2: %d" % (self.seed2))
+
+
+class MariadbStartEncryptionEvent(BinLogEvent):
+    """
+    Since MariaDB 10.1.7, 
+    the START_ENCRYPTION event is written to every binary log file 
+    if encrypt_binlog is set to ON. Prior to enabling this setting, 
+    additional configuration steps are required in MariaDB. 
+    (Link: https://mariadb.com/kb/en/encrypting-binary-logs/)
+
+    This event is written just once, after the Format Description event
+
+    Attributes:
+        schema: The Encryption scheme, always set to 1 for system files.
+        key_version: The Encryption key version.
+        nonce: Nonce (12 random bytes) of current binlog file.
+    """
+
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super().__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+
+        self.schema = self.packet.read_uint8()
+        self.key_version = self.packet.read_uint32()
+        self.nonce = self.packet.read(12)
+
+    def _dump(self):
+        print("Schema: %d" % self.schema)
+        print("Key version: %d" % self.key_version)
+        print(f"Nonce: {self.nonce}")
+
+
+class RowsQueryLogEvent(BinLogEvent):
+    """
+    Record original query for the row events in Row-Based Replication
+
+    More details are available in the MySQL Knowledge Base:
+    https://dev.mysql.com/doc/dev/mysql-server/latest/classRows__query__log__event.html
+
+    :ivar query_length: uint - Length of the SQL statement
+    :ivar query: str - The executed SQL statement
+    """
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super(RowsQueryLogEvent, self).__init__(from_packet, event_size, table_map,
+                                          ctl_connection, **kwargs)
+        self.query_length = self.packet.read_uint8()
+        self.query = self.packet.read(self.query_length).decode('utf-8')
+    def dump(self):
+        print("=== %s ===" % (self.__class__.__name__))
+        print("Query length: %d" % self.query_length)
+        print("Query: %s" % self.query)
 
 
 class NotImplementedEvent(BinLogEvent):
@@ -496,6 +652,6 @@ class NotImplementedEvent(BinLogEvent):
 	The event referencing this class skips parsing.
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(NotImplementedEvent, self).__init__(
+        super().__init__(
             from_packet, event_size, table_map, ctl_connection, **kwargs)
         self.packet.advance(event_size)
