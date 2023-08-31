@@ -143,7 +143,7 @@ class BinLogStreamReader(object):
                  slave_heartbeat=None,
                  is_mariadb=False,
                  annotate_rows_event=False,
-                 ignore_decode_errors=False
+                 ignore_decode_errors=False,
                  parma_logging=True, ):
         """
         Attributes:
