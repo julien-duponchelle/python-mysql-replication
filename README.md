@@ -4,7 +4,7 @@ python-mysql-replication
 <a href="https://travis-ci.org/noplay/python-mysql-replication"><img src="https://travis-ci.org/noplay/python-mysql-replication.svg?branch=master"></a>&nbsp;
 <a href="https://pypi.python.org/pypi/mysql-replication"><img src="http://img.shields.io/pypi/dm/mysql-replication.svg"></a>
 
-Pure Python Implementation of MySQL replication protocol build on top of PyMYSQL. This allow you to receive event like insert, update, delete with their datas and raw SQL queries.
+Pure Python Implementation of MySQL replication protocol build on top of PyMYSQL. This allows you to receive event like insert, update, delete with their datas and raw SQL queries.
 
 Use cases
 ===========
@@ -56,6 +56,14 @@ Limitations
 
 https://python-mysql-replication.readthedocs.org/en/latest/limitations.html
 
+Featured
+=============
+
+[Data Pipelines Pocket Reference](https://www.oreilly.com/library/view/data-pipelines-pocket/9781492087823/) (by James Densmore, O'Reilly): Introduced and exemplified in Chapter 4: Data Ingestion: Extracting Data.
+
+[Streaming Changes in a Database with Amazon Kinesis](https://aws.amazon.com/blogs/database/streaming-changes-in-a-database-with-amazon-kinesis/) (by Emmanuel Espina, Amazon Web Services)
+
+
 Projects using this library
 ===========================
 
@@ -79,6 +87,7 @@ Projects using this library
 * MySQL to Kafka (https://github.com/scottpersinger/mysql-to-kafka/)
 * Aventri MySQL Monitor (https://github.com/aventri/mysql-monitor)
 * BitSwanPump: A real-time stream processor  (https://github.com/LibertyAces/BitSwanPump)
+* clickhouse-mysql-data-reader: https://github.com/Altinity/clickhouse-mysql-data-reader
 
 MySQL server settings
 =========================

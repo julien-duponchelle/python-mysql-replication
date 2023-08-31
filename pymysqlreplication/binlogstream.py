@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
 
-import pymysql
 import struct
 import logging
 from distutils.version import LooseVersion
 
+import pymysql
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE
 from pymysql.cursors import DictCursor
 
-from .packet import BinLogPacketWrapper
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT, FORMAT_DESCRIPTION_EVENT
-from .gtid import GtidSet
 from .event import (
     QueryEvent, RotateEvent, FormatDescriptionEvent,
     XidEvent, GtidEvent, StopEvent, XAPrepareEvent,
     BeginLoadQueryEvent, ExecuteLoadQueryEvent,
-    HeartbeatLogEvent, NotImplementedEvent, MariadbGtidEvent)
+    HeartbeatLogEvent, NotImplementedEvent, MariadbGtidEvent,
+    MariadbAnnotateRowsEvent, RandEvent, MariadbStartEncryptionEvent, RowsQueryLogEvent,
+    MariadbGtidListEvent, MariadbBinLogCheckPointEvent)
 from .exceptions import BinLogNotEnabled
+from .gtid import GtidSet
+from .packet import BinLogPacketWrapper
 from .row_event import (
     UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent)
 
@@ -140,7 +142,8 @@ class BinLogStreamReader(object):
                  fail_on_table_metadata_unavailable=False,
                  slave_heartbeat=None,
                  is_mariadb=False,
-                 ignore_decode_errors=False,
+                 annotate_rows_event=False,
+                 ignore_decode_errors=False
                  parma_logging=True, ):
         """
         Attributes:
@@ -166,7 +169,8 @@ class BinLogStreamReader(object):
             skip_to_timestamp: Ignore all events until reaching specified
                                timestamp.
             report_slave: Report slave in SHOW SLAVE HOSTS.
-            slave_uuid: Report slave_uuid in SHOW SLAVE HOSTS.
+            slave_uuid: Report slave_uuid or replica_uuid in SHOW SLAVE HOSTS(MySQL 8.0.21-) or
+                        SHOW REPLICAS(MySQL 8.0.22+) depends on your MySQL version.
             fail_on_table_metadata_unavailable: Should raise exception if we
                                                 can't get table information on
                                                 row_events
@@ -178,6 +182,8 @@ class BinLogStreamReader(object):
                              for semantics
             is_mariadb: Flag to indicate it's a MariaDB server, used with auto_position
                     to point to Mariadb specific GTID.
+            annotate_rows_event: Parameter value to enable annotate rows event in mariadb,
+                    used with 'is_mariadb'
             ignore_decode_errors: If true, any decode errors encountered 
                                   when reading column data will be ignored.
         """
@@ -219,6 +225,7 @@ class BinLogStreamReader(object):
         self.auto_position = auto_position
         self.skip_to_timestamp = skip_to_timestamp
         self.is_mariadb = is_mariadb
+        self.__annotate_rows_event = annotate_rows_event
         if parma_logging:
             self.__log_valid_parameters()
 
@@ -252,6 +259,7 @@ class BinLogStreamReader(object):
             self._ctl_connection_settings = dict(self.__connection_settings)
         self._ctl_connection_settings["db"] = "information_schema"
         self._ctl_connection_settings["cursorclass"] = DictCursor
+        self._ctl_connection_settings["autocommit"] = True
         self._ctl_connection = self.pymysql_wrapper(**self._ctl_connection_settings)
         self._ctl_connection._get_table_information = self.__get_table_information
         self.__connected_ctl = True
@@ -298,12 +306,12 @@ class BinLogStreamReader(object):
         # we support it
         if self.__use_checksum:
             cur = self._stream_connection.cursor()
-            cur.execute("set @master_binlog_checksum= @@global.binlog_checksum")
+            cur.execute("SET @master_binlog_checksum= @@global.binlog_checksum")
             cur.close()
 
         if self.slave_uuid:
             cur = self._stream_connection.cursor()
-            cur.execute("set @slave_uuid= '%s'" % self.slave_uuid)
+            cur.execute("SET @slave_uuid = %s, @replica_uuid = %s", (self.slave_uuid, self.slave_uuid))
             cur.close()
 
         if self.slave_heartbeat:
@@ -319,7 +327,7 @@ class BinLogStreamReader(object):
             # master_heartbeat_period is nanoseconds
             heartbeat = int(heartbeat * 1000000000)
             cur = self._stream_connection.cursor()
-            cur.execute("set @master_heartbeat_period= %d" % heartbeat)
+            cur.execute("SET @master_heartbeat_period= %d" % heartbeat)
             cur.close()
 
         # When replicating from Mariadb 10.6.12 using binlog coordinates, a slave capability < 4 triggers a bug in
@@ -333,67 +341,41 @@ class BinLogStreamReader(object):
         self._register_slave()
 
         if not self.auto_position:
-            # only when log_file and log_pos both provided, the position info is
-            # valid, if not, get the current position from master
-            if self.log_file is None or self.log_pos is None:
-                cur = self._stream_connection.cursor()
-                cur.execute("SHOW MASTER STATUS")
-                master_status = cur.fetchone()
-                if master_status is None:
-                    raise BinLogNotEnabled()
-                self.log_file, self.log_pos = master_status[:2]
-                cur.close()
-
-            prelude = struct.pack('<i', len(self.log_file) + 11) \
-                      + bytes(bytearray([COM_BINLOG_DUMP]))
-
-            if self.__resume_stream:
-                prelude += struct.pack('<I', self.log_pos)
-            else:
-                prelude += struct.pack('<I', 4)
-
-            flags = 0
-            if not self.__blocking:
-                flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
-            prelude += struct.pack('<H', flags)
-
-            prelude += struct.pack('<I', self.__server_id)
-            prelude += self.log_file.encode()
-        else:
             if self.is_mariadb:
-                # https://mariadb.com/kb/en/5-slave-registration/
-                cur = self._stream_connection.cursor()
-                cur.execute("SET @slave_connect_state='%s'" % self.auto_position)
-                cur.execute("SET @slave_gtid_strict_mode=1")
-                cur.execute("SET @slave_gtid_ignore_duplicates=0")
-                cur.close()
+                prelude = self.__set_mariadb_settings()
+            else:
+                # only when log_file and log_pos both provided, the position info is
+                # valid, if not, get the current position from master
+                if self.log_file is None or self.log_pos is None:
+                    cur = self._stream_connection.cursor()
+                    cur.execute("SHOW MASTER STATUS")
+                    master_status = cur.fetchone()
+                    if master_status is None:
+                        raise BinLogNotEnabled()
+                    self.log_file, self.log_pos = master_status[:2]
+                    cur.close()
 
-                # https://mariadb.com/kb/en/com_binlog_dump/
-                header_size = (
-                        4 +  # binlog pos
-                        2 +  # binlog flags
-                        4 +  # slave server_id,
-                        4  # requested binlog file name , set it to empty
-                )
+                prelude = struct.pack('<i', len(self.log_file) + 11) \
+                          + bytes(bytearray([COM_BINLOG_DUMP]))
 
-                prelude = struct.pack('<i', header_size) + bytes(bytearray([COM_BINLOG_DUMP]))
-
-                # binlog pos
-                prelude += struct.pack('<i', 4)
+                if self.__resume_stream:
+                    prelude += struct.pack('<I', self.log_pos)
+                else:
+                    prelude += struct.pack('<I', 4)
 
                 flags = 0
+
                 if not self.__blocking:
                     flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
 
-                # binlog flags
                 prelude += struct.pack('<H', flags)
 
-                # server id (4 bytes)
                 prelude += struct.pack('<I', self.__server_id)
 
-                # empty_binlog_name (4 bytes)
-                prelude += b'\0\0\0\0'
-
+                prelude += self.log_file.encode()
+        else:
+            if self.is_mariadb:
+                prelude = self.__set_mariadb_settings()
             else:
                 # Format for mysql packet master_auto_position
                 #
@@ -474,6 +456,48 @@ class BinLogStreamReader(object):
             self._stream_connection._write_bytes(prelude)
             self._stream_connection._next_seq_id = 1
         self.__connected_stream = True
+
+    def __set_mariadb_settings(self):
+        # https://mariadb.com/kb/en/5-slave-registration/
+        cur = self._stream_connection.cursor()
+        if self.auto_position != None:
+            cur.execute("SET @slave_connect_state='%s'" % self.auto_position)
+        cur.execute("SET @slave_gtid_strict_mode=1")
+        cur.execute("SET @slave_gtid_ignore_duplicates=0")
+        cur.close()
+
+        # https://mariadb.com/kb/en/com_binlog_dump/
+        header_size = (
+                4 +  # binlog pos
+                2 +  # binlog flags
+                4 +  # slave server_id,
+                4  # requested binlog file name , set it to empty
+        )
+
+        prelude = struct.pack('<i', header_size) + bytes(bytearray([COM_BINLOG_DUMP]))
+
+        # binlog pos
+        prelude += struct.pack('<i', 4)
+
+        flags = 0
+
+        # Enable annotate rows event 
+        if self.__annotate_rows_event:
+            flags |= 0x02  # BINLOG_SEND_ANNOTATE_ROWS_EVENT
+
+        if not self.__blocking:
+            flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
+
+        # binlog flags
+        prelude += struct.pack('<H', flags)
+
+        # server id (4 bytes)
+        prelude += struct.pack('<I', self.__server_id)
+
+        # empty_binlog_name (4 bytes)
+        prelude += b'\0\0\0\0'
+
+        return prelude
 
     def fetchone(self):
         while True:
@@ -603,7 +627,13 @@ class BinLogStreamReader(object):
                 TableMapEvent,
                 HeartbeatLogEvent,
                 NotImplementedEvent,
-                MariadbGtidEvent
+                MariadbGtidEvent,
+                RowsQueryLogEvent,
+                MariadbAnnotateRowsEvent,
+                RandEvent,
+                MariadbStartEncryptionEvent,
+                MariadbGtidListEvent,
+                MariadbBinLogCheckPointEvent
             ))
         if ignored_events is not None:
             for e in ignored_events:
@@ -631,10 +661,11 @@ class BinLogStreamReader(object):
                         information_schema.columns
                     WHERE
                         table_schema = %s AND table_name = %s
-                    ORDER BY ORDINAL_POSITION
                     """, (schema, table))
+                result = sorted(cur.fetchall(), key=lambda x: x['ORDINAL_POSITION'])
+                cur.close()
 
-                return cur.fetchall()
+                return result
             except pymysql.OperationalError as error:
                 code, message = error.args
                 if code in MYSQL_EXPECTED_ERROR_CODES:
