@@ -53,7 +53,18 @@ class BinLogEvent(object):
 
 
 class GtidEvent(BinLogEvent):
-    """GTID change in binlog event
+    """
+    GTID change in binlog event
+
+    For more information: `[GTID] <https://mariadb.com/kb/en/gtid/>`_ `[see also] <https://dev.mysql.com/doc/dev/mysql-server/latest/classbinary__log_1_1Gtid__event.html>`_ 
+
+    :ivar commit_flag: 1byte - 00000001 = Transaction may have changes logged with SBR.
+            In 5.6, 5.7.0-5.7.18, and 8.0.0-8.0.1, this flag is always set. Starting in 5.7.19 and 8.0.2, this flag is cleared if the transaction only contains row events. It is set if any part of the transaction is written in statement format.
+    :ivar sid: 16 byte sequence - UUID representing the SID
+    :ivar gno: int - Group number, second component of GTID.
+    :ivar lt_type: int(1 byte) - The type of logical timestamp used in the logical clock fields.
+    :ivar last_committed: Store the transaction's commit parent sequence_number
+    :ivar sequence_number: The transaction's logical timestamp assigned at prepare phase
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map,
@@ -70,7 +81,8 @@ class GtidEvent(BinLogEvent):
 
     @property
     def gtid(self):
-        """GTID = source_id:transaction_id
+        """
+        GTID = source_id:transaction_id
         Eg: 3E11FA47-71CA-11E1-9E33-C80AA9429562:23
         See: http://dev.mysql.com/doc/refman/5.6/en/replication-gtids-concepts.html"""
         nibbles = binascii.hexlify(self.sid).decode('ascii')
@@ -92,8 +104,15 @@ class GtidEvent(BinLogEvent):
 
 class MariadbGtidEvent(BinLogEvent):
     """
-    GTID change in binlog event in MariaDB
-    https://mariadb.com/kb/en/gtid_event/
+    GTID(Global Transaction Identifier) change in binlog event in MariaDB
+
+    For more information: `[see details] <https://mariadb.com/kb/en/gtid_event/>`_.
+
+    :ivar server_id: int - The ID of the server where the GTID event occurred.
+    :ivar gtid_seq_no: int - The sequence number of the GTID event.
+    :ivar domain_id: int - The domain ID associated with the GTID event.
+    :ivar flags: int - Flags related to the GTID event.
+    :ivar gtid: str - The Global Transaction Identifier in the format ‘domain_id-server_id-gtid_seq_no’.
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
 
@@ -117,7 +136,7 @@ class MariadbBinLogCheckPointEvent(BinLogEvent):
     More details are available in the MariaDB Knowledge Base:
     https://mariadb.com/kb/en/binlog_checkpoint_event/
 
-    :ivar filename_length:  int - The length of the filename.
+    :ivar filename_length: int - The length of the filename.
     :ivar filename: str - The name of the file saved at the checkpoint.
     """
 
@@ -136,8 +155,7 @@ class MariadbAnnotateRowsEvent(BinLogEvent):
     If you want to check this binlog, change the value of the flag(line 382 of the 'binlogstream.py') option to 2 
     https://mariadb.com/kb/en/annotate_rows_event/
 
-    Attributes:
-        sql_statement: The SQL statement
+    :ivar sql_statement: str - The SQL statement
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
@@ -152,15 +170,14 @@ class MariadbGtidListEvent(BinLogEvent):
     GTID List event
     https://mariadb.com/kb/en/gtid_list_event/
 
-    Attributes:
-        gtid_length: Number of GTIDs
-        gtid_list: list of 'MariadbGtidObejct'
+    :ivar gtid_length: int - Number of GTIDs
+    :ivar gtid_list: list - list of 'MariadbGtidObejct'
 
-        'MariadbGtidObejct' Attributes:
-            domain_id: Replication Domain ID
-            server_id: Server_ID
-            gtid_seq_no: GTID sequence
-            gtid: 'domain_id'+ 'server_id' + 'gtid_seq_no'
+    'MariadbGtidObejct' Attributes:
+        domain_id: Replication Domain ID
+        server_id: Server_ID
+        gtid_seq_no: GTID sequence
+        gtid: 'domain_id'+ 'server_id' + 'gtid_seq_no'
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
 
@@ -183,11 +200,14 @@ class MariadbGtidListEvent(BinLogEvent):
 
 
 class RotateEvent(BinLogEvent):
-    """Change MySQL bin log file
+    """
+    Change MySQL bin log file
+    Represents information for the slave to know the name of the binary log it is going to receive.
 
-    Attributes:
-        position: Position inside next binlog
-        next_binlog: Name of next binlog file
+    For more information: `[see details] <https://dev.mysql.com/doc/dev/mysql-server/latest/classbinary__log_1_1Rotate__event.html>`_.
+
+    :ivar position: int - Position inside next binlog
+    :ivar next_binlog: str - Name of next binlog file
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map,
@@ -203,12 +223,15 @@ class RotateEvent(BinLogEvent):
 
 
 class XAPrepareEvent(BinLogEvent):
-    """An XA prepare event is generated for a XA prepared transaction.
-    Like Xid_event it contains XID of the *prepared* transaction
+    """
+    An XA prepare event is generated for a XA prepared transaction.
+    Like Xid_event, it contains XID of the **prepared** transaction.
 
-    Attributes:
-        one_phase: current XA transaction commit method
-        xid: serialized XID representation of XA transaction
+    For more information: `[see details] <https://dev.mysql.com/doc/refman/8.0/en/xa-statements.html>`_.
+    
+    :ivar one_phase: current XA transaction commit method
+    :ivar xid_format_id: a number that identifies the format used by the gtrid and bqual values
+    :ivar xid: serialized XID representation of XA transaction (xid_gtrid + xid_bqual)
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map,
@@ -234,6 +257,16 @@ class XAPrepareEvent(BinLogEvent):
 
 
 class FormatDescriptionEvent(BinLogEvent):
+    """
+    Represents a Format Description Event in the MySQL binary log.
+    
+    This event is written at the start of a binary log file for binlog version 4.
+    It provides the necessary information to decode subsequent events in the file.
+
+    :ivar binlog_version: int - Version of the binary log format.
+    :ivar mysql_version_str: str - Server's MySQL version in string format.
+    """
+    
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
@@ -252,10 +285,12 @@ class StopEvent(BinLogEvent):
 
 
 class XidEvent(BinLogEvent):
-    """A COMMIT event
+    """
+    A COMMIT event generated when COMMIT of a transaction that modifies one or more tables of an XA-capable storage engine occurs.
 
-    Attributes:
-        xid: Transaction ID for 2PC
+    For more information: `[see details] <https://mariadb.com/kb/en/xid_event/>`_. 
+
+    :ivar xid: uint - Transaction ID for 2 Phase Commit.
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
@@ -270,22 +305,26 @@ class XidEvent(BinLogEvent):
 
 class HeartbeatLogEvent(BinLogEvent):
     """A Heartbeat event
-    Heartbeats are sent by the master only if there are no unsent events in the
-    binary log file for a period longer than the interval defined by
-    MASTER_HEARTBEAT_PERIOD connection setting.
+    Heartbeats are sent by the master.
+    Master sends heartbeats when there are no unsent events in the binary log file after certain period of time.
+    The interval is defined by MASTER_HEARTBEAT_PERIOD connection setting.
 
-    A mysql server will also play those to the slave for each skipped
-    events in the log. I (baloo) believe the intention is to make the slave
-    bump its position so that if a disconnection occurs, the slave only
-    reconnects from the last skipped position (see Binlog_sender::send_events
-    in sql/rpl_binlog_sender.cc). That makes 106 bytes of data for skipped
-    event in the binlog. *this is also the case with GTID replication*. To
-    mitigate such behavior, you are expected to keep the binlog small (see
-    max_binlog_size, defaults to 1G).
-    In any case, the timestamp is 0 (as in 1970-01-01T00:00:00).
+    `[see MASTER_HEARTBEAT_PERIOD] <https://dev.mysql.com/doc/refman/8.0/en/change-master-to.html>`_.
 
-    Attributes:
-        ident: Name of the current binlog
+    A Mysql server also does it for each skipped events in the log. 
+    This is because to make the slave bump its position so that 
+    if a disconnection occurs, the slave will only reconnects from the lasted skipped position. (Baloo's idea)
+
+    (see Binlog_sender::send_events in sql/rpl_binlog_sender.cc)
+
+    Warning:
+    That makes 106 bytes of data for skipped event in the binlog. 
+    *this is also the case with GTID replication*.  
+    To mitigate such behavior, you are expected to keep the binlog small 
+    (see max_binlog_size, defaults to 1G).  
+    In any case, the timestamp is 0 (as in 1970-01-01T00:00:00).  
+
+    :ivar ident: Name of the current binlog
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
@@ -300,8 +339,19 @@ class HeartbeatLogEvent(BinLogEvent):
 
 
 class QueryEvent(BinLogEvent):
-    '''This event is trigger when a query is run of the database.
-    Only replicated queries are logged.'''
+    """
+    QueryEvent is generated for each query that modified database.
+    If row-based replication is used, DML will not be logged as RowsEvent instead.
+
+    :ivar slave_proxy_id: int - The id of the thread that issued this statement on the master server
+    :ivar execution_time: int - The time from when the query started to when it was logged in the binlog, in seconds.
+    :ivar schema_length: int - The length of the name of the currently selected database.
+    :ivar error_code: int - Error code generated by the master
+    :ivar status_vars_length: int - The length of the status variable
+
+    :ivar schema: str - The name of the currently selected database.
+    :ivar query: str - The query executed.
+    """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map,
                                          ctl_connection, **kwargs)
@@ -341,8 +391,7 @@ class QueryEvent(BinLogEvent):
         Parsing logic from mysql-server source code edited by dongwook-chan
         https://github.com/mysql/mysql-server/blob/beb865a960b9a8a16cf999c323e46c5b0c67f21f/libbinlogevents/src/statement_events.cpp#L181-L336
 
-        Args:
-            key: key for status variable
+        :ivar key: key for status variable
         """
         if key == Q_FLAGS2_CODE:                      # 0x00
             self.flags2 = self.packet.read_uint32()
@@ -423,10 +472,11 @@ class QueryEvent(BinLogEvent):
 
 class BeginLoadQueryEvent(BinLogEvent):
     """
+    This event is written into the binary log file for LOAD DATA INFILE events
+    if the server variable binlog_mode was set to "STATEMENT".
 
-    Attributes:
-        file_id
-        block-data
+    :ivar file_id: the id of the file
+    :ivar block-data: data block about "LOAD DATA INFILE"
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map,
@@ -444,18 +494,20 @@ class BeginLoadQueryEvent(BinLogEvent):
 
 class ExecuteLoadQueryEvent(BinLogEvent):
     """
+    This event handles "LOAD DATA INFILE" statement.
+    LOAD DATA INFILE statement reads data from file and insert into database's table.
+    Since QueryEvent cannot explain this special action, ExecuteLoadQueryEvent is needed.
+    So it is similar to a QUERY_EVENT except that it has extra static fields.
 
-    Attributes:
-        slave_proxy_id
-        execution_time
-        schema_length
-        error_code
-        status_vars_length
-
-        file_id
-        start_pos
-        end_pos
-        dup_handling_flags
+    :ivar slave_proxy_id: int - The id of the thread that issued this statement on the master server
+    :ivar execution_time: int - The number of seconds that the statement took to execute
+    :ivar schema_length: int - The length of the default database's name when the statement was executed.
+    :ivar error_code: int - The error code resulting from execution of the statement on the master
+    :ivar status_vars_length: int - The length of the status variable block
+    :ivar file_id: int - The id of the loaded file
+    :ivar start_pos: int - Offset from the start of the statement to the beginning of the filename
+    :ivar end_pos: int - Offset from the start of the statement to the end of the filename
+    :ivar dup_handling_flags: int - How LOAD DATA INFILE handles duplicated data (0x0: error, 0x1: ignore, 0x2: replace)
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map,
@@ -489,10 +541,12 @@ class ExecuteLoadQueryEvent(BinLogEvent):
 
 class IntvarEvent(BinLogEvent):
     """
-
-    Attributes:
-        type
-        value
+    Stores the value of auto-increment variables.
+    This event will be created just before a QueryEvent.
+    
+    :ivar type: int - 1 byte identifying the type of variable stored. 
+    Can be either LAST_INSERT_ID_EVENT (1) or INSERT_ID_EVENT (2).
+    :ivar value: int - The value of the variable
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map,
@@ -594,6 +648,11 @@ class RowsQueryLogEvent(BinLogEvent):
 
 
 class NotImplementedEvent(BinLogEvent):
+    """
+    Used as a temporary class for events that have not yet been implemented.
+
+    The event referencing this class skips parsing.
+    """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(
             from_packet, event_size, table_map, ctl_connection, **kwargs)
