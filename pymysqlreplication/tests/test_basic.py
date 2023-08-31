@@ -1190,6 +1190,24 @@ class TestRowsQueryLogEvents(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         self.assertIsInstance(event, RowsQueryLogEvent)
 
+class TestLatin1(base.PyMySQLReplicationTestCase):
+
+    def setUp(self):
+        super().setUp(charset='latin1')
+
+    def test_query_event_latin1(self):
+        """
+        Ensure query events with a non-utf8 encoded query are parsed without errors.
+        """
+        self.stream = BinLogStreamReader(self.database, server_id=1024, only_events=[QueryEvent])
+        self.execute("CREATE TABLE test_latin1_ÖÆÛ (a INT)")
+        self.execute("COMMIT")
+        assert "ÖÆÛ".encode('latin-1') == b'\xd6\xc6\xdb'
+
+        event = self.stream.fetchone()
+        assert event.query.startswith("CREATE TABLE test")
+        assert event.query == r"CREATE TABLE test_latin1_\xd6\xc6\xdb (a INT)"
+
 
 if __name__ == "__main__":
     import unittest

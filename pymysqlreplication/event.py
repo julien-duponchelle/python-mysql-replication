@@ -324,8 +324,9 @@ class QueryEvent(BinLogEvent):
         self.schema = self.packet.read(self.schema_length)
         self.packet.advance(1)
 
-        self.query = self.packet.read(event_size - 13 - self.status_vars_length
-                                      - self.schema_length - 1).decode("utf-8")
+        query = self.packet.read(event_size - 13 - self.status_vars_length
+                                 - self.schema_length - 1)
+        self.query = query.decode("utf-8", errors='backslashreplace')
         #string[EOF]    query
 
     def _dump(self):
