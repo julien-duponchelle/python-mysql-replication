@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 
-import pymysql
 import copy
-
-from pymysql.cursors import Cursor
-
-from pymysqlreplication import BinLogStreamReader
 import os
 import sys
+import typing
+import pymysql
+
+from pymysqlreplication import BinLogStreamReader
 
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
     import unittest
+
+if typing.TYPE_CHECKING:
+    from pymysql.cursors import Cursor
 
 base = unittest.TestCase
 
@@ -30,7 +32,7 @@ class PyMySQLReplicationTestCase(base):
             "port": 3306,
             "use_unicode": True,
             "charset": "utf8",
-            "db": "pymysqlreplication_test"
+            "db": "pymysqlreplication_test",
         }
 
         self.conn_control = None
@@ -50,25 +52,27 @@ class PyMySQLReplicationTestCase(base):
         """Return the MySQL version of the server
         If version is 5.6.10-log the result is 5.6.10
         """
-        return self.execute("SELECT VERSION()").fetchone()[0].split('-')[0]
+        return self.execute("SELECT VERSION()").fetchone()[0].split("-")[0]
 
     def isMySQL56AndMore(self) -> bool:
-        version = float(self.getMySQLVersion().rsplit('.', 1)[0])
+        version = float(self.getMySQLVersion().rsplit(".", 1)[0])
         if version >= 5.6:
             return True
         return False
 
     def isMySQL57(self) -> bool:
-        version = float(self.getMySQLVersion().rsplit('.', 1)[0])
+        version = float(self.getMySQLVersion().rsplit(".", 1)[0])
         return version == 5.7
 
     def isMySQL80AndMore(self) -> bool:
-        version = float(self.getMySQLVersion().rsplit('.', 1)[0])
+        version = float(self.getMySQLVersion().rsplit(".", 1)[0])
         return version >= 8.0
 
     def isMariaDB(self) -> bool:
         if self.__is_mariaDB is None:
-            self.__is_mariaDB = "MariaDB" in self.execute("SELECT VERSION()").fetchone()[0]
+            self.__is_mariaDB = (
+                "MariaDB" in self.execute("SELECT VERSION()").fetchone()[0]
+            )
         return self.__is_mariaDB
 
     @property
@@ -92,7 +96,7 @@ class PyMySQLReplicationTestCase(base):
         c = self.conn_control.cursor()
         c.execute(query)
         return c
-    
+
     def execute_with_args(self, query: str, args) -> Cursor:
         c = self.conn_control.cursor()
         c.execute(query, args)
@@ -102,12 +106,13 @@ class PyMySQLReplicationTestCase(base):
         self.execute("RESET MASTER")
         if self.stream is not None:
             self.stream.close()
-        self.stream = BinLogStreamReader(self.database, server_id=1024,
-                                         ignored_events=self.ignoredEvents())
+        self.stream = BinLogStreamReader(
+            self.database, server_id=1024, ignored_events=self.ignoredEvents()
+        )
 
     def set_sql_mode(self) -> None:
         """set sql_mode to test with same sql_mode (mysql 5.7 sql_mode default is changed)"""
-        version = float(self.getMySQLVersion().rsplit('.', 1)[0])
+        version = float(self.getMySQLVersion().rsplit(".", 1)[0])
         if version == 5.7:
             self.execute("SET @@sql_mode='NO_ENGINE_SUBSTITUTION'")
 
@@ -118,7 +123,7 @@ class PyMySQLReplicationTestCase(base):
         return result[0]
 
     def bin_log_basename(self) -> str:
-        cursor: Cursor = self.execute('SELECT @@log_bin_basename')
+        cursor: Cursor = self.execute("SELECT @@log_bin_basename")
         bin_log_basename = cursor.fetchone()[0]
         bin_log_basename = bin_log_basename.split("/")[-1]
         return bin_log_basename
@@ -134,7 +139,7 @@ class PyMySQLReplicationMariaDbTestCase(PyMySQLReplicationTestCase):
             "port": int(os.environ.get("MARIADB_10_6_PORT") or 3308),
             "use_unicode": True,
             "charset": "utf8",
-            "db": "pymysqlreplication_test"
+            "db": "pymysqlreplication_test",
         }
 
         self.conn_control = None
@@ -147,9 +152,9 @@ class PyMySQLReplicationMariaDbTestCase(PyMySQLReplicationTestCase):
         self.connect_conn_control(db)
         self.stream = None
         self.resetBinLog()
-    
+
     def bin_log_basename(self) -> str:
-        cursor: Cursor = self.execute('SELECT @@log_bin_basename')
+        cursor: Cursor = self.execute("SELECT @@log_bin_basename")
         bin_log_basename = cursor.fetchone()[0]
         bin_log_basename = bin_log_basename.split("/")[-1]
         return bin_log_basename
