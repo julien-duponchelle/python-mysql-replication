@@ -18,7 +18,7 @@ class TestAbnormalBinLogStreamReader(base.PyMySQLReplicationTestCase):
         '''Events the BinLogStreamReader should ignore'''
         return [GtidEvent]
 
-    def test_no_trailing_rotate_event(self):
+    def test_no_trailing_rotate_event(self) -> None:
         '''A missing RotateEvent and skip_to_timestamp cause corruption
 
         This test shows that a binlog file which lacks the trailing RotateEvent
@@ -54,7 +54,7 @@ class TestAbnormalBinLogStreamReader(base.PyMySQLReplicationTestCase):
         # The table_map should be empty because of the binlog being rotated.
         self.assertEqual({}, self.stream.table_map)
 
-    def _remove_trailing_rotate_event_from_first_binlog(self):
+    def _remove_trailing_rotate_event_from_first_binlog(self) -> None:
         '''Remove the trailing RotateEvent from the first binlog
 
         According to the MySQL Internals Manual, a RotateEvent will be added to
