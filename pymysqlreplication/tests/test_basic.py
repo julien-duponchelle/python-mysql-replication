@@ -18,6 +18,7 @@ from pymysqlreplication.gtid import GtidSet, Gtid
 from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
+from pymysql import Connection
 
 __all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader", "TestMariadbBinlogStreamReader", "TestStatementConnectionSetting", "TestRowsQueryLogEvents"]
 
@@ -723,7 +724,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.execute("INSERT INTO test_drop_column VALUES (2)")
         self.execute("COMMIT")
 
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             server_id=1024,
             only_events=(WriteRowsEvent,)
@@ -747,12 +748,12 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.execute("INSERT INTO test_alter_column VALUES (2, 'Another value', 'A value')")
         self.execute("COMMIT")
 
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             server_id=1024,
             only_events=(WriteRowsEvent,),
             )
-        event = self.stream.fetchone()  # insert with two values
+        event: BinLogEvent = self.stream.fetchone()  # insert with two values
         # both of these asserts fail because of issue underlying proble described in issue #118
         # because it got table schema info after the alter table, it wrongly assumes the second
         # column of the first insert is 'another_data'
@@ -769,17 +770,17 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
     def setUp(self):
         super().setUp()
         self.stream.close()
-        ctl_db = copy.copy(self.database)
-        ctl_db["db"] = None
-        ctl_db["port"] = int(os.environ.get("MYSQL_5_7_CTL_PORT") or 3307)
-        ctl_db["host"] = os.environ.get("MYSQL_5_7_CTL") or "localhost"
-        self.ctl_conn_control = pymysql.connect(**ctl_db)
+        ctl_db: dict = copy.copy(self.database)
+        ctl_db["db"]: str = None
+        ctl_db["port"]: int = int(os.environ.get("MYSQL_5_7_CTL_PORT") or 3307)
+        ctl_db["host"]: str = os.environ.get("MYSQL_5_7_CTL") or "localhost"
+        self.ctl_conn_control: Connection = pymysql.connect(**ctl_db)
         self.ctl_conn_control.cursor().execute("DROP DATABASE IF EXISTS pymysqlreplication_test")
         self.ctl_conn_control.cursor().execute("CREATE DATABASE pymysqlreplication_test")
         self.ctl_conn_control.close()
-        ctl_db["db"] = "pymysqlreplication_test"
-        self.ctl_conn_control = pymysql.connect(**ctl_db)
-        self.stream = BinLogStreamReader(
+        ctl_db["db"]: str = "pymysqlreplication_test"
+        self.ctl_conn_control: Connection = pymysql.connect(**ctl_db)
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             ctl_connection_settings=ctl_db,
             server_id=1024,
@@ -798,9 +799,9 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
 
         had_error = False
         try:
-            event = self.stream.fetchone()
+            event: BinLogEvent = self.stream.fetchone()
         except TableMetadataUnavailableError as e:
-            had_error = True
+            had_error: bool = True
             assert "test" in e.args[0]
         finally:
             self.resetBinLog()
@@ -829,13 +830,13 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
             raise unittest.SkipTest("database does not support GTID, skipping GTID tests")
 
     def test_read_query_event(self):
-        query = "CREATE TABLE test (id INT NOT NULL, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test (id INT NOT NULL, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "SELECT @@global.gtid_executed;"
-        gtid = self.execute(query).fetchone()[0]
+        query: str = "SELECT @@global.gtid_executed;"
+        gtid: int = self.execute(query).fetchone()[0]
 
         self.stream.close()
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database, server_id=1024, blocking=True, auto_position=gtid,
             ignored_events=[HeartbeatLogEvent])
 
@@ -843,14 +844,14 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
 
         # Insert first event
-        query = "BEGIN;"
+        query: str = "BEGIN;"
         self.execute(query)
-        query = "INSERT INTO test (id, data) VALUES(1, 'Hello');"
+        query: str = "INSERT INTO test (id, data) VALUES(1, 'Hello');"
         self.execute(query)
-        query = "COMMIT;"
+        query: str = "COMMIT;"
         self.execute(query)
 
-        firstevent = self.stream.fetchone()
+        firstevent: BinLogEvent = self.stream.fetchone()
         self.assertIsInstance(firstevent, GtidEvent)
 
         self.assertIsInstance(self.stream.fetchone(), QueryEvent)
@@ -859,14 +860,14 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), XidEvent)
 
         # Insert second event
-        query = "BEGIN;"
+        query: str = "BEGIN;"
         self.execute(query)
-        query = "INSERT INTO test (id, data) VALUES(2, 'Hello');"
+        query: str = "INSERT INTO test (id, data) VALUES(2, 'Hello');"
         self.execute(query)
-        query = "COMMIT;"
+        query: str = "COMMIT;"
         self.execute(query)
 
-        secondevent = self.stream.fetchone()
+        secondevent: BinLogEvent = self.stream.fetchone()
         self.assertIsInstance(secondevent, GtidEvent)
 
         self.assertIsInstance(self.stream.fetchone(), QueryEvent)
@@ -877,180 +878,180 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(secondevent.gno, firstevent.gno + 1)
 
     def test_position_gtid(self):
-        query = "CREATE TABLE test (id INT NOT NULL, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test (id INT NOT NULL, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "BEGIN;"
+        query: str = "BEGIN;"
         self.execute(query)
-        query = "INSERT INTO test (id, data) VALUES(1, 'Hello');"
+        query: str = "INSERT INTO test (id, data) VALUES(1, 'Hello');"
         self.execute(query)
-        query = "COMMIT;"
+        query: str = "COMMIT;"
         self.execute(query)
 
-        query = "SELECT @@global.gtid_executed;"
-        gtid = self.execute(query).fetchone()[0]
+        query: str = "SELECT @@global.gtid_executed;"
+        gtid: int = self.execute(query).fetchone()[0]
 
-        query = "CREATE TABLE test2 (id INT NOT NULL, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test2 (id INT NOT NULL, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
         self.stream.close()
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database, server_id=1024, blocking=True, auto_position=gtid,
             ignored_events=[HeartbeatLogEvent])
 
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
         self.assertIsInstance(self.stream.fetchone(), GtidEvent)
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
 
         self.assertEqual(event.query, 'CREATE TABLE test2 (id INT NOT NULL, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))');
 
 
 class TestGtidRepresentation(unittest.TestCase):
     def test_gtidset_representation(self):
-        set_repr = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56,' \
+        set_repr: str = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56,' \
                    '4350f323-7565-4e59-8763-4b1b83a0ce0e:1-20'
 
-        myset = GtidSet(set_repr)
+        myset: GtidSet = GtidSet(set_repr)
         self.assertEqual(str(myset), set_repr)
 
     def test_gtidset_representation_newline(self):
-        set_repr = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56,' \
+        set_repr: str = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56,' \
                    '4350f323-7565-4e59-8763-4b1b83a0ce0e:1-20'
-        mysql_repr = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56,\n' \
+        mysql_repr: str = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56,\n' \
                    '4350f323-7565-4e59-8763-4b1b83a0ce0e:1-20'
 
-        myset = GtidSet(mysql_repr)
+        myset: GtidSet = GtidSet(mysql_repr)
         self.assertEqual(str(myset), set_repr)
 
     def test_gtidset_representation_payload(self):
-        set_repr = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56,' \
+        set_repr: str = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56,' \
                    '4350f323-7565-4e59-8763-4b1b83a0ce0e:1-20'
 
-        myset = GtidSet(set_repr)
-        payload = myset.encode()
-        parsedset = myset.decode(io.BytesIO(payload))
+        myset: GtidSet = GtidSet(set_repr)
+        payload: bytes = myset.encode()
+        parsedset: GtidSet = myset.decode(io.BytesIO(payload))
 
         self.assertEqual(str(myset), str(parsedset))
 
-        set_repr = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1,' \
+        set_repr: str = '57b70f4e-20d3-11e5-a393-4a63946f7eac:1,' \
                    '4350f323-7565-4e59-8763-4b1b83a0ce0e:1-20'
 
-        myset = GtidSet(set_repr)
-        payload = myset.encode()
-        parsedset = myset.decode(io.BytesIO(payload))
+        myset: GtidSet = GtidSet(set_repr)
+        payload: bytes = myset.encode()
+        parsedset: GtidSet = myset.decode(io.BytesIO(payload))
 
         self.assertEqual(str(myset), str(parsedset))
 
 
 class GtidTests(unittest.TestCase):
     def test_ordering(self):
-        gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
-        other = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:5-10")
+        gtid: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+        other: int = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:5-10")
         assert gtid.__lt__(other)
         assert gtid.__le__(other)
         assert other.__gt__(gtid)
         assert other.__ge__(gtid)
-        gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
-        other = Gtid("deadbeef-20d3-11e5-a393-4a63946f7eac:5-10")
+        gtid: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+        other: int = Gtid("deadbeef-20d3-11e5-a393-4a63946f7eac:5-10")
         assert gtid.__lt__(other)
         assert gtid.__le__(other)
         assert other.__gt__(gtid)
         assert other.__ge__(gtid)
 
     def test_encode_decode(self):
-        gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
-        payload = gtid.encode()
-        decoded = Gtid.decode(io.BytesIO(payload))
+        gtid: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+        payload: bytes = gtid.encode()
+        decoded: bytes = Gtid.decode(io.BytesIO(payload))
         assert str(gtid) == str(decoded)
 
     def test_add_interval(self):
-        gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:5-56")
-        end = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:57-58")
+        gtid: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:5-56")
+        end: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:57-58")
         assert (gtid + end).intervals == [(5, 59)]
 
-        start = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-2")
+        start: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-2")
         assert (gtid + start).intervals == [(1, 3), (5, 57)]
 
-        sparse = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-4:7-10")
-        within = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:5-6")
+        sparse: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-4:7-10")
+        within: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:5-6")
         assert (sparse + within).intervals == [(1, 11)]
 
     def test_interval_non_merging(self):
-        gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
-        other = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:58-59")
+        gtid: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+        other: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:58-59")
         gtid = gtid + other
         self.assertEqual(str(gtid), "57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56:58-59")
 
     def test_merging(self):
-        gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
-        other = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:57-59")
+        gtid: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+        other: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:57-59")
         gtid = gtid + other
         self.assertEqual(str(gtid), "57b70f4e-20d3-11e5-a393-4a63946f7eac:1-59")
 
     def test_sub_interval(self):
-        gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
-        start = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-5")
+        gtid: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+        start: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-5")
         assert (gtid - start).intervals == [(6, 57)]
 
-        end = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:55-56")
+        end: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:55-56")
         assert (gtid - end).intervals == [(1, 55)]
 
-        within = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:25-26")
+        within: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:25-26")
         assert (gtid - within).intervals == [(1, 25), (27, 57)]
 
     def test_parsing(self):
         with self.assertRaises(ValueError) as exc:
-            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-5 57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
-            gtid = Gtid("NNNNNNNN-20d3-11e5-a393-4a63946f7eac:1-5")
-            gtid = Gtid("-20d3-11e5-a393-4a63946f7eac:1-5")
-            gtid = Gtid("-20d3-11e5-a393-4a63946f7eac:1-")
-            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:A-1")
-            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:-1")
-            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-:1")
-            gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
+            gtid: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-5 57b70f4e-20d3-11e5-a393-4a63946f7eac:1-56")
+            gtid: Gtid = Gtid("NNNNNNNN-20d3-11e5-a393-4a63946f7eac:1-5")
+            gtid: Gtid = Gtid("-20d3-11e5-a393-4a63946f7eac:1-5")
+            gtid: Gtid = Gtid("-20d3-11e5-a393-4a63946f7eac:1-")
+            gtid: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:A-1")
+            gtid: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:-1")
+            gtid: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-:1")
+            gtid: Gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
 
 class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
     def test_binlog_checkpoint_event(self):
         self.stream.close()
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database, 
             server_id=1023,
             blocking=False,
             is_mariadb=True
         )
 
-        query = "DROP TABLE IF EXISTS test"
+        query: str = "DROP TABLE IF EXISTS test"
         self.execute(query)
 
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
         self.stream.close()
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertIsInstance(event, RotateEvent)  
         
-        event = self.stream.fetchone()
-        self.assertIsInstance(event,FormatDescriptionEvent)
+        event: BinLogEvent = self.stream.fetchone()
+        self.assertIsInstance(event, FormatDescriptionEvent)
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertIsInstance(event, MariadbBinLogCheckPointEvent)
         self.assertEqual(event.filename, self.bin_log_basename()+".000001")
 
 class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
     
     def test_annotate_rows_event(self):
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
         # Insert first event
-        query = "BEGIN;"
+        query: str = "BEGIN;"
         self.execute(query)
-        insert_query = b"INSERT INTO test (id, data) VALUES(1, 'Hello')"
+        insert_query: bytes = b"INSERT INTO test (id, data) VALUES(1, 'Hello')"
         self.execute(insert_query)
-        query = "COMMIT;"
+        query: str = "COMMIT;"
         self.execute(query)
 
         self.stream.close()
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database, 
             server_id=1024, 
             blocking=False,
@@ -1059,38 +1060,38 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
             annotate_rows_event=True,
             )
         
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         #Check event type 160,MariadbAnnotateRowsEvent
-        self.assertEqual(event.event_type,160)
+        self.assertEqual(event.event_type, 160)
         #Check self.sql_statement
-        self.assertEqual(event.sql_statement,insert_query)
-        self.assertIsInstance(event,MariadbAnnotateRowsEvent)
+        self.assertEqual(event.sql_statement, insert_query)
+        self.assertIsInstance(event, MariadbAnnotateRowsEvent)
         
     def test_start_encryption_event(self):
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "INSERT INTO test (data) VALUES('Hello World')"
+        query: str = "INSERT INTO test (data) VALUES('Hello World')"
         self.execute(query)
         self.execute("COMMIT")
 
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
 
-        start_encryption_event = self.stream.fetchone()
+        start_encryption_event: BinLogEvent = self.stream.fetchone()
         self.assertIsInstance(start_encryption_event, MariadbStartEncryptionEvent)
 
-        schema = start_encryption_event.schema
-        key_version = start_encryption_event.key_version
-        nonce = start_encryption_event.nonce
+        schema: int = start_encryption_event.schema
+        key_version: int = start_encryption_event.key_version
+        nonce: bytes = start_encryption_event.nonce
 
         from pathlib import Path
 
-        encryption_key_file_path = Path(__file__).parent.parent.parent
+        encryption_key_file_path: Path = Path(__file__).parent.parent.parent
 
         try:
             with open(f"{encryption_key_file_path}/.mariadb/no_encryption_key.key", "r") as key_file:
-                first_line = key_file.readline()
-                key_version_from_key_file = int(first_line.split(";")[0])
+                first_line: str = key_file.readline()
+                key_version_from_key_file: int = int(first_line.split(";")[0])
         except Exception as e:
             self.fail("raised unexpected exception: {exception}".format(exception=e))
         finally:
@@ -1104,11 +1105,11 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
 
     def test_gtid_list_event(self):
         # set max_binlog_size to create new binlog file
-        query = 'SET GLOBAL max_binlog_size=4096'
+        query: str = 'SET GLOBAL max_binlog_size=4096'
         self.execute(query)
         # parse only Maradb GTID list event
         self.stream.close()
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database, 
             server_id=1024, 
             blocking=False,
@@ -1116,21 +1117,21 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
             is_mariadb=True,
         )
 
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "INSERT INTO test (data) VALUES('Hello World')"
+        query: str = "INSERT INTO test (data) VALUES('Hello World')"
         
-        for cnt in range(0,15):
+        for cnt in range(0, 15):
             self.execute(query)
             self.execute("COMMIT")
 
         # 'mariadb gtid list event' of first binlog file
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertEqual(event.event_type,163)
         self.assertIsInstance(event,MariadbGtidListEvent)    
 
         # 'mariadb gtid list event' of second binlog file
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertEqual(event.event_type,163)
         self.assertEqual(event.gtid_list[0].gtid, '0-1-15')
         
@@ -1140,7 +1141,7 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
     def setUp(self):
         super().setUp()
         self.stream.close()
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             server_id=1024,
             only_events=(RandEvent, QueryEvent),
@@ -1157,7 +1158,7 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), QueryEvent)
         self.assertIsInstance(self.stream.fetchone(), QueryEvent)
 
-        expect_rand_event = self.stream.fetchone()
+        expect_rand_event: BinLogEvent = self.stream.fetchone()
         self.assertIsInstance(expect_rand_event, RandEvent)
         self.assertEqual(type(expect_rand_event.seed1), int)
         self.assertEqual(type(expect_rand_event.seed2), int)
@@ -1179,7 +1180,7 @@ class TestRowsQueryLogEvents(base.PyMySQLReplicationTestCase):
 
     def test_rows_query_log_event(self):
         self.stream.close()
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             server_id=1024,
             only_events=[RowsQueryLogEvent],
@@ -1187,7 +1188,7 @@ class TestRowsQueryLogEvents(base.PyMySQLReplicationTestCase):
         self.execute("CREATE TABLE IF NOT EXISTS test (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))")
         self.execute("INSERT INTO test (name) VALUES ('Soul Lee')")
         self.execute("COMMIT")
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertIsInstance(event, RowsQueryLogEvent)
 
 
