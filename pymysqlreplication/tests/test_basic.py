@@ -4,8 +4,8 @@ import io
 import os
 import sys
 import time
-
 import pymysql
+from typing import List, Type, Union, Optional, Tuple, Dict, Any, Callable
 
 if sys.version_info < (2, 7):
     import unittest2 as unittest
@@ -19,59 +19,60 @@ from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 from pymysql import Connection
+from pymysqlreplication.event import BinLogEvent
 
 __all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader", "TestMariadbBinlogStreamReader", "TestStatementConnectionSetting", "TestRowsQueryLogEvents"]
 
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
-    def ignoredEvents(self):
+    def ignoredEvents(self) -> List[Type[BinLogEvent]]:
         return [GtidEvent]
 
-    def test_allowed_event_list(self):
+    def test_allowed_event_list(self) -> None:
         self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 22)
         self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 21)
         self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 21)
         self.assertEqual(len(self.stream._allowed_event_list([RotateEvent], None, False)), 1)
 
-    def test_read_query_event(self):
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+    def test_read_query_event(self) -> None:
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertEqual(event.position, 4)
         self.assertEqual(event.next_binlog, self.bin_log_basename() + ".000001")
         self.assertIsInstance(event, RotateEvent)
 
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertIsInstance(event, QueryEvent)
         self.assertEqual(event.query, query)
 
-    def test_read_query_event_with_unicode(self):
-        query = u"CREATE TABLE `testÈ` (id INT NOT NULL AUTO_INCREMENT, dataÈ VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+    def test_read_query_event_with_unicode(self) -> None:
+        query: str = u"CREATE TABLE `testÈ` (id INT NOT NULL AUTO_INCREMENT, dataÈ VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertEqual(event.position, 4)
         self.assertEqual(event.next_binlog, self.bin_log_basename() + ".000001")
         self.assertIsInstance(event, RotateEvent)
 
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertIsInstance(event, QueryEvent)
         self.assertEqual(event.query, query)
 
 
-    def test_reading_rotate_event(self):
-        query = "CREATE TABLE test_2 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+    def test_reading_rotate_event(self) -> None:
+        query: str = "CREATE TABLE test_2 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
         self.stream.close()
 
-        query = "CREATE TABLE test_3 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test_3 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
         # Rotate event
@@ -104,15 +105,15 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), XidEvent)
     """
 
-    def test_connection_stream_lost_event(self):
+    def test_connection_stream_lost_event(self) -> None:
         self.stream.close()
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database, server_id=1024, blocking=True,
             ignored_events=self.ignoredEvents())
 
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query2 = "INSERT INTO test (data) VALUES('a')"
+        query2: str = "INSERT INTO test (data) VALUES('a')"
         for i in range(0, 10000):
             self.execute(query2)
         self.execute("COMMIT")
@@ -120,87 +121,87 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
 
         self.assertIsInstance(event, QueryEvent)
         self.assertEqual(event.query, query)
 
         self.conn_control.kill(self.stream._stream_connection.thread_id())
         for i in range(0, 10000):
-            event = self.stream.fetchone()
+            event: BinLogEvent = self.stream.fetchone()
             self.assertIsNotNone(event)
 
-    def test_filtering_only_events(self):
+    def test_filtering_only_events(self) -> None:
         self.stream.close()
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database, server_id=1024, only_events=[QueryEvent])
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: BinLogEvent = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertIsInstance(event, QueryEvent)
         self.assertEqual(event.query, query)
 
-    def test_filtering_ignore_events(self):
+    def test_filtering_ignore_events(self) -> None:
         self.stream.close()
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database, server_id=1024, ignored_events=[QueryEvent])
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertIsInstance(event, RotateEvent)
 
-    def test_filtering_table_event_with_only_tables(self):
+    def test_filtering_table_event_with_only_tables(self) -> None:
         self.stream.close()
         self.assertEqual(self.bin_log_format(), "ROW")
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             server_id=1024,
             only_events=[WriteRowsEvent],
             only_tables = ["test_2"]
         )
 
-        query = "CREATE TABLE test_2 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test_2 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "CREATE TABLE test_3 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test_3 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
         self.execute("INSERT INTO test_2 (data) VALUES ('alpha')")
         self.execute("INSERT INTO test_3 (data) VALUES ('alpha')")
         self.execute("INSERT INTO test_2 (data) VALUES ('beta')")
         self.execute("COMMIT")
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertEqual(event.table, "test_2")
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertEqual(event.table, "test_2")
 
-    def test_filtering_table_event_with_ignored_tables(self):
+    def test_filtering_table_event_with_ignored_tables(self) -> None:
         self.stream.close()
         self.assertEqual(self.bin_log_format(), "ROW")
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             server_id=1024,
             only_events=[WriteRowsEvent],
             ignored_tables = ["test_2"]
         )
 
-        query = "CREATE TABLE test_2 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test_2 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "CREATE TABLE test_3 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test_3 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
         self.execute("INSERT INTO test_2 (data) VALUES ('alpha')")
         self.execute("INSERT INTO test_3 (data) VALUES ('alpha')")
         self.execute("INSERT INTO test_2 (data) VALUES ('beta')")
         self.execute("COMMIT")
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertEqual(event.table, "test_3")
 
-    def test_filtering_table_event_with_only_tables_and_ignored_tables(self):
+    def test_filtering_table_event_with_only_tables_and_ignored_tables(self) -> None:
         self.stream.close()
         self.assertEqual(self.bin_log_format(), "ROW")
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             server_id=1024,
             only_events=[WriteRowsEvent],
@@ -208,22 +209,22 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             ignored_tables = ["test_3"]
         )
 
-        query = "CREATE TABLE test_2 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test_2 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "CREATE TABLE test_3 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test_3 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
         self.execute("INSERT INTO test_2 (data) VALUES ('alpha')")
         self.execute("INSERT INTO test_3 (data) VALUES ('alpha')")
         self.execute("INSERT INTO test_2 (data) VALUES ('beta')")
         self.execute("COMMIT")
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertEqual(event.table, "test_2")
 
-    def test_write_row_event(self):
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+    def test_write_row_event(self) -> None:
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "INSERT INTO test (data) VALUES('Hello World')"
+        query: str = "INSERT INTO test (data) VALUES('Hello World')"
         self.execute(query)
         self.execute("COMMIT")
 
@@ -236,7 +237,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         if self.isMySQL56AndMore():
             self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
         else:
@@ -248,15 +249,15 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.table, "test")
         self.assertEqual(event.columns[1].name, 'data')
 
-    def test_delete_row_event(self):
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+    def test_delete_row_event(self) -> None:
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "INSERT INTO test (data) VALUES('Hello World')"
+        query: str = "INSERT INTO test (data) VALUES('Hello World')"
         self.execute(query)
 
         self.resetBinLog()
 
-        query = "DELETE FROM test WHERE id = 1"
+        query: str = "DELETE FROM test WHERE id = 1"
         self.execute(query)
         self.execute("COMMIT")
 
@@ -277,15 +278,15 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["id"], 1)
         self.assertEqual(event.rows[0]["values"]["data"], "Hello World")
 
-    def test_update_row_event(self):
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+    def test_update_row_event(self) -> None:
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "INSERT INTO test (data) VALUES('Hello')"
+        query: str = "INSERT INTO test (data) VALUES('Hello')"
         self.execute(query)
 
         self.resetBinLog()
 
-        query = "UPDATE test SET data = 'World' WHERE id = 1"
+        query: str = "UPDATE test SET data = 'World' WHERE id = 1"
         self.execute(query)
         self.execute("COMMIT")
 
@@ -297,7 +298,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         if self.isMySQL56AndMore():
             self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V2)
         else:
@@ -308,12 +309,12 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["after_values"]["id"], 1)
         self.assertEqual(event.rows[0]["after_values"]["data"], "World")
 
-    def test_minimal_image_write_row_event(self):
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+    def test_minimal_image_write_row_event(self) -> None:
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "SET SESSION binlog_row_image = 'minimal'"
+        query: str = "SET SESSION binlog_row_image = 'minimal'"
         self.execute(query)
-        query = "INSERT INTO test (data) VALUES('Hello World')"
+        query: str = "INSERT INTO test (data) VALUES('Hello World')"
         self.execute(query)
         self.execute("COMMIT")
 
@@ -326,7 +327,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         if self.isMySQL56AndMore():
             self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
         else:
@@ -338,16 +339,16 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.table, "test")
         self.assertEqual(event.columns[1].name, 'data')
 
-    def test_minimal_image_delete_row_event(self):
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+    def test_minimal_image_delete_row_event(self) -> None:
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "INSERT INTO test (data) VALUES('Hello World')"
+        query: str = "INSERT INTO test (data) VALUES('Hello World')"
         self.execute(query)
-        query = "SET SESSION binlog_row_image = 'minimal'"
+        query: str = "SET SESSION binlog_row_image = 'minimal'"
         self.execute(query)
         self.resetBinLog()
 
-        query = "DELETE FROM test WHERE id = 1"
+        query: str = "DELETE FROM test WHERE id = 1"
         self.execute(query)
         self.execute("COMMIT")
 
@@ -359,7 +360,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         if self.isMySQL56AndMore():
             self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V2)
         else:
@@ -368,16 +369,16 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["values"]["id"], 1)
         self.assertEqual(event.rows[0]["values"]["data"], None)
 
-    def test_minimal_image_update_row_event(self):
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+    def test_minimal_image_update_row_event(self) -> None:
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "INSERT INTO test (data) VALUES('Hello')"
+        query: str = "INSERT INTO test (data) VALUES('Hello')"
         self.execute(query)
-        query = "SET SESSION binlog_row_image = 'minimal'"
+        query: str = "SET SESSION binlog_row_image = 'minimal'"
         self.execute(query)
         self.resetBinLog()
 
-        query = "UPDATE test SET data = 'World' WHERE id = 1"
+        query: str = "UPDATE test SET data = 'World' WHERE id = 1"
         self.execute(query)
         self.execute("COMMIT")
 
@@ -389,7 +390,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         if self.isMySQL56AndMore():
             self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V2)
         else:
@@ -400,10 +401,10 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[0]["after_values"]["id"], None)
         self.assertEqual(event.rows[0]["after_values"]["data"], "World")
 
-    def test_log_pos(self):
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+    def test_log_pos(self) -> None:
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "INSERT INTO test (data) VALUES('Hello')"
+        query: str = "INSERT INTO test (data) VALUES('Hello')"
         self.execute(query)
         self.execute("COMMIT")
 
@@ -412,14 +413,14 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         # record position after insert
         log_file, log_pos = self.stream.log_file, self.stream.log_pos
 
-        query = "UPDATE test SET data = 'World' WHERE id = 1"
+        query: str = "UPDATE test SET data = 'World' WHERE id = 1"
         self.execute(query)
         self.execute("COMMIT")
 
         # resume stream from previous position
         if self.stream is not None:
             self.stream.close()
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             server_id=1024,
             resume_stream=True,
@@ -438,18 +439,18 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), XidEvent)
 
 
-    def test_log_pos_handles_disconnects(self):
+    def test_log_pos_handles_disconnects(self) -> None:
         self.stream.close()
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             server_id=1024,
             resume_stream=False,
             only_events = [FormatDescriptionEvent, QueryEvent, TableMapEvent, WriteRowsEvent, XidEvent]
         )
 
-        query = "CREATE TABLE test (id INT  PRIMARY KEY AUTO_INCREMENT, data VARCHAR (50) NOT NULL)"
+        query: str = "CREATE TABLE test (id INT  PRIMARY KEY AUTO_INCREMENT, data VARCHAR (50) NOT NULL)"
         self.execute(query)
-        query = "INSERT INTO test (data) VALUES('Hello')"
+        query: str = "INSERT INTO test (data) VALUES('Hello')"
         self.execute(query)
         self.execute("COMMIT")
 
@@ -465,27 +466,27 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertGreater(self.stream.log_pos, 0)
 
-    def test_skip_to_timestamp(self):
+    def test_skip_to_timestamp(self) -> None:
         self.stream.close()
-        query = "CREATE TABLE test_1 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        query: str = "CREATE TABLE test_1 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
         time.sleep(1)
-        query = "SELECT UNIX_TIMESTAMP();"
+        query: str = "SELECT UNIX_TIMESTAMP();"
         timestamp = self.execute(query).fetchone()[0]
         query2 = "CREATE TABLE test_2 (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query2)
 
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             server_id=1024,
             skip_to_timestamp=timestamp,
             ignored_events=self.ignoredEvents(),
             )
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertIsInstance(event, QueryEvent)
         self.assertEqual(event.query, query2)
 
-    def test_end_log_pos(self):
+    def test_end_log_pos(self) -> None:
         """Test end_log_pos parameter for BinLogStreamReader
 
         MUST BE TESTED IN DEFAULT SYSTEM VARIABLES SETTING
@@ -507,15 +508,15 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         binlog = self.execute("SHOW BINARY LOGS").fetchone()[0]
 
         self.stream.close()
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             server_id=1024,
             log_pos=0,
             log_file=binlog,
             end_log_pos=888)
 
-        last_log_pos = 0
-        last_event_type = 0
+        last_log_pos: int = 0
+        last_event_type: int = 0
         for event in self.stream:
             last_log_pos = self.stream.log_pos
             last_event_type = event.event_type
@@ -525,16 +526,16 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
-    def ignoredEvents(self):
+    def ignoredEvents(self) -> List[Type[BinLogEvent]]:
         return [GtidEvent]
 
-    def test_insert_multiple_row_event(self):
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+    def test_insert_multiple_row_event(self) -> None:
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
 
         self.resetBinLog()
 
-        query = "INSERT INTO test (data) VALUES('Hello'),('World')"
+        query: str = "INSERT INTO test (data) VALUES('Hello'),('World')"
         self.execute(query)
         self.execute("COMMIT")
 
@@ -545,7 +546,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
-        event = self.stream.fetchone()
+        event: str = self.stream.fetchone()
         if self.isMySQL56AndMore():
             self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
         else:
@@ -558,17 +559,17 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[1]["values"]["id"], 2)
         self.assertEqual(event.rows[1]["values"]["data"], "World")
 
-    def test_update_multiple_row_event(self):
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+    def test_update_multiple_row_event(self) -> None:
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "INSERT INTO test (data) VALUES('Hello')"
+        query: str = "INSERT INTO test (data) VALUES('Hello')"
         self.execute(query)
-        query = "INSERT INTO test (data) VALUES('World')"
+        query: str = "INSERT INTO test (data) VALUES('World')"
         self.execute(query)
 
         self.resetBinLog()
 
-        query = "UPDATE test SET data = 'Toto'"
+        query: str = "UPDATE test SET data = 'Toto'"
         self.execute(query)
         self.execute("COMMIT")
 
@@ -596,17 +597,17 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[1]["after_values"]["id"], 2)
         self.assertEqual(event.rows[1]["after_values"]["data"], "Toto")
 
-    def test_delete_multiple_row_event(self):
-        query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+    def test_delete_multiple_row_event(self) -> None:
+        query: str = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
-        query = "INSERT INTO test (data) VALUES('Hello')"
+        query: str = "INSERT INTO test (data) VALUES('Hello')"
         self.execute(query)
-        query = "INSERT INTO test (data) VALUES('World')"
+        query: str = "INSERT INTO test (data) VALUES('World')"
         self.execute(query)
 
         self.resetBinLog()
 
-        query = "DELETE FROM test"
+        query: str = "DELETE FROM test"
         self.execute(query)
         self.execute("COMMIT")
 
@@ -631,7 +632,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.rows[1]["values"]["id"], 2)
         self.assertEqual(event.rows[1]["values"]["data"], "World")
 
-    def test_drop_table(self):
+    def test_drop_table(self) -> None:
         self.execute("CREATE TABLE test (id INTEGER(11))")
         self.execute("INSERT INTO test VALUES (1)")
         self.execute("DROP TABLE test")
@@ -647,10 +648,10 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         #QueryEvent for the BEGIN
         self.stream.fetchone()
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
 
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         if self.isMySQL56AndMore():
             self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
         else:
@@ -659,51 +660,51 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertEqual([], event.rows)
 
-    def test_drop_table_tablemetadata_unavailable(self):
+    def test_drop_table_tablemetadata_unavailable(self) -> None:
         self.stream.close()
         self.execute("CREATE TABLE test (id INTEGER(11))")
         self.execute("INSERT INTO test VALUES (1)")
         self.execute("DROP TABLE test")
         self.execute("COMMIT")
 
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             server_id=1024,
             only_events=(WriteRowsEvent,),
             fail_on_table_metadata_unavailable=True
         )
-        had_error = False
+        had_error: bool = False
         try:
-            event = self.stream.fetchone()
+            event: BinLogEvent = self.stream.fetchone()
         except TableMetadataUnavailableError as e:
-            had_error = True
+            had_error: bool = True
             assert "test" in e.args[0]
         finally:
             self.resetBinLog()
             assert had_error
 
-    def test_ignore_decode_errors(self):
-        problematic_unicode_string = b'[{"text":"\xed\xa0\xbd \xed\xb1\x8d Some string"}]'
+    def test_ignore_decode_errors(self) -> None:
+        problematic_unicode_string: bytes = b'[{"text":"\xed\xa0\xbd \xed\xb1\x8d Some string"}]'
         self.stream.close()
         self.execute("CREATE TABLE test (data VARCHAR(50) CHARACTER SET utf8mb4)")
         self.execute_with_args("INSERT INTO test (data) VALUES (%s)", (problematic_unicode_string))
         self.execute("COMMIT")
 
         # Initialize with ignore_decode_errors=False
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             server_id=1024,
             only_events=(WriteRowsEvent,),
             ignore_decode_errors=False
         )
-        event = self.stream.fetchone()
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         with self.assertRaises(UnicodeError) as exception:
-            event = self.stream.fetchone()
+            event: BinLogEvent = self.stream.fetchone()
             data = event.rows[0]["values"]["data"]
 
         # Initialize with ignore_decode_errors=True
-        self.stream = BinLogStreamReader(
+        self.stream: BinLogStreamReader = BinLogStreamReader(
             self.database,
             server_id=1024,
             only_events=(WriteRowsEvent,),
@@ -711,11 +712,11 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         )
         self.stream.fetchone()
         self.stream.fetchone()
-        event = self.stream.fetchone()
+        event: BinLogEvent = self.stream.fetchone()
         data = event.rows[0]["values"]["data"]
         self.assertEqual(data, '[{"text":"  Some string"}]')
 
-    def test_drop_column(self):
+    def test_drop_column(self) -> None
         self.stream.close()
         self.execute("CREATE TABLE test_drop_column (id INTEGER(11), data VARCHAR(50))")
         self.execute("INSERT INTO test_drop_column VALUES (1, 'A value')")
@@ -738,7 +739,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.resetBinLog()
 
     @unittest.expectedFailure
-    def test_alter_column(self):
+    def test_alter_column(self) -> None:
         self.stream.close()
         self.execute("CREATE TABLE test_alter_column (id INTEGER(11), data VARCHAR(50))")
         self.execute("INSERT INTO test_alter_column VALUES (1, 'A value')")
@@ -788,11 +789,11 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
             fail_on_table_metadata_unavailable=True
         )
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         super().tearDown()
         self.ctl_conn_control.close()
 
-    def test_separate_ctl_settings_table_metadata_unavailable(self):
+    def test_separate_ctl_settings_table_metadata_unavailable(self) -> None:
         self.execute("CREATE TABLE test (id INTEGER(11))")
         self.execute("INSERT INTO test VALUES (1)")
         self.execute("COMMIT")
