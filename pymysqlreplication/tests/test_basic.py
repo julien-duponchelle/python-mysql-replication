@@ -716,7 +716,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         data = event.rows[0]["values"]["data"]
         self.assertEqual(data, '[{"text":"  Some string"}]')
 
-    def test_drop_column(self) -> None
+    def test_drop_column(self) -> None:
         self.stream.close()
         self.execute("CREATE TABLE test_drop_column (id INTEGER(11), data VARCHAR(50))")
         self.execute("INSERT INTO test_drop_column VALUES (1, 'A value')")
