@@ -3,32 +3,36 @@
 import struct
 
 from .constants import FIELD_TYPE
-
+from typing import Any, Dict, Optional
 
 class Column(object):
     """Definition of a column
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         if len(args) == 3:
             self.__parse_column_definition(*args)
         else:
             self.__dict__.update(kwargs)
 
-    def __parse_column_definition(self, column_type, column_schema, packet):
-        self.type = column_type
-        self.name = column_schema["COLUMN_NAME"]
-        self.collation_name = column_schema["COLLATION_NAME"]
-        self.character_set_name = column_schema["CHARACTER_SET_NAME"]
-        self.comment = column_schema["COLUMN_COMMENT"]
-        self.unsigned = column_schema["COLUMN_TYPE"].find("unsigned") != -1
-        self.zerofill = column_schema["COLUMN_TYPE"].find("zerofill") != -1
-        self.type_is_bool = False
-        self.is_primary = column_schema["COLUMN_KEY"] == "PRI"
+    def __parse_column_definition(self,
+                                  column_type: str,
+                                  column_schema: Dict[str, Any],
+                                  packet: Any
+                                  ) -> None:
+        self.type: str = column_type
+        self.name: str = column_schema["COLUMN_NAME"]
+        self.collation_name: str = column_schema["COLLATION_NAME"]
+        self.character_set_name: str = column_schema["CHARACTER_SET_NAME"]
+        self.comment: str = column_schema["COLUMN_COMMENT"]
+        self.unsigned: bool = column_schema["COLUMN_TYPE"].find("unsigned") != -1
+        self.zerofill: bool = column_schema["COLUMN_TYPE"].find("zerofill") != -1
+        self.type_is_bool: bool = False
+        self.is_primary: bool = column_schema["COLUMN_KEY"] == "PRI"
 
         # Check for fixed-length binary type. When that's the case then we need
         # to zero-pad the values to full length at read time.
-        self.fixed_binary_length = None
+        self.fixed_binary_length: Optional[str] = None
         if column_schema["DATA_TYPE"] == "binary":
             self.fixed_binary_length = column_schema["CHARACTER_OCTET_LENGTH"]
 
@@ -65,7 +69,7 @@ class Column(object):
             self.bits = (bytes * 8) + bits
             self.bytes = int((self.bits + 7) / 8)
 
-    def __read_string_metadata(self, packet, column_schema):
+    def __read_string_metadata(self, packet: Any, column_schema: Dict[str, Any]) -> None:
         metadata = (packet.read_uint8() << 8) + packet.read_uint8()
         real_type = metadata >> 8
         if real_type == FIELD_TYPE.SET or real_type == FIELD_TYPE.ENUM:
@@ -76,7 +80,7 @@ class Column(object):
             self.max_length = (((metadata >> 4) & 0x300) ^ 0x300) \
                 + (metadata & 0x00ff)
 
-    def __read_enum_metadata(self, column_schema):
+    def __read_enum_metadata(self, column_schema: Dict[str, Any]) -> None:
         enums = column_schema["COLUMN_TYPE"]
         if self.type == FIELD_TYPE.ENUM:
             self.enum_values = [''] + enums.replace('enum(', '')\
@@ -85,15 +89,15 @@ class Column(object):
             self.set_values = enums.replace('set(', '')\
                 .replace(')', '').replace('\'', '').split(',')
 
-    def __eq__(self, other):
+    def __eq__(self, other: 'Column') -> bool:
         return self.data == other.data
 
-    def __ne__(self, other):
+    def __ne__(self, other: 'Column') -> bool:
         return not self.__eq__(other)
 
-    def serializable_data(self):
+    def serializable_data(self) -> Dict[str, Any]:
         return self.data
 
     @property
-    def data(self):
+    def data(self) -> Dict[str, Any]:
         return dict((k, v) for (k, v) in self.__dict__.items() if not k.startswith('_'))
