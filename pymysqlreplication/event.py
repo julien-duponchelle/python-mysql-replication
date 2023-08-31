@@ -53,9 +53,10 @@ class BinLogEvent(object):
 
 
 class GtidEvent(BinLogEvent):
-    """GTID change in binlog event
+    """
+    GTID change in binlog event
 
-    For more information : `[GTID] <https://mariadb.com/kb/en/gtid/>`_ `[see also] <https://dev.mysql.com/doc/dev/mysql-server/latest/classbinary__log_1_1Gtid__event.html>`_ 
+    For more information: `[GTID] <https://mariadb.com/kb/en/gtid/>`_ `[see also] <https://dev.mysql.com/doc/dev/mysql-server/latest/classbinary__log_1_1Gtid__event.html>`_ 
 
     :ivar commit_flag: 1byte - 00000001 = Transaction may have changes logged with SBR.
             In 5.6, 5.7.0-5.7.18, and 8.0.0-8.0.1, this flag is always set. Starting in 5.7.19 and 8.0.2, this flag is cleared if the transaction only contains row events. It is set if any part of the transaction is written in statement format.
@@ -80,7 +81,8 @@ class GtidEvent(BinLogEvent):
 
     @property
     def gtid(self):
-        """GTID = source_id:transaction_id
+        """
+        GTID = source_id:transaction_id
         Eg: 3E11FA47-71CA-11E1-9E33-C80AA9429562:23
         See: http://dev.mysql.com/doc/refman/5.6/en/replication-gtids-concepts.html"""
         nibbles = binascii.hexlify(self.sid).decode('ascii')
@@ -104,7 +106,7 @@ class MariadbGtidEvent(BinLogEvent):
     """
     GTID(Global Transaction Identifier) change in binlog event in MariaDB
 
-    for more information: `[see details] <https://mariadb.com/kb/en/gtid_event/>`_.
+    For more information: `[see details] <https://mariadb.com/kb/en/gtid_event/>`_.
 
     :ivar server_id: int - The ID of the server where the GTID event occurred.
     :ivar gtid_seq_no: int - The sequence number of the GTID event.
@@ -134,7 +136,7 @@ class MariadbBinLogCheckPointEvent(BinLogEvent):
     More details are available in the MariaDB Knowledge Base:
     https://mariadb.com/kb/en/binlog_checkpoint_event/
 
-    :ivar filename_length:  int - The length of the filename.
+    :ivar filename_length: int - The length of the filename.
     :ivar filename: str - The name of the file saved at the checkpoint.
     """
 
@@ -153,8 +155,7 @@ class MariadbAnnotateRowsEvent(BinLogEvent):
     If you want to check this binlog, change the value of the flag(line 382 of the 'binlogstream.py') option to 2 
     https://mariadb.com/kb/en/annotate_rows_event/
 
-    Attributes:
-        sql_statement: The SQL statement
+    :ivar sql_statement: str - The SQL statement
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
@@ -169,15 +170,14 @@ class MariadbGtidListEvent(BinLogEvent):
     GTID List event
     https://mariadb.com/kb/en/gtid_list_event/
 
-    Attributes:
-        gtid_length: Number of GTIDs
-        gtid_list: list of 'MariadbGtidObejct'
+    :ivar gtid_length: int - Number of GTIDs
+    :ivar gtid_list: list - list of 'MariadbGtidObejct'
 
-        'MariadbGtidObejct' Attributes:
-            domain_id: Replication Domain ID
-            server_id: Server_ID
-            gtid_seq_no: GTID sequence
-            gtid: 'domain_id'+ 'server_id' + 'gtid_seq_no'
+    'MariadbGtidObejct' Attributes:
+        domain_id: Replication Domain ID
+        server_id: Server_ID
+        gtid_seq_no: GTID sequence
+        gtid: 'domain_id'+ 'server_id' + 'gtid_seq_no'
     """
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
 
@@ -200,7 +200,8 @@ class MariadbGtidListEvent(BinLogEvent):
 
 
 class RotateEvent(BinLogEvent):
-    """Change MySQL bin log file
+    """
+    Change MySQL bin log file
     Represents information for the slave to know the name of the binary log it is going to receive.
 
     For more information: `[see details] <https://dev.mysql.com/doc/dev/mysql-server/latest/classbinary__log_1_1Rotate__event.html>`_.
@@ -222,7 +223,8 @@ class RotateEvent(BinLogEvent):
 
 
 class XAPrepareEvent(BinLogEvent):
-    """An XA prepare event is generated for a XA prepared transaction.
+    """
+    An XA prepare event is generated for a XA prepared transaction.
     Like Xid_event, it contains XID of the **prepared** transaction.
 
     For more information: `[see details] <https://dev.mysql.com/doc/refman/8.0/en/xa-statements.html>`_.
@@ -283,10 +285,10 @@ class StopEvent(BinLogEvent):
 
 
 class XidEvent(BinLogEvent):
-    """A COMMIT event
-    Generated when COMMIT of a transaction that modifies one or more tables of an XA-capable storage engine occurs.
+    """
+    A COMMIT event generated when COMMIT of a transaction that modifies one or more tables of an XA-capable storage engine occurs.
 
-    For more information : `[see details] <https://mariadb.com/kb/en/xid_event/>`_. 
+    For more information: `[see details] <https://mariadb.com/kb/en/xid_event/>`_. 
 
     :ivar xid: uint - Transaction ID for 2 Phase Commit.
     """
