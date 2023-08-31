@@ -1,26 +1,56 @@
-version: '3.2'
+version: '3.4'
+
+x-mysql: &mysql
+  environment:
+    MYSQL_ALLOW_EMPTY_PASSWORD: true
+  command: >
+    mysqld
+    --log-bin=mysql-bin.log
+    --server-id 1
+    --binlog-format=row
+    --gtid_mode=on
+    --enforce-gtid-consistency=on
+
+x-mariadb: &mariadb
+  environment:
+    MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 1
+  command: >
+    --server-id=1
+    --default-authentication-plugin=mysql_native_password
+    --log-bin=master-bin
+    --binlog-format=row
+
 services:
-  percona-5.7:
-    platform: linux/amd64
+  percona-5.7-ctl:
+    <<: *mysql
     image: percona:5.7
-    environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: true
-      MYSQL_DATABASE: pymysqlreplication_test
     ports:
-      - 3306:3306
-    command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave_updates
-    restart: always
+      - "3307:3306"
     networks:
       - default
 
-  percona-5.7-ctl:
+  percona-5.7:
+    <<: *mysql
     image: percona:5.7
-    environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: true
-      MYSQL_DATABASE: pymysqlreplication_test
     ports:
-      - 3307:3307
-    command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave_updates -P 3307
+      - "3306:3306"
+    networks:
+      - default
+
+  mariadb-10.6:
+    <<: *mariadb
+    image: mariadb:10.6
+    ports:
+      - "3308:3306"
+    volumes:
+      - type: bind
+        source: ./.mariadb
+        target: /opt/key_file
+      - type: bind
+        source: ./.mariadb/my.cnf
+        target: /etc/mysql/my.cnf
+    networks:
+      - default
 
   pymysqlreplication:
     build:
@@ -30,6 +60,9 @@ services:
         BASE_IMAGE: python:3.11-alpine
         MYSQL_5_7: percona-5.7
         MYSQL_5_7_CTL: percona-5.7-ctl
+        MYSQL_5_7_CTL_PORT: 3306
+        MARIADB_10_6: mariadb-10.6
+        MARIADB_10_6_PORT: 3306
 
     command:
       - /bin/sh
@@ -39,7 +72,7 @@ services:
         
         while :
         do
-          if mysql -h percona-5.7 --user=root --execute "USE pymysqlreplication_test;" 2>&1 >/dev/null && mysql -h percona-5.7-ctl --port=3307  --user=root --execute "USE pymysqlreplication_test;" 2>&1 >/dev/null; then
+          if mysql -h percona-5.7 --user=root --execute "SELECT version();" 2>&1 >/dev/null && mysql -h percona-5.7-ctl --user=root --execute "SELECT version();" 2>&1 >/dev/null; then
             break
           fi
           sleep 1
@@ -56,4 +89,5 @@ services:
       - percona-5.7-ctl
 
 networks:
-  default: {}
+  default:
+    driver: bridge
