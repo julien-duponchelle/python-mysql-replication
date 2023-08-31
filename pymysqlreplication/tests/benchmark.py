@@ -11,15 +11,19 @@ import random
 import os
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.row_event import *
+from pymysql.connections import Connection
+from pymysql.cursors import Cursor
+
+from typing import Any
 import cProfile
 
 
-def execute(con, query):
+def execute(con: Connection, query: str) -> Cursor:
     c = con.cursor()
     c.execute(query)
     return c
 
-def consume_events():
+def consume_events() -> None:
     stream = BinLogStreamReader(connection_settings=database,
                                 server_id=3,
                                 resume_stream=False,
