@@ -644,8 +644,7 @@ class BinLogStreamReader(object):
                     raise error
 
     def __log_valid_parameters(self):
-        # ignore_list = ["allowed_events_in_packet", "table_map"]
-        logging.basicConfig(level=logging.INFO)
+        ignore_list = ["allowed_events_in_packet", "table_map"]
         for parameter, value in self.__dict__.items():
             if not value:
                 continue
