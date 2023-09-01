@@ -28,7 +28,7 @@ __all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def ignoredEvents(self):
-        return [GtidEvent]
+        return [GtidEvent, PreviousGtidsEvent]
 
     def test_allowed_event_list(self):
         self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 23)
@@ -577,7 +577,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def ignoredEvents(self):
-        return [GtidEvent]
+        return [GtidEvent, PreviousGtidsEvent]
 
     def test_insert_multiple_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -902,6 +902,7 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
         query = "COMMIT;"
         self.execute(query)
 
+        self.assertIsInstance(self.stream.fetchone(), PreviousGtidsEvent)
         firstevent = self.stream.fetchone()
         self.assertIsInstance(firstevent, GtidEvent)
 
@@ -951,6 +952,7 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        self.assertIsInstance(self.stream.fetchone(), PreviousGtidsEvent)
         self.assertIsInstance(self.stream.fetchone(), GtidEvent)
         event = self.stream.fetchone()
 
