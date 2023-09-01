@@ -18,8 +18,12 @@ from pymysqlreplication.gtid import GtidSet, Gtid
 from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
+from pymysqlreplication.packet import BinLogPacketWrapper
+from pymysql.protocol import MysqlPacket
 
-__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings", "TestGtidBinLogStreamReader", "TestMariadbBinlogStreamReader", "TestStatementConnectionSetting", "TestRowsQueryLogEvents"]
+__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings",
+           "TestGtidBinLogStreamReader", "TestMariadbBinlogStreamReader", "TestStatementConnectionSetting",
+           "TestRowsQueryLogEvents"]
 
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
@@ -521,6 +525,54 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertEqual(last_log_pos, 888)
         self.assertEqual(last_event_type, TABLE_MAP_EVENT)
+
+    def test_event_validation(self):
+        def create_binlog_packet_wrapper(pkt):
+            return BinLogPacketWrapper(pkt, self.stream.table_map,
+                                       self.stream._ctl_connection, self.stream.mysql_version,
+                                       self.stream._BinLogStreamReader__use_checksum,
+                                       self.stream._BinLogStreamReader__allowed_events_in_packet,
+                                       self.stream._BinLogStreamReader__only_tables,
+                                       self.stream._BinLogStreamReader__ignored_tables,
+                                       self.stream._BinLogStreamReader__only_schemas,
+                                       self.stream._BinLogStreamReader__ignored_schemas,
+                                       self.stream._BinLogStreamReader__freeze_schema,
+                                       self.stream._BinLogStreamReader__fail_on_table_metadata_unavailable,
+                                       self.stream._BinLogStreamReader__ignore_decode_errors,
+                                       self.stream._BinLogStreamReader__verify_checksum,)
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            blocking=False,
+            verify_checksum=True
+        )
+        # For event data, refer to the official document example data of mariaDB.
+        # https://mariadb.com/kb/en/query_event/#example-with-crc32
+        correct_event_data = (
+            # OK value
+            b"\x00"
+            # Header
+            b"q\x17(Z\x02\x8c'\x00\x00U\x00\x00\x00\x01\t\x00\x00\x00\x00"
+            # Content
+            b"f\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1a\x00"
+            b"\x00\x00\x00\x00\x00\x01\x00\x00\x00P\x00\x00"
+            b"\x00\x00\x06\x03std\x04\x08\x00\x08\x00\x08\x00\x00"
+            b"TRUNCATE TABLE test.t4"
+            # CRC 32, 4 Bytes 
+            b"Ji\x9e\xed"
+        )
+        # Assume a bit flip occurred while data was being transmitted    q(1001000) -> U(0110111)
+        modified_byte = b"U"
+        wrong_event_data = correct_event_data[:1] + modified_byte + correct_event_data[2:]
+
+        packet = MysqlPacket(correct_event_data, 0)
+        wrong_packet = MysqlPacket(wrong_event_data, 0)
+        self.stream.fetchone()  # for '_ctl_connection' parameter
+        binlog_event = create_binlog_packet_wrapper(packet)
+        wrong_event = create_binlog_packet_wrapper(wrong_packet)
+        self.assertEqual(binlog_event.event._is_event_valid, True)
+        self.assertNotEqual(wrong_event.event._is_event_valid, True)
 
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):

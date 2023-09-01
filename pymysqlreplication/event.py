@@ -4,6 +4,8 @@ import binascii
 import struct
 import datetime
 import decimal
+import zlib
+
 from pymysqlreplication.constants.STATUS_VAR_KEY import *
 from pymysqlreplication.exceptions import StatusVariableMismatch
 from typing import Union, Optional
@@ -18,7 +20,8 @@ class BinLogEvent(object):
                  ignored_schemas=None,
                  freeze_schema=False,
                  fail_on_table_metadata_unavailable=False,
-                 ignore_decode_errors=False):
+                 ignore_decode_errors=False,
+                 verify_checksum=False,):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
@@ -28,16 +31,31 @@ class BinLogEvent(object):
         self.mysql_version = mysql_version
         self._fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
         self._ignore_decode_errors = ignore_decode_errors
+        self._verify_checksum = verify_checksum
+        self._is_event_valid = None
         # The event have been fully processed, if processed is false
         # the event will be skipped
         self._processed = True
         self.complete = True
+        self._verify_event()
 
     def _read_table_id(self):
         # Table ID is 6 byte
         # pad little-endian number
         table_id = self.packet.read(6) + b"\x00\x00"
         return struct.unpack('<Q', table_id)[0]
+
+    def _verify_event(self):
+        if not self._verify_checksum:
+            return
+
+        self.packet.rewind(1)
+        data = self.packet.read(19 + self.event_size)
+        footer = self.packet.read(4)
+        byte_data = zlib.crc32(data).to_bytes(4, byteorder='little')
+        self._is_event_valid = True if byte_data == footer else False
+        self.packet.read_bytes -= (19 + self.event_size + 4)
+        self.packet.rewind(20)
 
     def dump(self):
         print("=== %s ===" % (self.__class__.__name__))
@@ -57,7 +75,7 @@ class GtidEvent(BinLogEvent):
     """
     GTID change in binlog event
 
-    For more information: `[GTID] <https://mariadb.com/kb/en/gtid/>`_ `[see also] <https://dev.mysql.com/doc/dev/mysql-server/latest/classbinary__log_1_1Gtid__event.html>`_ 
+    For more information: `[GTID] <https://mariadb.com/kb/en/gtid/>`_ `[see also] <https://dev.mysql.com/doc/dev/mysql-server/latest/classbinary__log_1_1Gtid__event.html>`_
 
     :ivar commit_flag: 1byte - 00000001 = Transaction may have changes logged with SBR.
             In 5.6, 5.7.0-5.7.18, and 8.0.0-8.0.1, this flag is always set. Starting in 5.7.19 and 8.0.2, this flag is cleared if the transaction only contains row events. It is set if any part of the transaction is written in statement format.
@@ -152,8 +170,8 @@ class MariadbBinLogCheckPointEvent(BinLogEvent):
 
 class MariadbAnnotateRowsEvent(BinLogEvent):
     """
-    Annotate rows event 
-    If you want to check this binlog, change the value of the flag(line 382 of the 'binlogstream.py') option to 2 
+    Annotate rows event
+    If you want to check this binlog, change the value of the flag(line 382 of the 'binlogstream.py') option to 2
     https://mariadb.com/kb/en/annotate_rows_event/
 
     :ivar sql_statement: str - The SQL statement
@@ -229,7 +247,7 @@ class XAPrepareEvent(BinLogEvent):
     Like Xid_event, it contains XID of the **prepared** transaction.
 
     For more information: `[see details] <https://dev.mysql.com/doc/refman/8.0/en/xa-statements.html>`_.
-    
+
     :ivar one_phase: current XA transaction commit method
     :ivar xid_format_id: a number that identifies the format used by the gtrid and bqual values
     :ivar xid: serialized XID representation of XA transaction (xid_gtrid + xid_bqual)
@@ -260,14 +278,14 @@ class XAPrepareEvent(BinLogEvent):
 class FormatDescriptionEvent(BinLogEvent):
     """
     Represents a Format Description Event in the MySQL binary log.
-    
+
     This event is written at the start of a binary log file for binlog version 4.
     It provides the necessary information to decode subsequent events in the file.
 
     :ivar binlog_version: int - Version of the binary log format.
     :ivar mysql_version_str: str - Server's MySQL version in string format.
     """
-    
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map,
                                           ctl_connection, **kwargs)
@@ -289,7 +307,7 @@ class XidEvent(BinLogEvent):
     """
     A COMMIT event generated when COMMIT of a transaction that modifies one or more tables of an XA-capable storage engine occurs.
 
-    For more information: `[see details] <https://mariadb.com/kb/en/xid_event/>`_. 
+    For more information: `[see details] <https://mariadb.com/kb/en/xid_event/>`_.
 
     :ivar xid: uint - Transaction ID for 2 Phase Commit.
     """
@@ -312,18 +330,18 @@ class HeartbeatLogEvent(BinLogEvent):
 
     `[see MASTER_HEARTBEAT_PERIOD] <https://dev.mysql.com/doc/refman/8.0/en/change-master-to.html>`_.
 
-    A Mysql server also does it for each skipped events in the log. 
-    This is because to make the slave bump its position so that 
+    A Mysql server also does it for each skipped events in the log.
+    This is because to make the slave bump its position so that
     if a disconnection occurs, the slave will only reconnects from the lasted skipped position. (Baloo's idea)
 
     (see Binlog_sender::send_events in sql/rpl_binlog_sender.cc)
 
     Warning:
-    That makes 106 bytes of data for skipped event in the binlog. 
-    *this is also the case with GTID replication*.  
-    To mitigate such behavior, you are expected to keep the binlog small 
-    (see max_binlog_size, defaults to 1G).  
-    In any case, the timestamp is 0 (as in 1970-01-01T00:00:00).  
+    That makes 106 bytes of data for skipped event in the binlog.
+    *this is also the case with GTID replication*.
+    To mitigate such behavior, you are expected to keep the binlog small
+    (see max_binlog_size, defaults to 1G).
+    In any case, the timestamp is 0 (as in 1970-01-01T00:00:00).
 
     :ivar ident: Name of the current binlog
     """
@@ -411,7 +429,7 @@ class QueryEvent(BinLogEvent):
         elif key == Q_TIME_ZONE_CODE:                 # 0x05
             time_zone_len = self.packet.read_uint8()
             if time_zone_len:
-                self.time_zone = self.packet.read(time_zone_len) 
+                self.time_zone = self.packet.read(time_zone_len)
         elif key == Q_CATALOG_NZ_CODE:                # 0x06
             catalog_len = self.packet.read_uint8()
             if catalog_len:
@@ -545,8 +563,8 @@ class IntvarEvent(BinLogEvent):
     """
     Stores the value of auto-increment variables.
     This event will be created just before a QueryEvent.
-    
-    :ivar type: int - 1 byte identifying the type of variable stored. 
+
+    :ivar type: int - 1 byte identifying the type of variable stored.
     Can be either LAST_INSERT_ID_EVENT (1) or INSERT_ID_EVENT (2).
     :ivar value: int - The value of the variable
     """
@@ -743,10 +761,10 @@ class UserVarEvent(BinLogEvent):
 
 class MariadbStartEncryptionEvent(BinLogEvent):
     """
-    Since MariaDB 10.1.7, 
-    the START_ENCRYPTION event is written to every binary log file 
-    if encrypt_binlog is set to ON. Prior to enabling this setting, 
-    additional configuration steps are required in MariaDB. 
+    Since MariaDB 10.1.7,
+    the START_ENCRYPTION event is written to every binary log file
+    if encrypt_binlog is set to ON. Prior to enabling this setting,
+    additional configuration steps are required in MariaDB.
     (Link: https://mariadb.com/kb/en/encrypting-binary-logs/)
 
     This event is written just once, after the Format Description event
