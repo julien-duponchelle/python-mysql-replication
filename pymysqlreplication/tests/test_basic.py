@@ -1280,7 +1280,6 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         #Check self.sql_statement
         self.assertEqual(event.sql_statement,insert_query)
         self.assertIsInstance(event,MariadbAnnotateRowsEvent)
-
     def test_start_encryption_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
@@ -1348,7 +1347,6 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         event = self.stream.fetchone()
         self.assertEqual(event.event_type,163)
         self.assertEqual(event.gtid_list[0].gtid, '0-1-15')
-        
 
 
 class TestRowsQueryLogEvents(base.PyMySQLReplicationTestCase):

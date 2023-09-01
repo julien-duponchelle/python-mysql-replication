@@ -625,9 +625,9 @@ class BinLogStreamReader(object):
                 MariadbAnnotateRowsEvent,
                 RandEvent,
                 MariadbStartEncryptionEvent,
-                UserVarEvent,
                 MariadbGtidListEvent,
-                MariadbBinLogCheckPointEvent
+                MariadbBinLogCheckPointEvent,
+                UserVarEvent
             ))
         if ignored_events is not None:
             for e in ignored_events:
