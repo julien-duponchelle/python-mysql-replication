@@ -145,8 +145,8 @@ class BinLogStreamReader(object):
                  is_mariadb=False,
                  annotate_rows_event=False,
                  ignore_decode_errors=False,
-                 parma_logging=True,
-                 verify_checksum=False,):
+                 verify_checksum=False,
+                 enable_logging=True,):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -189,6 +189,8 @@ class BinLogStreamReader(object):
             ignore_decode_errors: If true, any decode errors encountered
                                   when reading column data will be ignored.
             verify_checksum: If true, verify events read from the binary log by examining checksums.
+            enable_logging: When set to True, logs various details helpful for debugging and monitoring
+                            When set to False, logging is disabled to enhance performance.
         """
 
         self.__connection_settings = connection_settings
@@ -230,7 +232,7 @@ class BinLogStreamReader(object):
         self.skip_to_timestamp = skip_to_timestamp
         self.is_mariadb = is_mariadb
         self.__annotate_rows_event = annotate_rows_event
-        if parma_logging:
+        if enable_logging:
             self.__log_valid_parameters()
 
         if end_log_pos:
@@ -615,7 +617,6 @@ class BinLogStreamReader(object):
         if only_events is not None:
             events = set(only_events)
         else:
-            a = QueryEvent
             events = set((
                 QueryEvent,
                 RotateEvent,
@@ -682,20 +683,18 @@ class BinLogStreamReader(object):
                     raise error
 
     def __log_valid_parameters(self):
-        ignore_list = ["allowed_events_in_packet", "table_map"]
+        ignored = ["allowed_events", "table_map"]
         for parameter, value in self.__dict__.items():
-            if not value:
-                continue
             if parameter.startswith("_BinLogStreamReader__"):
                 parameter = parameter.replace("_BinLogStreamReader__", "")
-            if type(value) == bool or type(value) == int:
-                comment = f"{parameter} is {value}"
-            elif type(value) == frozenset:
+            if parameter in ignored or not value:
+                continue
+            if type(value) == frozenset:
                 string_list = [str(item).split()[-1][:-2].split('.')[2] for item in value]
                 items = ", ".join(string_list)
                 comment = f"{parameter}: [{items}]"
             else:
-                comment = "Set parameter - {}, value - {}".format(parameter, value)
+                comment = f"{parameter}: {value}"
             logging.info(comment)
 
     def __iter__(self):
