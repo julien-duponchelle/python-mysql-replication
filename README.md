@@ -63,6 +63,7 @@ Featured
 
 [Streaming Changes in a Database with Amazon Kinesis](https://aws.amazon.com/blogs/database/streaming-changes-in-a-database-with-amazon-kinesis/) (by Emmanuel Espina, Amazon Web Services)
 
+[Near Zero Downtime Migration from MySQL to DynamoDB](https://aws.amazon.com/ko/blogs/big-data/near-zero-downtime-migration-from-mysql-to-dynamodb/) (by YongSeong Lee, Amazon Web Services)
 
 Projects using this library
 ===========================

@@ -64,6 +64,7 @@ class BinLogPacketWrapper(object):
         constants.XID_EVENT: event.XidEvent,
         constants.INTVAR_EVENT: event.IntvarEvent,
         constants.GTID_LOG_EVENT: event.GtidEvent,
+        constants.PREVIOUS_GTIDS_LOG_EVENT: event.PreviousGtidsEvent,
         constants.STOP_EVENT: event.StopEvent,
         constants.BEGIN_LOAD_QUERY_EVENT: event.BeginLoadQueryEvent,
         constants.EXECUTE_LOAD_QUERY_EVENT: event.ExecuteLoadQueryEvent,
@@ -71,6 +72,7 @@ class BinLogPacketWrapper(object):
         constants.XA_PREPARE_EVENT: event.XAPrepareEvent,
         constants.ROWS_QUERY_LOG_EVENT: event.RowsQueryLogEvent,
         constants.RAND_EVENT: event.RandEvent,
+        constants.USER_VAR_EVENT: event.UserVarEvent,
         # row_event
         constants.UPDATE_ROWS_EVENT_V1: row_event.UpdateRowsEvent,
         constants.WRITE_ROWS_EVENT_V1: row_event.WriteRowsEvent,
@@ -81,33 +83,27 @@ class BinLogPacketWrapper(object):
         constants.TABLE_MAP_EVENT: row_event.TableMapEvent,
         # 5.6 GTID enabled replication events
         constants.ANONYMOUS_GTID_LOG_EVENT: event.NotImplementedEvent,
-        constants.ANONYMOUS_GTID_LOG_EVENT: event.NotImplementedEvent,
-        constants.PREVIOUS_GTIDS_LOG_EVENT: event.NotImplementedEvent,
         # MariaDB GTID
         constants.MARIADB_ANNOTATE_ROWS_EVENT: event.MariadbAnnotateRowsEvent,
-        constants.MARIADB_BINLOG_CHECKPOINT_EVENT: event.NotImplementedEvent,
         constants.MARIADB_BINLOG_CHECKPOINT_EVENT: event.MariadbBinLogCheckPointEvent,
         constants.MARIADB_GTID_EVENT: event.MariadbGtidEvent,
         constants.MARIADB_GTID_GTID_LIST_EVENT: event.MariadbGtidListEvent,
         constants.MARIADB_START_ENCRYPTION_EVENT: event.MariadbStartEncryptionEvent,
     }
 
-    def __init__(
-        self,
-        from_packet,
-        table_map,
-        ctl_connection,
-        mysql_version,
-        use_checksum,
-        allowed_events,
-        only_tables,
-        ignored_tables,
-        only_schemas,
-        ignored_schemas,
-        freeze_schema,
-        fail_on_table_metadata_unavailable,
-        ignore_decode_errors,
-    ):
+    def __init__(self, from_packet, table_map,
+                 ctl_connection,
+                 mysql_version,
+                 use_checksum,
+                 allowed_events,
+                 only_tables,
+                 ignored_tables,
+                 only_schemas,
+                 ignored_schemas,
+                 freeze_schema,
+                 fail_on_table_metadata_unavailable,
+                 ignore_decode_errors,
+                 verify_checksum,):
         # -1 because we ignore the ok byte
         self.read_bytes = 0
         # Used when we want to override a value in the data buffer
@@ -137,6 +133,7 @@ class BinLogPacketWrapper(object):
         if use_checksum:
             event_size_without_header = self.event_size - 23
         else:
+            verify_checksum = False
             event_size_without_header = self.event_size - 19
 
         self.event = None
@@ -144,21 +141,18 @@ class BinLogPacketWrapper(object):
 
         if event_class not in allowed_events:
             return
-        self.event = event_class(
-            self,
-            event_size_without_header,
-            table_map,
-            ctl_connection,
-            mysql_version=mysql_version,
-            only_tables=only_tables,
-            ignored_tables=ignored_tables,
-            only_schemas=only_schemas,
-            ignored_schemas=ignored_schemas,
-            freeze_schema=freeze_schema,
-            fail_on_table_metadata_unavailable=fail_on_table_metadata_unavailable,
-            ignore_decode_errors=ignore_decode_errors,
-        )
-        if self.event._processed is False:
+        self.event = event_class(self, event_size_without_header, table_map,
+                                 ctl_connection,
+                                 mysql_version=mysql_version,
+                                 only_tables=only_tables,
+                                 ignored_tables=ignored_tables,
+                                 only_schemas=only_schemas,
+                                 ignored_schemas=ignored_schemas,
+                                 freeze_schema=freeze_schema,
+                                 fail_on_table_metadata_unavailable=fail_on_table_metadata_unavailable,
+                                 ignore_decode_errors=ignore_decode_errors,
+                                 verify_checksum=verify_checksum)
+        if self.event._processed == False:
             self.event = None
 
     def read(self, size):

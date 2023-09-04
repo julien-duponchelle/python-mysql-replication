@@ -35,7 +35,7 @@ def to_binary_dict(d):
 
 class TestDataType(base.PyMySQLReplicationTestCase):
     def ignoredEvents(self):
-        return [GtidEvent]
+        return [GtidEvent, PreviousGtidsEvent]
 
     def create_and_insert_value(self, create_query, insert_query):
         self.execute(create_query)
