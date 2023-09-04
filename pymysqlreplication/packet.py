@@ -152,7 +152,7 @@ class BinLogPacketWrapper(object):
                                  fail_on_table_metadata_unavailable=fail_on_table_metadata_unavailable,
                                  ignore_decode_errors=ignore_decode_errors,
                                  verify_checksum=verify_checksum)
-        if self.event._processed == False:
+        if not self.event._processed:
             self.event = None
 
     def read(self, size):
