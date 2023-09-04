@@ -9,13 +9,27 @@ from pymysql.cursors import DictCursor
 
 from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT, FORMAT_DESCRIPTION_EVENT
 from .event import (
-    QueryEvent, RotateEvent, FormatDescriptionEvent,
-    XidEvent, GtidEvent, StopEvent, XAPrepareEvent,
-    BeginLoadQueryEvent, ExecuteLoadQueryEvent,
-    HeartbeatLogEvent, NotImplementedEvent, MariadbGtidEvent,
-    MariadbAnnotateRowsEvent, RandEvent, MariadbStartEncryptionEvent, RowsQueryLogEvent,
-    MariadbGtidListEvent, MariadbBinLogCheckPointEvent, UserVarEvent,
-    PreviousGtidsEvent)
+    QueryEvent,
+    RotateEvent,
+    FormatDescriptionEvent,
+    XidEvent,
+    GtidEvent,
+    StopEvent,
+    XAPrepareEvent,
+    BeginLoadQueryEvent,
+    ExecuteLoadQueryEvent,
+    HeartbeatLogEvent,
+    NotImplementedEvent,
+    MariadbGtidEvent,
+    MariadbAnnotateRowsEvent,
+    RandEvent,
+    MariadbStartEncryptionEvent,
+    RowsQueryLogEvent,
+    MariadbGtidListEvent,
+    MariadbBinLogCheckPointEvent,
+    UserVarEvent,
+    PreviousGtidsEvent,
+)
 from .exceptions import BinLogNotEnabled
 from .gtid import GtidSet
 from .packet import BinLogPacketWrapper
@@ -138,23 +152,36 @@ class BinLogStreamReader(object):
 
     report_slave = None
 
-    def __init__(self, connection_settings, server_id,
-                 ctl_connection_settings=None, resume_stream=False,
-                 blocking=False, only_events=None, log_file=None,
-                 log_pos=None, end_log_pos=None,
-                 filter_non_implemented_events=True,
-                 ignored_events=None, auto_position=None,
-                 only_tables=None, ignored_tables=None,
-                 only_schemas=None, ignored_schemas=None,
-                 freeze_schema=False, skip_to_timestamp=None,
-                 report_slave=None, slave_uuid=None,
-                 pymysql_wrapper=None,
-                 fail_on_table_metadata_unavailable=False,
-                 slave_heartbeat=None,
-                 is_mariadb=False,
-                 annotate_rows_event=False,
-                 ignore_decode_errors=False,
-                 verify_checksum=False,):
+    def __init__(
+        self,
+        connection_settings,
+        server_id,
+        ctl_connection_settings=None,
+        resume_stream=False,
+        blocking=False,
+        only_events=None,
+        log_file=None,
+        log_pos=None,
+        end_log_pos=None,
+        filter_non_implemented_events=True,
+        ignored_events=None,
+        auto_position=None,
+        only_tables=None,
+        ignored_tables=None,
+        only_schemas=None,
+        ignored_schemas=None,
+        freeze_schema=False,
+        skip_to_timestamp=None,
+        report_slave=None,
+        slave_uuid=None,
+        pymysql_wrapper=None,
+        fail_on_table_metadata_unavailable=False,
+        slave_heartbeat=None,
+        is_mariadb=False,
+        annotate_rows_event=False,
+        ignore_decode_errors=False,
+        verify_checksum=False,
+    ):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -548,19 +575,22 @@ class BinLogStreamReader(object):
             if not pkt.is_ok_packet():
                 continue
 
-            binlog_event = BinLogPacketWrapper(pkt, self.table_map,
-                                               self._ctl_connection,
-                                               self.mysql_version,
-                                               self.__use_checksum,
-                                               self.__allowed_events_in_packet,
-                                               self.__only_tables,
-                                               self.__ignored_tables,
-                                               self.__only_schemas,
-                                               self.__ignored_schemas,
-                                               self.__freeze_schema,
-                                               self.__fail_on_table_metadata_unavailable,
-                                               self.__ignore_decode_errors,
-                                               self.__verify_checksum,)
+            binlog_event = BinLogPacketWrapper(
+                pkt,
+                self.table_map,
+                self._ctl_connection,
+                self.mysql_version,
+                self.__use_checksum,
+                self.__allowed_events_in_packet,
+                self.__only_tables,
+                self.__ignored_tables,
+                self.__only_schemas,
+                self.__ignored_schemas,
+                self.__freeze_schema,
+                self.__fail_on_table_metadata_unavailable,
+                self.__ignore_decode_errors,
+                self.__verify_checksum,
+            )
 
             if binlog_event.event_type == ROTATE_EVENT:
                 self.log_pos = binlog_event.event.position
@@ -638,32 +668,34 @@ class BinLogStreamReader(object):
         if only_events is not None:
             events = set(only_events)
         else:
-            events = set((
-                QueryEvent,
-                RotateEvent,
-                StopEvent,
-                FormatDescriptionEvent,
-                XAPrepareEvent,
-                XidEvent,
-                GtidEvent,
-                BeginLoadQueryEvent,
-                ExecuteLoadQueryEvent,
-                UpdateRowsEvent,
-                WriteRowsEvent,
-                DeleteRowsEvent,
-                TableMapEvent,
-                HeartbeatLogEvent,
-                NotImplementedEvent,
-                MariadbGtidEvent,
-                RowsQueryLogEvent,
-                MariadbAnnotateRowsEvent,
-                RandEvent,
-                MariadbStartEncryptionEvent,
-                MariadbGtidListEvent,
-                MariadbBinLogCheckPointEvent,
-                UserVarEvent,
-                PreviousGtidsEvent
-            ))
+            events = set(
+                (
+                    QueryEvent,
+                    RotateEvent,
+                    StopEvent,
+                    FormatDescriptionEvent,
+                    XAPrepareEvent,
+                    XidEvent,
+                    GtidEvent,
+                    BeginLoadQueryEvent,
+                    ExecuteLoadQueryEvent,
+                    UpdateRowsEvent,
+                    WriteRowsEvent,
+                    DeleteRowsEvent,
+                    TableMapEvent,
+                    HeartbeatLogEvent,
+                    NotImplementedEvent,
+                    MariadbGtidEvent,
+                    RowsQueryLogEvent,
+                    MariadbAnnotateRowsEvent,
+                    RandEvent,
+                    MariadbStartEncryptionEvent,
+                    MariadbGtidListEvent,
+                    MariadbBinLogCheckPointEvent,
+                    UserVarEvent,
+                    PreviousGtidsEvent,
+                )
+            )
         if ignored_events is not None:
             for e in ignored_events:
                 events.remove(e)

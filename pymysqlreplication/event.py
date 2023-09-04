@@ -12,16 +12,22 @@ from typing import Union, Optional
 
 
 class BinLogEvent(object):
-    def __init__(self, from_packet, event_size, table_map, ctl_connection,
-                 mysql_version=(0,0,0),
-                 only_tables=None,
-                 ignored_tables=None,
-                 only_schemas=None,
-                 ignored_schemas=None,
-                 freeze_schema=False,
-                 fail_on_table_metadata_unavailable=False,
-                 ignore_decode_errors=False,
-                 verify_checksum=False,):
+    def __init__(
+        self,
+        from_packet,
+        event_size,
+        table_map,
+        ctl_connection,
+        mysql_version=(0, 0, 0),
+        only_tables=None,
+        ignored_tables=None,
+        only_schemas=None,
+        ignored_schemas=None,
+        freeze_schema=False,
+        fail_on_table_metadata_unavailable=False,
+        ignore_decode_errors=False,
+        verify_checksum=False,
+    ):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
@@ -52,9 +58,9 @@ class BinLogEvent(object):
         self.packet.rewind(1)
         data = self.packet.read(19 + self.event_size)
         footer = self.packet.read(4)
-        byte_data = zlib.crc32(data).to_bytes(4, byteorder='little')
+        byte_data = zlib.crc32(data).to_bytes(4, byteorder="little")
         self._is_event_valid = True if byte_data == footer else False
-        self.packet.read_bytes -= (19 + self.event_size + 4)
+        self.packet.read_bytes -= 19 + self.event_size + 4
         self.packet.rewind(20)
 
     def dump(self):
@@ -73,6 +79,7 @@ class BinLogEvent(object):
         """Core data dumped for the event"""
         pass
 
+
 class GtidEvent(BinLogEvent):
     """
     GTID change in binlog event
@@ -87,6 +94,7 @@ class GtidEvent(BinLogEvent):
     :ivar last_committed: Store the transaction's commit parent sequence_number
     :ivar sequence_number: The transaction's logical timestamp assigned at prepare phase
     """
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
 
@@ -136,9 +144,11 @@ class PreviousGtidsEvent(BinLogEvent):
         n_intervals: how many intervals are sent
     Eg: [4c9e3dfc-9d25-11e9-8d2e-0242ac1cfd7e:1-100, 4c9e3dfc-9d25-11e9-8d2e-0242ac1cfd7e:1-10:20-30]
     """
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(PreviousGtidsEvent, self).__init__(from_packet, event_size, table_map,
-                                                ctl_connection, **kwargs)
+        super(PreviousGtidsEvent, self).__init__(
+            from_packet, event_size, table_map, ctl_connection, **kwargs
+        )
 
         self._n_sid = self.packet.read_int64()
         self._gtids = []
@@ -146,13 +156,22 @@ class PreviousGtidsEvent(BinLogEvent):
         for _ in range(self._n_sid):
             sid = self.packet.read(16)
             n_intervals = self.packet.read_uint64()
-            intervals = [f"{self.packet.read_int64()}-{self.packet.read_uint64()}" for _ in range(n_intervals)]
-            nibbles = binascii.hexlify(sid).decode('ascii')
-            gtid = '%s-%s-%s-%s-%s:%s' % (
-                nibbles[:8], nibbles[8:12], nibbles[12:16], nibbles[16:20], nibbles[20:], ':'.join(intervals))
+            intervals = [
+                f"{self.packet.read_int64()}-{self.packet.read_uint64()}"
+                for _ in range(n_intervals)
+            ]
+            nibbles = binascii.hexlify(sid).decode("ascii")
+            gtid = "%s-%s-%s-%s-%s:%s" % (
+                nibbles[:8],
+                nibbles[8:12],
+                nibbles[12:16],
+                nibbles[16:20],
+                nibbles[20:],
+                ":".join(intervals),
+            )
             self._gtids.append(gtid)
 
-        self._previous_gtids = ','.join(self._gtids)
+        self._previous_gtids = ",".join(self._gtids)
 
     def _dump(self):
         print("previous_gtids: %s" % self._previous_gtids)
@@ -427,6 +446,7 @@ class QueryEvent(BinLogEvent):
     :ivar schema: str - The name of the currently selected database.
     :ivar query: str - The query executed.
     """
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
 
@@ -447,10 +467,11 @@ class QueryEvent(BinLogEvent):
 
         self.schema = self.packet.read(self.schema_length)
         self.packet.advance(1)
-        query = self.packet.read(event_size - 13 - self.status_vars_length
-                                 - self.schema_length - 1)
-        self.query = query.decode("utf-8", errors='backslashreplace')
-        #string[EOF]    query
+        query = self.packet.read(
+            event_size - 13 - self.status_vars_length - self.schema_length - 1
+        )
+        self.query = query.decode("utf-8", errors="backslashreplace")
+        # string[EOF]    query
 
     def _dump(self):
         super()._dump()
@@ -484,7 +505,7 @@ class QueryEvent(BinLogEvent):
             time_zone_len = self.packet.read_uint8()
             if time_zone_len:
                 self.time_zone = self.packet.read(time_zone_len)
-        elif key == Q_CATALOG_NZ_CODE:                # 0x06
+        elif key == Q_CATALOG_NZ_CODE:  # 0x06
             catalog_len = self.packet.read_uint8()
             if catalog_len:
                 self.catalog_nz_code = self.packet.read(catalog_len)
@@ -670,6 +691,7 @@ class RandEvent(BinLogEvent):
         print("seed1: %d" % (self.seed1))
         print("seed2: %d" % (self.seed2))
 
+
 class UserVarEvent(BinLogEvent):
     """
     UserVarEvent is generated every time a statement uses a user variable.
@@ -685,41 +707,53 @@ class UserVarEvent(BinLogEvent):
     """
 
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
-        super(UserVarEvent, self).__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+        super(UserVarEvent, self).__init__(
+            from_packet, event_size, table_map, ctl_connection, **kwargs
+        )
 
         # Payload
         self.name_len: int = self.packet.read_uint32()
         self.name: str = self.packet.read(self.name_len).decode()
         self.is_null: int = self.packet.read_uint8()
         self.type_to_codes_and_method: dict = {
-            0x00: ['STRING_RESULT', self._read_string],
-            0x01: ['REAL_RESULT', self._read_real],
-            0x02: ['INT_RESULT', self._read_int],
-            0x03: ['ROW_RESULT', self._read_default],
-            0x04: ['DECIMAL_RESULT', self._read_decimal]
+            0x00: ["STRING_RESULT", self._read_string],
+            0x01: ["REAL_RESULT", self._read_real],
+            0x02: ["INT_RESULT", self._read_int],
+            0x03: ["ROW_RESULT", self._read_default],
+            0x04: ["DECIMAL_RESULT", self._read_decimal],
         }
 
         self.value: Optional[Union[str, float, int, decimal.Decimal]] = None
         self.flags: Optional[int] = None
-        self.temp_value_buffer: Union[bytes, memoryview] = b''
+        self.temp_value_buffer: Union[bytes, memoryview] = b""
 
         if not self.is_null:
             self.type: int = self.packet.read_uint8()
             self.charset: int = self.packet.read_uint32()
             self.value_len: int = self.packet.read_uint32()
-            self.temp_value_buffer: Union[bytes, memoryview] = self.packet.read(self.value_len)
+            self.temp_value_buffer: Union[bytes, memoryview] = self.packet.read(
+                self.value_len
+            )
             self.flags: int = self.packet.read_uint8()
             self._set_value_from_temp_buffer()
         else:
-            self.type, self.charset, self.value_len, self.value, self.flags = None, None, None, None, None
+            self.type, self.charset, self.value_len, self.value, self.flags = (
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
 
     def _set_value_from_temp_buffer(self):
         """
         Set the value from the temporary buffer based on the type code.
         """
         if self.temp_value_buffer:
-            type_code, read_method = self.type_to_codes_and_method.get(self.type, ["UNKNOWN_RESULT", self._read_default])
-            if type_code == 'INT_RESULT':
+            type_code, read_method = self.type_to_codes_and_method.get(
+                self.type, ["UNKNOWN_RESULT", self._read_default]
+            )
+            if type_code == "INT_RESULT":
                 self.value = read_method(self.temp_value_buffer, self.flags)
             else:
                 self.value = read_method(self.temp_value_buffer)
@@ -734,13 +768,13 @@ class UserVarEvent(BinLogEvent):
         """
         Read real data.
         """
-        return struct.unpack('<d', buffer)[0]
+        return struct.unpack("<d", buffer)[0]
 
     def _read_int(self, buffer: bytes, flags: int) -> int:
         """
         Read integer data.
         """
-        fmt = '<Q' if flags == 1 else '<q'
+        fmt = "<Q" if flags == 1 else "<q"
         return struct.unpack(fmt, buffer)[0]
 
     def _read_decimal(self, buffer: bytes) -> decimal.Decimal:
@@ -750,7 +784,9 @@ class UserVarEvent(BinLogEvent):
         self.precision = self.temp_value_buffer[0]
         self.decimals = self.temp_value_buffer[1]
         raw_decimal = self.temp_value_buffer[2:]
-        return self._parse_decimal_from_bytes(raw_decimal, self.precision, self.decimals)
+        return self._parse_decimal_from_bytes(
+            raw_decimal, self.precision, self.decimals
+        )
 
     def _read_default(self) -> bytes:
         """
@@ -760,7 +796,9 @@ class UserVarEvent(BinLogEvent):
         return self.packet.read(self.value_len)
 
     @staticmethod
-    def _parse_decimal_from_bytes(raw_decimal: bytes, precision: int, decimals: int) -> decimal.Decimal:
+    def _parse_decimal_from_bytes(
+        raw_decimal: bytes, precision: int, decimals: int
+    ) -> decimal.Decimal:
         """
         Parse decimal from bytes.
         """
@@ -781,27 +819,31 @@ class UserVarEvent(BinLogEvent):
                 databuff = bytearray(data[:size])
                 for i in range(size):
                     databuff[i] = (databuff[i] ^ mask) & 0xFF
-                return size, int.from_bytes(databuff, byteorder='big')
+                return size, int.from_bytes(databuff, byteorder="big")
             return 0, 0
 
-        pointer, value = decode_decimal_decompress_value(comp_integral, raw_decimal, mask)
+        pointer, value = decode_decimal_decompress_value(
+            comp_integral, raw_decimal, mask
+        )
         res += str(value)
 
         for _ in range(uncomp_integral):
-            value = struct.unpack('>i', raw_decimal[pointer:pointer+4])[0] ^ mask
-            res += '%09d' % value
+            value = struct.unpack(">i", raw_decimal[pointer : pointer + 4])[0] ^ mask
+            res += "%09d" % value
             pointer += 4
 
         res += "."
 
         for _ in range(uncomp_fractional):
-            value = struct.unpack('>i', raw_decimal[pointer:pointer+4])[0] ^ mask
-            res += '%09d' % value
+            value = struct.unpack(">i", raw_decimal[pointer : pointer + 4])[0] ^ mask
+            res += "%09d" % value
             pointer += 4
 
-        size, value = decode_decimal_decompress_value(comp_fractional, raw_decimal[pointer:], mask)
+        size, value = decode_decimal_decompress_value(
+            comp_fractional, raw_decimal[pointer:], mask
+        )
         if size > 0:
-            res += '%0*d' % (comp_fractional, value)
+            res += "%0*d" % (comp_fractional, value)
         return decimal.Decimal(res)
 
     def _dump(self) -> None:
@@ -809,10 +851,14 @@ class UserVarEvent(BinLogEvent):
         print("User variable name: %s" % self.name)
         print("Is NULL: %s" % ("Yes" if self.is_null else "No"))
         if not self.is_null:
-            print("Type: %s" % self.type_to_codes_and_method.get(self.type, ['UNKNOWN_TYPE'])[0])
+            print(
+                "Type: %s"
+                % self.type_to_codes_and_method.get(self.type, ["UNKNOWN_TYPE"])[0]
+            )
             print("Charset: %s" % self.charset)
             print("Value: %s" % self.value)
             print("Flags: %s" % self.flags)
+
 
 class MariadbStartEncryptionEvent(BinLogEvent):
     """
@@ -873,6 +919,7 @@ class NotImplementedEvent(BinLogEvent):
 
     The event referencing this class skips parsing.
     """
+
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
         self.packet.advance(event_size)

@@ -27,7 +27,7 @@ class PyMySQLReplicationTestCase(base):
             "port": 3306,
             "use_unicode": True,
             "charset": charset,
-            "db": "pymysqlreplication_test"
+            "db": "pymysqlreplication_test",
         }
 
         self.conn_control = None
