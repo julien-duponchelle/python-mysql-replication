@@ -18,6 +18,8 @@ from pymysqlreplication.gtid import GtidSet, Gtid
 from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
+from pymysqlreplication.packet import BinLogPacketWrapper
+from pymysql.protocol import MysqlPacket
 
 __all__ = [
     "TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings",
@@ -28,12 +30,12 @@ __all__ = [
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def ignoredEvents(self):
-        return [GtidEvent]
+        return [GtidEvent, PreviousGtidsEvent]
 
     def test_allowed_event_list(self):
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 22)
-        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 21)
-        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 21)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, False)), 23)
+        self.assertEqual(len(self.stream._allowed_event_list(None, None, True)), 22)
+        self.assertEqual(len(self.stream._allowed_event_list(None, [RotateEvent], False)), 22)
         self.assertEqual(len(self.stream._allowed_event_list([RotateEvent], None, False)), 1)
 
     def test_read_query_event(self):
@@ -524,10 +526,58 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(last_log_pos, 888)
         self.assertEqual(last_event_type, TABLE_MAP_EVENT)
 
+    def test_event_validation(self):
+        def create_binlog_packet_wrapper(pkt):
+            return BinLogPacketWrapper(pkt, self.stream.table_map,
+                                       self.stream._ctl_connection, self.stream.mysql_version,
+                                       self.stream._BinLogStreamReader__use_checksum,
+                                       self.stream._BinLogStreamReader__allowed_events_in_packet,
+                                       self.stream._BinLogStreamReader__only_tables,
+                                       self.stream._BinLogStreamReader__ignored_tables,
+                                       self.stream._BinLogStreamReader__only_schemas,
+                                       self.stream._BinLogStreamReader__ignored_schemas,
+                                       self.stream._BinLogStreamReader__freeze_schema,
+                                       self.stream._BinLogStreamReader__fail_on_table_metadata_unavailable,
+                                       self.stream._BinLogStreamReader__ignore_decode_errors,
+                                       self.stream._BinLogStreamReader__verify_checksum,)
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            blocking=False,
+            verify_checksum=True
+        )
+        # For event data, refer to the official document example data of mariaDB.
+        # https://mariadb.com/kb/en/query_event/#example-with-crc32
+        correct_event_data = (
+            # OK value
+            b"\x00"
+            # Header
+            b"q\x17(Z\x02\x8c'\x00\x00U\x00\x00\x00\x01\t\x00\x00\x00\x00"
+            # Content
+            b"f\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1a\x00"
+            b"\x00\x00\x00\x00\x00\x01\x00\x00\x00P\x00\x00"
+            b"\x00\x00\x06\x03std\x04\x08\x00\x08\x00\x08\x00\x00"
+            b"TRUNCATE TABLE test.t4"
+            # CRC 32, 4 Bytes 
+            b"Ji\x9e\xed"
+        )
+        # Assume a bit flip occurred while data was being transmitted    q(1001000) -> U(0110111)
+        modified_byte = b"U"
+        wrong_event_data = correct_event_data[:1] + modified_byte + correct_event_data[2:]
+
+        packet = MysqlPacket(correct_event_data, 0)
+        wrong_packet = MysqlPacket(wrong_event_data, 0)
+        self.stream.fetchone()  # for '_ctl_connection' parameter
+        binlog_event = create_binlog_packet_wrapper(packet)
+        wrong_event = create_binlog_packet_wrapper(wrong_packet)
+        self.assertEqual(binlog_event.event._is_event_valid, True)
+        self.assertNotEqual(wrong_event.event._is_event_valid, True)
+
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def ignoredEvents(self):
-        return [GtidEvent]
+        return [GtidEvent, PreviousGtidsEvent]
 
     def test_insert_multiple_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -852,6 +902,7 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
         query = "COMMIT;"
         self.execute(query)
 
+        self.assertIsInstance(self.stream.fetchone(), PreviousGtidsEvent)
         firstevent = self.stream.fetchone()
         self.assertIsInstance(firstevent, GtidEvent)
 
@@ -901,6 +952,7 @@ class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        self.assertIsInstance(self.stream.fetchone(), PreviousGtidsEvent)
         self.assertIsInstance(self.stream.fetchone(), GtidEvent)
         event = self.stream.fetchone()
 
@@ -1012,6 +1064,221 @@ class GtidTests(unittest.TestCase):
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac:1-:1")
             gtid = Gtid("57b70f4e-20d3-11e5-a393-4a63946f7eac::1")
 
+class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super(TestStatementConnectionSetting, self).setUp()
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(RandEvent, UserVarEvent, QueryEvent),
+            fail_on_table_metadata_unavailable=True
+        )
+        self.execute("SET @@binlog_format='STATEMENT'")
+
+    def test_rand_event(self):
+        self.execute("CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data INT NOT NULL, PRIMARY KEY (id))")
+        self.execute("INSERT INTO test (data) VALUES(RAND())")
+        self.execute("COMMIT")
+
+        self.assertEqual(self.bin_log_format(), "STATEMENT")
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        expected_rand_event = self.stream.fetchone()
+        self.assertIsInstance(expected_rand_event, RandEvent)
+        self.assertEqual(type(expected_rand_event.seed1), int)
+        self.assertEqual(type(expected_rand_event.seed2), int)
+
+    def test_user_var_string_event(self):
+        self.execute("CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR(50), PRIMARY KEY (id))")
+        self.execute("SET @test_user_var = 'foo'")
+        self.execute("INSERT INTO test (data) VALUES(@test_user_var)")
+        self.execute("COMMIT")
+
+        self.assertEqual(self.bin_log_format(), "STATEMENT")
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        expected_user_var_event = self.stream.fetchone()
+        self.assertIsInstance(expected_user_var_event, UserVarEvent)
+        self.assertIsInstance(expected_user_var_event.name_len, int)
+        self.assertEqual(expected_user_var_event.name, "test_user_var")
+        self.assertEqual(expected_user_var_event.value, "foo")
+        self.assertEqual(expected_user_var_event.is_null, 0)
+        self.assertEqual(expected_user_var_event.type, 0)
+        self.assertEqual(expected_user_var_event.charset, 33)
+
+    def test_user_var_real_event(self):
+        self.execute("CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data REAL, PRIMARY KEY (id))")
+        self.execute("SET @test_user_var = @@timestamp")
+        self.execute("INSERT INTO test (data) VALUES(@test_user_var)")
+        self.execute("COMMIT")
+
+        self.assertEqual(self.bin_log_format(), "STATEMENT")
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        expected_user_var_event = self.stream.fetchone()
+        self.assertIsInstance(expected_user_var_event, UserVarEvent)
+        self.assertIsInstance(expected_user_var_event.name_len, int)
+        self.assertEqual(expected_user_var_event.name, "test_user_var")
+        self.assertIsInstance(expected_user_var_event.value,float)
+        self.assertEqual(expected_user_var_event.is_null, 0)
+        self.assertEqual(expected_user_var_event.type, 1)
+        self.assertEqual(expected_user_var_event.charset, 33)
+
+    def test_user_var_int_event(self):
+        self.execute("CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data1 INT, data2 INT, data3 INT, PRIMARY KEY (id))")
+        self.execute("SET @test_user_var1 = 5")
+        self.execute("SET @test_user_var2 = 0")
+        self.execute("SET @test_user_var3 = -5")
+        self.execute("INSERT INTO test (data1, data2, data3) VALUES(@test_user_var1, @test_user_var2, @test_user_var3)")
+        self.execute("COMMIT")
+
+        self.assertEqual(self.bin_log_format(), "STATEMENT")
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        expected_user_var_event = self.stream.fetchone()
+        self.assertIsInstance(expected_user_var_event, UserVarEvent)
+        self.assertIsInstance(expected_user_var_event.name_len, int)
+        self.assertEqual(expected_user_var_event.name, "test_user_var1")
+        self.assertEqual(expected_user_var_event.value, 5)
+        self.assertEqual(expected_user_var_event.is_null, 0)
+        self.assertEqual(expected_user_var_event.type, 2)
+        self.assertEqual(expected_user_var_event.charset, 33)
+
+        expected_user_var_event = self.stream.fetchone()
+        self.assertIsInstance(expected_user_var_event, UserVarEvent)
+        self.assertIsInstance(expected_user_var_event.name_len, int)
+        self.assertEqual(expected_user_var_event.name, "test_user_var2")
+        self.assertEqual(expected_user_var_event.value, 0)
+        self.assertEqual(expected_user_var_event.is_null, 0)
+        self.assertEqual(expected_user_var_event.type, 2)
+        self.assertEqual(expected_user_var_event.charset, 33)
+
+        expected_user_var_event = self.stream.fetchone()
+        self.assertIsInstance(expected_user_var_event, UserVarEvent)
+        self.assertIsInstance(expected_user_var_event.name_len, int)
+        self.assertEqual(expected_user_var_event.name, "test_user_var3")
+        self.assertEqual(expected_user_var_event.value, -5)
+        self.assertEqual(expected_user_var_event.is_null, 0)
+        self.assertEqual(expected_user_var_event.type, 2)
+        self.assertEqual(expected_user_var_event.charset, 33)
+
+    def test_user_var_int24_event(self):
+        self.execute("CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data1 MEDIUMINT, data2 MEDIUMINT, data3 MEDIUMINT UNSIGNED, PRIMARY KEY (id))")
+        self.execute("SET @test_user_var1 = 8388607")
+        self.execute("SET @test_user_var2 = -8388607")
+        self.execute("SET @test_user_var3 = 16777215")
+        self.execute("INSERT INTO test (data1, data2, data3) VALUES(@test_user_var1, @test_user_var2, @test_user_var3)")
+        self.execute("COMMIT")
+
+        self.assertEqual(self.bin_log_format(), "STATEMENT")
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        expected_user_var_event = self.stream.fetchone()
+        self.assertIsInstance(expected_user_var_event, UserVarEvent)
+        self.assertIsInstance(expected_user_var_event.name_len, int)
+        self.assertEqual(expected_user_var_event.name, "test_user_var1")
+        self.assertEqual(expected_user_var_event.value, 8388607)
+        self.assertEqual(expected_user_var_event.is_null, 0)
+        self.assertEqual(expected_user_var_event.type, 2)
+        self.assertEqual(expected_user_var_event.charset, 33)
+
+        expected_user_var_event = self.stream.fetchone()
+        self.assertIsInstance(expected_user_var_event, UserVarEvent)
+        self.assertIsInstance(expected_user_var_event.name_len, int)
+        self.assertEqual(expected_user_var_event.name, "test_user_var2")
+        self.assertEqual(expected_user_var_event.value, -8388607)
+        self.assertEqual(expected_user_var_event.is_null, 0)
+        self.assertEqual(expected_user_var_event.type, 2)
+        self.assertEqual(expected_user_var_event.charset, 33)
+
+        expected_user_var_event = self.stream.fetchone()
+        self.assertIsInstance(expected_user_var_event, UserVarEvent)
+        self.assertIsInstance(expected_user_var_event.name_len, int)
+        self.assertEqual(expected_user_var_event.name, "test_user_var3")
+        self.assertEqual(expected_user_var_event.value, 16777215)
+        self.assertEqual(expected_user_var_event.is_null, 0)
+        self.assertEqual(expected_user_var_event.type, 2)
+        self.assertEqual(expected_user_var_event.charset, 33)
+
+    def test_user_var_longlong_event(self):
+        self.execute("CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data1 BIGINT, data2 BIGINT, data3 BIGINT UNSIGNED, PRIMARY KEY (id))")
+        self.execute("SET @test_user_var1 = 9223372036854775807")
+        self.execute("SET @test_user_var2 = -9223372036854775808")
+        self.execute("SET @test_user_var3 = 18446744073709551615")
+        self.execute("INSERT INTO test (data1, data2, data3) VALUES(@test_user_var1, @test_user_var2, @test_user_var3)")
+        self.execute("COMMIT")
+
+        self.assertEqual(self.bin_log_format(), "STATEMENT")
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        expected_user_var_event = self.stream.fetchone()
+        self.assertIsInstance(expected_user_var_event, UserVarEvent)
+        self.assertIsInstance(expected_user_var_event.name_len, int)
+        self.assertEqual(expected_user_var_event.name, "test_user_var1")
+        self.assertEqual(expected_user_var_event.value, 9223372036854775807)
+        self.assertEqual(expected_user_var_event.is_null, 0)
+        self.assertEqual(expected_user_var_event.type, 2)
+        self.assertEqual(expected_user_var_event.charset, 33)
+
+        expected_user_var_event = self.stream.fetchone()
+        self.assertIsInstance(expected_user_var_event, UserVarEvent)
+        self.assertIsInstance(expected_user_var_event.name_len, int)
+        self.assertEqual(expected_user_var_event.name, "test_user_var2")
+        self.assertEqual(expected_user_var_event.value, -9223372036854775808)
+        self.assertEqual(expected_user_var_event.is_null, 0)
+        self.assertEqual(expected_user_var_event.type, 2)
+        self.assertEqual(expected_user_var_event.charset, 33)
+
+        expected_user_var_event = self.stream.fetchone()
+        self.assertIsInstance(expected_user_var_event, UserVarEvent)
+        self.assertIsInstance(expected_user_var_event.name_len, int)
+        self.assertEqual(expected_user_var_event.name, "test_user_var3")
+        self.assertEqual(expected_user_var_event.value, 18446744073709551615)
+        self.assertEqual(expected_user_var_event.is_null, 0)
+        self.assertEqual(expected_user_var_event.type, 2)
+        self.assertEqual(expected_user_var_event.charset, 33)
+
+    def test_user_var_decimal_event(self):
+        self.execute("CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data1 DECIMAL, data2 DECIMAL, PRIMARY KEY (id))")
+        self.execute("SET @test_user_var1 = 5.25")
+        self.execute("SET @test_user_var2 = -5.25")
+        self.execute("INSERT INTO test (data1, data2) VALUES(@test_user_var1, @test_user_var2)")
+        self.execute("COMMIT")
+
+        self.assertEqual(self.bin_log_format(), "STATEMENT")
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        expected_user_var_event = self.stream.fetchone()
+        self.assertIsInstance(expected_user_var_event, UserVarEvent)
+        self.assertIsInstance(expected_user_var_event.name_len, int)
+        self.assertEqual(expected_user_var_event.name, "test_user_var1")
+        self.assertEqual(expected_user_var_event.value, 5.25)
+        self.assertEqual(expected_user_var_event.is_null, 0)
+        self.assertEqual(expected_user_var_event.type, 4)
+        self.assertEqual(expected_user_var_event.charset, 33)
+
+        expected_user_var_event = self.stream.fetchone()
+        self.assertIsInstance(expected_user_var_event, UserVarEvent)
+        self.assertIsInstance(expected_user_var_event.name_len, int)
+        self.assertEqual(expected_user_var_event.name, "test_user_var2")
+        self.assertEqual(expected_user_var_event.value, -5.25)
+        self.assertEqual(expected_user_var_event.is_null, 0)
+        self.assertEqual(expected_user_var_event.type, 4)
+        self.assertEqual(expected_user_var_event.charset, 33)
+
+    def tearDown(self):
+        self.execute("SET @@binlog_format='ROW'")
+        self.assertEqual(self.bin_log_format(), "ROW")
+        super(TestStatementConnectionSetting, self).tearDown()
+
 class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
     def test_binlog_checkpoint_event(self):
         self.stream.close()
@@ -1068,7 +1335,6 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         #Check self.sql_statement
         self.assertEqual(event.sql_statement,insert_query)
         self.assertIsInstance(event,MariadbAnnotateRowsEvent)
-        
     def test_start_encryption_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
@@ -1136,39 +1402,6 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         event = self.stream.fetchone()
         self.assertEqual(event.event_type,163)
         self.assertEqual(event.gtid_list[0].gtid, '0-1-15')
-        
-
-
-class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
-    def setUp(self):
-        super().setUp()
-        self.stream.close()
-        self.stream = BinLogStreamReader(
-            self.database,
-            server_id=1024,
-            only_events=(RandEvent, QueryEvent),
-            fail_on_table_metadata_unavailable=True
-        )
-        self.execute("SET @@binlog_format='STATEMENT'")
-
-    def test_rand_event(self):
-        self.execute("CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data INT NOT NULL, PRIMARY KEY (id))")
-        self.execute("INSERT INTO test (data) VALUES(RAND())")
-        self.execute("COMMIT")
-
-        self.assertEqual(self.bin_log_format(), "STATEMENT")
-        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
-        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
-
-        expect_rand_event = self.stream.fetchone()
-        self.assertIsInstance(expect_rand_event, RandEvent)
-        self.assertEqual(type(expect_rand_event.seed1), int)
-        self.assertEqual(type(expect_rand_event.seed2), int)
-
-    def tearDown(self):
-        self.execute("SET @@binlog_format='ROW'")
-        self.assertEqual(self.bin_log_format(), "ROW")
-        super().tearDown()
 
 
 class TestRowsQueryLogEvents(base.PyMySQLReplicationTestCase):
@@ -1192,6 +1425,24 @@ class TestRowsQueryLogEvents(base.PyMySQLReplicationTestCase):
         self.execute("COMMIT")
         event = self.stream.fetchone()
         self.assertIsInstance(event, RowsQueryLogEvent)
+
+class TestLatin1(base.PyMySQLReplicationTestCase):
+
+    def setUp(self):
+        super().setUp(charset='latin1')
+
+    def test_query_event_latin1(self):
+        """
+        Ensure query events with a non-utf8 encoded query are parsed without errors.
+        """
+        self.stream = BinLogStreamReader(self.database, server_id=1024, only_events=[QueryEvent])
+        self.execute("CREATE TABLE test_latin1_ÖÆÛ (a INT)")
+        self.execute("COMMIT")
+        assert "ÖÆÛ".encode('latin-1') == b'\xd6\xc6\xdb'
+
+        event = self.stream.fetchone()
+        assert event.query.startswith("CREATE TABLE test")
+        assert event.query == r"CREATE TABLE test_latin1_\xd6\xc6\xdb (a INT)"
 
 
 class TestOptionalMetaData(base.PyMySQLReplicationTestCase):

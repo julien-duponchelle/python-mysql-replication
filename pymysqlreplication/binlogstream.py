@@ -14,7 +14,8 @@ from .event import (
     BeginLoadQueryEvent, ExecuteLoadQueryEvent,
     HeartbeatLogEvent, NotImplementedEvent, MariadbGtidEvent,
     MariadbAnnotateRowsEvent, RandEvent, MariadbStartEncryptionEvent, RowsQueryLogEvent,
-    MariadbGtidListEvent, MariadbBinLogCheckPointEvent)
+    MariadbGtidListEvent, MariadbBinLogCheckPointEvent, UserVarEvent,
+    PreviousGtidsEvent)
 from .exceptions import BinLogNotEnabled
 from .gtid import GtidSet
 from .packet import BinLogPacketWrapper
@@ -142,7 +143,8 @@ class BinLogStreamReader(object):
                  slave_heartbeat=None,
                  is_mariadb=False,
                  annotate_rows_event=False,
-                 ignore_decode_errors=False):
+                 ignore_decode_errors=False,
+                 verify_checksum=False,):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -182,8 +184,9 @@ class BinLogStreamReader(object):
                     to point to Mariadb specific GTID.
             annotate_rows_event: Parameter value to enable annotate rows event in mariadb,
                     used with 'is_mariadb'
-            ignore_decode_errors: If true, any decode errors encountered 
+            ignore_decode_errors: If true, any decode errors encountered
                                   when reading column data will be ignored.
+            verify_checksum: If true, verify events read from the binary log by examining checksums.
         """
 
         self.__connection_settings = connection_settings
@@ -206,6 +209,7 @@ class BinLogStreamReader(object):
             only_events, ignored_events, filter_non_implemented_events)
         self.__fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
         self.__ignore_decode_errors = ignore_decode_errors
+        self.__verify_checksum = verify_checksum
 
         # We can't filter on packet level TABLE_MAP and rotate event because
         # we need them for handling other operations
@@ -476,7 +480,7 @@ class BinLogStreamReader(object):
 
         flags = 0
 
-        # Enable annotate rows event 
+        # Enable annotate rows event
         if self.__annotate_rows_event:
             flags |= 0x02  # BINLOG_SEND_ANNOTATE_ROWS_EVENT
 
@@ -536,7 +540,8 @@ class BinLogStreamReader(object):
                                                self.__ignored_schemas,
                                                self.__freeze_schema,
                                                self.__fail_on_table_metadata_unavailable,
-                                               self.__ignore_decode_errors)
+                                               self.__ignore_decode_errors,
+                                               self.__verify_checksum,)
 
             if binlog_event.event_type == ROTATE_EVENT:
                 self.log_pos = binlog_event.event.position
@@ -627,7 +632,9 @@ class BinLogStreamReader(object):
                 RandEvent,
                 MariadbStartEncryptionEvent,
                 MariadbGtidListEvent,
-                MariadbBinLogCheckPointEvent
+                MariadbBinLogCheckPointEvent,
+                UserVarEvent,
+                PreviousGtidsEvent
             ))
         if ignored_events is not None:
             for e in ignored_events:

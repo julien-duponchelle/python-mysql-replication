@@ -18,7 +18,7 @@ class PyMySQLReplicationTestCase(base):
     def ignoredEvents(self):
         return []
 
-    def setUp(self):
+    def setUp(self, charset="utf8"):
         # default
         self.database = {
             "host": os.environ.get("MYSQL_5_7") or "localhost",
@@ -26,7 +26,7 @@ class PyMySQLReplicationTestCase(base):
             "passwd": "",
             "port": 3306,
             "use_unicode": True,
-            "charset": "utf8",
+            "charset": charset,
             "db": "pymysqlreplication_test"
         }
 
