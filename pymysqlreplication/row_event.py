@@ -634,7 +634,7 @@ class TableMapEvent(BinLogEvent):
         self.__only_schemas = kwargs["only_schemas"]
         self.__ignored_schemas = kwargs["ignored_schemas"]
         self.__freeze_schema = kwargs["freeze_schema"]
-
+        self.__optional_meta_data = kwargs["optional_meta_data"]
         # Post-Header
         self.table_id = self._read_table_id()
 
@@ -672,6 +672,8 @@ class TableMapEvent(BinLogEvent):
 
         if self.table_id in table_map:
             self.column_schemas = table_map[self.table_id].column_schemas
+        elif self.__optional_meta_data:
+            self.column_schemas = []
         else:
             self.column_schemas = self._ctl_connection._get_table_information(self.schema, self.table)
 
@@ -811,10 +813,8 @@ class TableMapEvent(BinLogEvent):
         column_schemas = []
         if len(self.optional_metadata.column_name_list) == 0:
             return
-        if len(self.column_schemas) == self.column_count:
-            # If the column schema length matches the number of columns,
-            # updating column schema information from optional metadata is not advisable.
-            # The reason is that the information obtained from optional metadata is not sufficient.
+        if not self.__optional_meta_data:
+            # If optional_meta_data is False Do not sync Event Time Column Schemas
             return
 
         charset_pos = 0

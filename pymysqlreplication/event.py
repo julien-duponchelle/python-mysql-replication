@@ -21,7 +21,8 @@ class BinLogEvent(object):
                  freeze_schema=False,
                  fail_on_table_metadata_unavailable=False,
                  ignore_decode_errors=False,
-                 verify_checksum=False,):
+                 verify_checksum=False,
+                 optional_meta_data=False,):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
