@@ -16,8 +16,7 @@ class BinLogEvent(object):
                  ignored_schemas=None,
                  freeze_schema=False,
                  fail_on_table_metadata_unavailable=False,
-                 ignore_decode_errors=False,
-                 optional_meta_data=False):
+                 ignore_decode_errors=False):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
