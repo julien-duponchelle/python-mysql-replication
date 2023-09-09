@@ -459,6 +459,24 @@ class RowsEvent(BinLogEvent):
         mask = ((1 << size) - 1)
         return binary & mask
 
+    def _categorize_none(self, column_data):
+        result = {}
+        for column_name, value in column_data.items():
+            if value is not None:
+                continue
+
+            category = "null"
+
+            column_type = [col.type for col in self.columns if col.name == column_name][0]
+            if column_type in (FIELD_TYPE.DATETIME, FIELD_TYPE.DATE, FIELD_TYPE.DATETIME2):
+                category = "out of datetime range"
+            elif column_type == FIELD_TYPE.SET:
+                category = "empty set"
+
+            result[column_name] = category
+
+        return result
+
     def _dump(self):
         super()._dump()
         print("Table: %s.%s" % (self.schema, self.table))
@@ -498,6 +516,8 @@ class DeleteRowsEvent(RowsEvent):
         row = {}
 
         row["values"] = self._read_column_data(self.columns_present_bitmap)
+        row["category_of_none"] = self._categorize_none(row["values"])
+
         return row
 
     def _dump(self):
@@ -506,8 +526,8 @@ class DeleteRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["values"]:
-                print("*", key, ":", row["values"][key])
-
+                print("*", key, ":", row["values"][key],
+                      "(%s)" % row["category_of_none"][key] if key in row["category_of_none"] else "")
 
 class WriteRowsEvent(RowsEvent):
     """This event is triggered when a row in database is added
@@ -526,6 +546,8 @@ class WriteRowsEvent(RowsEvent):
         row = {}
 
         row["values"] = self._read_column_data(self.columns_present_bitmap)
+        row["category_of_none"] = self._categorize_none(row["values"])
+
         return row
 
     def _dump(self):
@@ -534,7 +556,8 @@ class WriteRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["values"]:
-                print("*", key, ":", row["values"][key])
+                print("*", key, ":", row["values"][key],
+                      "(%s)" % row["category_of_none"][key] if key in row["category_of_none"] else "")
 
 
 class UpdateRowsEvent(RowsEvent):
@@ -561,9 +584,15 @@ class UpdateRowsEvent(RowsEvent):
     def _fetch_one_row(self):
         row = {}
 
-        row["before_values"] = self._read_column_data(self.columns_present_bitmap)
+        changes = {}
+        updated_columns = []
+        column_types = {}
 
+        row["before_values"] = self._read_column_data(self.columns_present_bitmap)
         row["after_values"] = self._read_column_data(self.columns_present_bitmap2)
+        row["before_category_of_none"] = self._categorize_none(row["before_values"])
+        row["after_category_of_none"] = self._categorize_none(row["after_values"])
+
         return row
 
     def _dump(self):
@@ -573,10 +602,21 @@ class UpdateRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["before_values"]:
-                print("*%s:%s=>%s" % (key,
-                                      row["before_values"][key],
-                                      row["after_values"][key]))
+                if key in row["before_category_of_none"]:
+                    before_value_info = "%s(%s)" % (row["before_values"][key],
+                                                    row["before_category_of_none"][key])
+                else:
+                    before_value_info = row["before_values"][key]
 
+                if key in row["after_category_of_none"]:
+                    after_value_info = "%s(%s)" % (row["after_values"][key],
+                                                    row["after_category_of_none"][key])
+                else:
+                    after_value_info = row["after_values"][key]
+
+                print("*%s:%s=>%s" % (key,
+                                      before_value_info,
+                                      after_value_info))
 
 class TableMapEvent(BinLogEvent):
     """This event describes the structure of a table.
