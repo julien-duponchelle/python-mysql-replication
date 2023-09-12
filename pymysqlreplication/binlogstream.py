@@ -153,24 +153,37 @@ class BinLogStreamReader(object):
 
     report_slave = None
 
-    def __init__(self, connection_settings, server_id,
-                 ctl_connection_settings=None, resume_stream=False,
-                 blocking=False, only_events=None, log_file=None,
-                 log_pos=None, end_log_pos=None,
-                 filter_non_implemented_events=True,
-                 ignored_events=None, auto_position=None,
-                 only_tables=None, ignored_tables=None,
-                 only_schemas=None, ignored_schemas=None,
-                 freeze_schema=False, skip_to_timestamp=None,
-                 report_slave=None, slave_uuid=None,
-                 pymysql_wrapper=None,
-                 fail_on_table_metadata_unavailable=False,
-                 slave_heartbeat=None,
-                 is_mariadb=False,
-                 annotate_rows_event=False,
-                 ignore_decode_errors=False,
-                 verify_checksum=False,
-                 enable_logging=True,):
+    def __init__(
+        self,
+        connection_settings,
+        server_id,
+        ctl_connection_settings=None,
+        resume_stream=False,
+        blocking=False,
+        only_events=None,
+        log_file=None,
+        log_pos=None,
+        end_log_pos=None,
+        filter_non_implemented_events=True,
+        ignored_events=None,
+        auto_position=None,
+        only_tables=None,
+        ignored_tables=None,
+        only_schemas=None,
+        ignored_schemas=None,
+        freeze_schema=False,
+        skip_to_timestamp=None,
+        report_slave=None,
+        slave_uuid=None,
+        pymysql_wrapper=None,
+        fail_on_table_metadata_unavailable=False,
+        slave_heartbeat=None,
+        is_mariadb=False,
+        annotate_rows_event=False,
+        ignore_decode_errors=False,
+        verify_checksum=False,
+        enable_logging=True,
+    ):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -404,9 +417,9 @@ class BinLogStreamReader(object):
                 if not self.__blocking:
                     flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
 
-                prelude += struct.pack('<H', flags)
+                prelude += struct.pack("<H", flags)
 
-                prelude += struct.pack('<I', self.__server_id)
+                prelude += struct.pack("<I", self.__server_id)
 
                 prelude += self.log_file.encode()
         else:
@@ -733,18 +746,18 @@ class BinLogStreamReader(object):
                     continue
                 else:
                     raise error
-                
+
     def __get_dbms(self):
         if not self.__connected_ctl:
             self.__connect_to_ctl()
 
         cur = self._ctl_connection.cursor()
         cur.execute("SELECT VERSION();")
-        version_info = cur.fetchone().get('VERSION()', '')
+        version_info = cur.fetchone().get("VERSION()", "")
 
-        if 'MariaDB' in version_info:
-            return 'mariadb'
-        return 'mysql'
+        if "MariaDB" in version_info:
+            return "mariadb"
+        return "mysql"
 
     def __log_valid_parameters(self):
         ignored = ["allowed_events", "table_map"]
@@ -754,7 +767,9 @@ class BinLogStreamReader(object):
             if parameter in ignored or not value:
                 continue
             if type(value) == frozenset:
-                string_list = [str(item).split()[-1][:-2].split('.')[2] for item in value]
+                string_list = [
+                    str(item).split()[-1][:-2].split(".")[2] for item in value
+                ]
                 items = ", ".join(string_list)
                 comment = f"{parameter}: [{items}]"
             else:

@@ -53,31 +53,38 @@ class RowsEvent(BinLogEvent):
             self._processed = False
             return
 
+        # Event V2
+        if (
+            self.event_type == BINLOG.WRITE_ROWS_EVENT_V2
+            or self.event_type == BINLOG.DELETE_ROWS_EVENT_V2
+            or self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2
+        ):
+            self.flags, self.extra_data_length = struct.unpack(
+                "<HH", self.packet.read(4)
+            )
+            if self.extra_data_length > 2:
+                self.extra_data_type = struct.unpack("<B", self.packet.read(1))[0]
 
-        #Event V2
-        if self.event_type == BINLOG.WRITE_ROWS_EVENT_V2 or \
-                self.event_type == BINLOG.DELETE_ROWS_EVENT_V2 or \
-                self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2:
-                self.flags, self.extra_data_length = struct.unpack('<HH', self.packet.read(4))
-                if self.extra_data_length > 2:
-                    self.extra_data_type = struct.unpack('<B', self.packet.read(1))[0]
-
-                    # ndb information
-                    if self.extra_data_type == 0:
-                        self.nbd_info_length, self.nbd_info_format = struct.unpack('<BB', self.packet.read(2))
-                        self.nbd_info = self.packet.read(self.nbd_info_length - 2)
-                    # partition information
-                    elif self.extra_data_type == 1:
-                        if self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2:
-                            self.partition_id, self.source_partition_id = struct.unpack('<HH', self.packet.read(4))
-                        else:
-                            self.partition_id = struct.unpack('<H', self.packet.read(2))[0]
-                    # etc
+                # ndb information
+                if self.extra_data_type == 0:
+                    self.nbd_info_length, self.nbd_info_format = struct.unpack(
+                        "<BB", self.packet.read(2)
+                    )
+                    self.nbd_info = self.packet.read(self.nbd_info_length - 2)
+                # partition information
+                elif self.extra_data_type == 1:
+                    if self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2:
+                        self.partition_id, self.source_partition_id = struct.unpack(
+                            "<HH", self.packet.read(4)
+                        )
                     else:
                         self.partition_id = struct.unpack("<H", self.packet.read(2))[0]
                 # etc
                 else:
-                    self.extra_data = self.packet.read(self.extra_info_length - 3)
+                    self.partition_id = struct.unpack("<H", self.packet.read(2))[0]
+            # etc
+            else:
+                self.extra_data = self.packet.read(self.extra_info_length - 3)
         else:
             self.flags = struct.unpack("<H", self.packet.read(2))[0]
 
@@ -608,6 +615,7 @@ class UpdateRowsEvent(RowsEvent):
                     % (key, row["before_values"][key], row["after_values"][key])
                 )
 
+
 class OptionalMetaData:
     def __init__(self):
         self.unsigned_column_list = []
@@ -642,6 +650,7 @@ class OptionalMetaData:
         print("visibility_list: %s" % self.visibility_list)
         print("charset_collation_list: %s" % self.charset_collation_list)
         print("enum_and_set_collation_list: %s" % self.enum_and_set_collation_list)
+
 
 class TableMapEvent(BinLogEvent):
     """This event describes the structure of a table.
@@ -772,25 +781,36 @@ class TableMapEvent(BinLogEvent):
         while self.packet.bytes_to_read() > BINLOG.BINLOG_CHECKSUM_LEN:
             option_metadata_type = self.packet.read(1)[0]
             length = self.packet.read_length_coded_binary()
-            field_type: MetadataFieldType = MetadataFieldType.by_index(option_metadata_type)
+            field_type: MetadataFieldType = MetadataFieldType.by_index(
+                option_metadata_type
+            )
 
             if field_type == MetadataFieldType.SIGNEDNESS:
                 signed_column_list = self._convert_include_non_numeric_column(
-                    self._read_bool_list(length, True))
+                    self._read_bool_list(length, True)
+                )
                 optional_metadata.unsigned_column_list = signed_column_list
 
             elif field_type == MetadataFieldType.DEFAULT_CHARSET:
-                optional_metadata.default_charset_collation, optional_metadata.charset_collation = self._read_default_charset(
-                    length)
-                optional_metadata.charset_collation_list = self._parsed_column_charset_by_default_charset(
+                (
                     optional_metadata.default_charset_collation,
                     optional_metadata.charset_collation,
-                    self._is_character_column)
+                ) = self._read_default_charset(length)
+                optional_metadata.charset_collation_list = (
+                    self._parsed_column_charset_by_default_charset(
+                        optional_metadata.default_charset_collation,
+                        optional_metadata.charset_collation,
+                        self._is_character_column,
+                    )
+                )
 
             elif field_type == MetadataFieldType.COLUMN_CHARSET:
                 optional_metadata.column_charset = self._read_ints(length)
-                optional_metadata.charset_collation_list = self._parsed_column_charset_by_column_charset(
-                    optional_metadata.column_charset, self._is_character_column)
+                optional_metadata.charset_collation_list = (
+                    self._parsed_column_charset_by_column_charset(
+                        optional_metadata.column_charset, self._is_character_column
+                    )
+                )
 
             elif field_type == MetadataFieldType.COLUMN_NAME:
                 optional_metadata.column_name_list = self._read_column_names(length)
@@ -799,7 +819,9 @@ class TableMapEvent(BinLogEvent):
                 optional_metadata.set_str_value_list = self._read_type_values(length)
 
             elif field_type == MetadataFieldType.ENUM_STR_VALUE:
-                optional_metadata.set_enum_str_value_list = self._read_type_values(length)
+                optional_metadata.set_enum_str_value_list = self._read_type_values(
+                    length
+                )
 
             elif field_type == MetadataFieldType.GEOMETRY_TYPE:
                 optional_metadata.geometry_type_list = self._read_ints(length)
@@ -808,22 +830,35 @@ class TableMapEvent(BinLogEvent):
                 optional_metadata.simple_primary_key_list = self._read_ints(length)
 
             elif field_type == MetadataFieldType.PRIMARY_KEY_WITH_PREFIX:
-                optional_metadata.primary_keys_with_prefix = self._read_primary_keys_with_prefix(length)
+                optional_metadata.primary_keys_with_prefix = (
+                    self._read_primary_keys_with_prefix(length)
+                )
 
             elif field_type == MetadataFieldType.ENUM_AND_SET_DEFAULT_CHARSET:
-                optional_metadata.enum_and_set_default_charset, optional_metadata.enum_and_set_charset_collation = self._read_default_charset(
-                    length)
-
-                optional_metadata.enum_and_set_collation_list = self._parsed_column_charset_by_default_charset(
+                (
                     optional_metadata.enum_and_set_default_charset,
                     optional_metadata.enum_and_set_charset_collation,
-                    self._is_enum_or_set_column)
+                ) = self._read_default_charset(length)
+
+                optional_metadata.enum_and_set_collation_list = (
+                    self._parsed_column_charset_by_default_charset(
+                        optional_metadata.enum_and_set_default_charset,
+                        optional_metadata.enum_and_set_charset_collation,
+                        self._is_enum_or_set_column,
+                    )
+                )
 
             elif field_type == MetadataFieldType.ENUM_AND_SET_COLUMN_CHARSET:
-                optional_metadata.enum_and_set_default_column_charset_list = self._read_ints(length)
+                optional_metadata.enum_and_set_default_column_charset_list = (
+                    self._read_ints(length)
+                )
 
-                optional_metadata.enum_and_set_collation_list = self._parsed_column_charset_by_column_charset(
-                    optional_metadata.enum_and_set_default_column_charset_list, self._is_enum_or_set_column)
+                optional_metadata.enum_and_set_collation_list = (
+                    self._parsed_column_charset_by_column_charset(
+                        optional_metadata.enum_and_set_default_column_charset_list,
+                        self._is_enum_or_set_column,
+                    )
+                )
 
             elif field_type == MetadataFieldType.VISIBILITY:
                 optional_metadata.visibility_list = self._read_bool_list(length, False)
@@ -848,8 +883,12 @@ class TableMapEvent(BinLogEvent):
 
         return bool_list
 
-    def _parsed_column_charset_by_default_charset(self, default_charset_collation: int, column_charset_collation: dict,
-                                                  column_type_detect_function):
+    def _parsed_column_charset_by_default_charset(
+        self,
+        default_charset_collation: int,
+        column_charset_collation: dict,
+        column_type_detect_function,
+    ):
         column_charset = []
         for i in range(self.column_count):
             column_type = self.columns[i].type
@@ -862,7 +901,9 @@ class TableMapEvent(BinLogEvent):
 
         return column_charset
 
-    def _parsed_column_charset_by_column_charset(self, column_charset_list: list, column_type_detect_function):
+    def _parsed_column_charset_by_column_charset(
+        self, column_charset_list: list, column_type_detect_function
+    ):
         column_charset = []
         position = 0
         if len(column_charset_list) == 0:
@@ -954,10 +995,15 @@ class TableMapEvent(BinLogEvent):
         return result
 
     @staticmethod
-    def _is_character_column(column_type, dbms='mysql'):
-        if column_type in [FIELD_TYPE.STRING, FIELD_TYPE.VAR_STRING, FIELD_TYPE.VARCHAR, FIELD_TYPE.BLOB]:
+    def _is_character_column(column_type, dbms="mysql"):
+        if column_type in [
+            FIELD_TYPE.STRING,
+            FIELD_TYPE.VAR_STRING,
+            FIELD_TYPE.VARCHAR,
+            FIELD_TYPE.BLOB,
+        ]:
             return True
-        if column_type == FIELD_TYPE.GEOMETRY and dbms == 'mariadb':
+        if column_type == FIELD_TYPE.GEOMETRY and dbms == "mariadb":
             return True
         return False
 
@@ -974,19 +1020,27 @@ class TableMapEvent(BinLogEvent):
         return False
 
     @staticmethod
-    def _is_enum_or_set_column(column_type, dbms='mysql'):
+    def _is_enum_or_set_column(column_type, dbms="mysql"):
         if column_type in [FIELD_TYPE.ENUM, FIELD_TYPE.SET]:
             return True
         return False
 
     @staticmethod
     def _is_numeric_column(column_type):
-        if column_type in [FIELD_TYPE.TINY, FIELD_TYPE.SHORT, FIELD_TYPE.INT24, FIELD_TYPE.LONG,
-                           FIELD_TYPE.LONGLONG, FIELD_TYPE.NEWDECIMAL, FIELD_TYPE.FLOAT,
-                           FIELD_TYPE.DOUBLE,
-                           FIELD_TYPE.YEAR]:
+        if column_type in [
+            FIELD_TYPE.TINY,
+            FIELD_TYPE.SHORT,
+            FIELD_TYPE.INT24,
+            FIELD_TYPE.LONG,
+            FIELD_TYPE.LONGLONG,
+            FIELD_TYPE.NEWDECIMAL,
+            FIELD_TYPE.FLOAT,
+            FIELD_TYPE.DOUBLE,
+            FIELD_TYPE.YEAR,
+        ]:
             return True
         return False
+
 
 class MetadataFieldType(Enum):
     SIGNEDNESS = 1  # Signedness of numeric columns

@@ -22,9 +22,14 @@ from pymysqlreplication.packet import BinLogPacketWrapper
 from pymysql.protocol import MysqlPacket
 
 __all__ = [
-    "TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings",
-    "TestGtidBinLogStreamReader", "TestMariadbBinlogStreamReader", "TestStatementConnectionSetting",
-    "TestRowsQueryLogEvents", "TestOptionalMetaData"
+    "TestBasicBinLogStreamReader",
+    "TestMultipleRowBinLogStreamReader",
+    "TestCTLConnectionSettings",
+    "TestGtidBinLogStreamReader",
+    "TestMariadbBinlogStreamReader",
+    "TestStatementConnectionSetting",
+    "TestRowsQueryLogEvents",
+    "TestOptionalMetaData",
 ]
 
 
@@ -1540,7 +1545,7 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
             self.database,
             server_id=1024,
             only_events=(TableMapEvent,),
-            fail_on_table_metadata_unavailable=True
+            fail_on_table_metadata_unavailable=True,
         )
         if not self.isMySQL8014AndMore():
             self.skipTest("Mysql version is under 8.0.14 - pass TestOptionalMetaData")
@@ -1575,7 +1580,9 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
 
     def test_column_charset(self):
         create_query = "CREATE TABLE test_column_charset (col1 VARCHAR(50), col2 VARCHAR(50) CHARACTER SET binary, col3 VARCHAR(50) CHARACTER SET latin1);"
-        insert_query = "INSERT INTO test_column_charset VALUES ('python', 'mysql', 'replication');"
+        insert_query = (
+            "INSERT INTO test_column_charset VALUES ('python', 'mysql', 'replication');"
+        )
 
         self.execute(create_query)
         self.execute(insert_query)
@@ -1598,7 +1605,10 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
-        self.assertEqual(event.optional_metadata.column_name_list, ['col_int', 'col_varchar', 'col_bool'])
+        self.assertEqual(
+            event.optional_metadata.column_name_list,
+            ["col_int", "col_varchar", "col_bool"],
+        )
 
     def test_set_str_value(self):
         create_query = "CREATE TABLE test_set_str_value (skills SET('Programming', 'Writing', 'Design'));"
@@ -1610,7 +1620,10 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
-        self.assertEqual(event.optional_metadata.set_str_value_list, [['Programming', 'Writing', 'Design']])
+        self.assertEqual(
+            event.optional_metadata.set_str_value_list,
+            [["Programming", "Writing", "Design"]],
+        )
 
     def test_enum_str_value(self):
         create_query = "CREATE TABLE test_enum_str_value (pet ENUM('Dog', 'Cat'));"
@@ -1622,7 +1635,9 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
-        self.assertEqual(event.optional_metadata.set_enum_str_value_list, [['Dog', 'Cat']])
+        self.assertEqual(
+            event.optional_metadata.set_enum_str_value_list, [["Dog", "Cat"]]
+        )
 
     def test_geometry_type(self):
         create_query = "CREATE TABLE test_geometry_type (location POINT);"
@@ -1650,7 +1665,9 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
 
     def test_primary_key_with_prefix(self):
         create_query = "CREATE TABLE test_primary_key_with_prefix (c_key1 CHAR(100), c_key2 CHAR(10), c_not_key INT, c_key3 CHAR(100), PRIMARY KEY(c_key1(5), c_key2, c_key3(10)));"
-        insert_query = "INSERT INTO test_primary_key_with_prefix VALUES('1', '2', 3, '4');"
+        insert_query = (
+            "INSERT INTO test_primary_key_with_prefix VALUES('1', '2', 3, '4');"
+        )
 
         self.execute(create_query)
         self.execute(insert_query)
@@ -1658,11 +1675,15 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
-        self.assertEqual(event.optional_metadata.primary_keys_with_prefix, {0: 5, 1: 0, 3: 10})
+        self.assertEqual(
+            event.optional_metadata.primary_keys_with_prefix, {0: 5, 1: 0, 3: 10}
+        )
 
     def test_enum_and_set_default_charset(self):
         create_query = "CREATE TABLE test_enum_and_set_default_charset (pet ENUM('Dog', 'Cat'), skills SET('Programming', 'Writing', 'Design')) CHARACTER SET utf8mb4;"
-        insert_query = "INSERT INTO test_enum_and_set_default_charset VALUES('Dog', 'Design');"
+        insert_query = (
+            "INSERT INTO test_enum_and_set_default_charset VALUES('Dog', 'Design');"
+        )
 
         self.execute(create_query)
         self.execute(insert_query)
@@ -1671,13 +1692,19 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
         if self.isMariaDB():
-            self.assertEqual(event.optional_metadata.enum_and_set_collation_list, [45, 45])
+            self.assertEqual(
+                event.optional_metadata.enum_and_set_collation_list, [45, 45]
+            )
         else:
-            self.assertEqual(event.optional_metadata.enum_and_set_collation_list, [255, 255])
+            self.assertEqual(
+                event.optional_metadata.enum_and_set_collation_list, [255, 255]
+            )
 
     def test_enum_and_set_column_charset(self):
         create_query = "CREATE TABLE test_enum_and_set_column_charset (pet ENUM('Dog', 'Cat') CHARACTER SET utf8mb4, number SET('00', '01', '10', '11') CHARACTER SET binary);"
-        insert_query = "INSERT INTO test_enum_and_set_column_charset VALUES('Cat', '10');"
+        insert_query = (
+            "INSERT INTO test_enum_and_set_column_charset VALUES('Cat', '10');"
+        )
 
         self.execute(create_query)
         self.execute(insert_query)
@@ -1686,9 +1713,13 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
         if self.isMariaDB():
-            self.assertEqual(event.optional_metadata.enum_and_set_collation_list, [45, 63])
+            self.assertEqual(
+                event.optional_metadata.enum_and_set_collation_list, [45, 63]
+            )
         else:
-            self.assertEqual(event.optional_metadata.enum_and_set_collation_list, [255, 63])
+            self.assertEqual(
+                event.optional_metadata.enum_and_set_collation_list, [255, 63]
+            )
 
     def test_visibility(self):
         create_query = "CREATE TABLE test_visibility (name VARCHAR(50), secret_key VARCHAR(50) DEFAULT 'qwerty' INVISIBLE);"
@@ -1706,6 +1737,7 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
     def tearDown(self):
         self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")
         super(TestOptionalMetaData, self).tearDown()
+
 
 if __name__ == "__main__":
     import unittest
