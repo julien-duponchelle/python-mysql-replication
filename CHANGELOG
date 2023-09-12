@@ -196,3 +196,18 @@
 
 0.43.0 23/07/2023
 * Bump PyMySQL to 1.1.0 to solve : LookupError: unknown encoding: utf8mb3
+
+0.44.0 12/09/2023
+* Add MariadbAnnotateRowsEvent
+* Add RandEvent
+* Add MariadbStartEncryptionEvent
+* Add RowsQueryLogEvent
+* Add MariadbBinLogCheckPointEvent
+* Add PreviousGtidsEvent
+* Add UserVarEvent
+* Fix Bug increase history list length and snapshot : Mysql 8.0 version connection was being created along with the opening of a transaction. This led to a problem with looking at the snapshot before creating the table
+* Fix Avoid UnicodeDecodeError for non-utf8 QueryEvents
+* Enhance Data Integrity with Binlog Event Checksum Verification
+* Fix Bug table map event read null_bitmask packet
+* Fix Timestamp conversion to return UTC instead of local timezone
+* Optimize Handler_read_rnd by removing ORDER BY clause
