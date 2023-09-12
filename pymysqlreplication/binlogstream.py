@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import struct
+import logging
 from distutils.version import LooseVersion
 
 import pymysql
@@ -144,7 +145,8 @@ class BinLogStreamReader(object):
                  is_mariadb=False,
                  annotate_rows_event=False,
                  ignore_decode_errors=False,
-                 verify_checksum=False,):
+                 verify_checksum=False,
+                 enable_logging=True,):
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -187,6 +189,8 @@ class BinLogStreamReader(object):
             ignore_decode_errors: If true, any decode errors encountered
                                   when reading column data will be ignored.
             verify_checksum: If true, verify events read from the binary log by examining checksums.
+            enable_logging: When set to True, logs various details helpful for debugging and monitoring
+                            When set to False, logging is disabled to enhance performance.
         """
 
         self.__connection_settings = connection_settings
@@ -228,6 +232,8 @@ class BinLogStreamReader(object):
         self.skip_to_timestamp = skip_to_timestamp
         self.is_mariadb = is_mariadb
         self.__annotate_rows_event = annotate_rows_event
+        if enable_logging:
+            self.__log_valid_parameters()
 
         if end_log_pos:
             self.is_past_end_log_pos = False
@@ -368,9 +374,11 @@ class BinLogStreamReader(object):
 
                 if not self.__blocking:
                     flags |= 0x01  # BINLOG_DUMP_NON_BLOCK
+
                 prelude += struct.pack('<H', flags)
 
                 prelude += struct.pack('<I', self.__server_id)
+
                 prelude += self.log_file.encode()
         else:
             if self.is_mariadb:
@@ -674,7 +682,7 @@ class BinLogStreamReader(object):
                     continue
                 else:
                     raise error
-
+                
     def __get_dbms(self):
         if not self.__connected_ctl:
             self.__connect_to_ctl()
@@ -686,6 +694,21 @@ class BinLogStreamReader(object):
         if 'MariaDB' in version_info:
             return 'mariadb'
         return 'mysql'
+
+    def __log_valid_parameters(self):
+        ignored = ["allowed_events", "table_map"]
+        for parameter, value in self.__dict__.items():
+            if parameter.startswith("_BinLogStreamReader__"):
+                parameter = parameter.replace("_BinLogStreamReader__", "")
+            if parameter in ignored or not value:
+                continue
+            if type(value) == frozenset:
+                string_list = [str(item).split()[-1][:-2].split('.')[2] for item in value]
+                items = ", ".join(string_list)
+                comment = f"{parameter}: [{items}]"
+            else:
+                comment = f"{parameter}: {value}"
+            logging.info(comment)
 
     def __iter__(self):
         return iter(self.fetchone, None)
