@@ -197,7 +197,7 @@
 0.43.0 23/07/2023
 * Bump PyMySQL to 1.1.0 to solve : LookupError: unknown encoding: utf8mb3
 
-0.44.0
+0.44.0 12/09/2023
 * Add MariadbAnnotateRowsEvent
 * Add RandEvent
 * Add MariadbStartEncryptionEvent
