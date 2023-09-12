@@ -21,9 +21,11 @@ from pymysqlreplication.row_event import *
 from pymysqlreplication.packet import BinLogPacketWrapper
 from pymysql.protocol import MysqlPacket
 
-__all__ = ["TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings",
-           "TestGtidBinLogStreamReader", "TestMariadbBinlogStreamReader", "TestStatementConnectionSetting",
-           "TestRowsQueryLogEvents"]
+__all__ = [
+    "TestBasicBinLogStreamReader", "TestMultipleRowBinLogStreamReader", "TestCTLConnectionSettings",
+    "TestGtidBinLogStreamReader", "TestMariadbBinlogStreamReader", "TestStatementConnectionSetting",
+    "TestRowsQueryLogEvents", "TestOptionalMetaData"
+]
 
 
 class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
@@ -1443,6 +1445,181 @@ class TestLatin1(base.PyMySQLReplicationTestCase):
         assert event.query.startswith("CREATE TABLE test")
         assert event.query == r"CREATE TABLE test_latin1_\xd6\xc6\xdb (a INT)"
 
+
+class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super(TestOptionalMetaData, self).setUp()
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(TableMapEvent,),
+            fail_on_table_metadata_unavailable=True
+        )
+        if not self.isMySQL8014AndMore():
+            self.skipTest("Mysql version is under 8.0.14 - pass TestOptionalMetaData")
+        self.execute("SET GLOBAL binlog_row_metadata='FULL';")
+
+    def test_signedness(self):
+        create_query = "CREATE TABLE test_signedness (col1 INT, col2 INT UNSIGNED);"
+        insert_query = "INSERT INTO test_signedness VALUES (-10, 10);"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        self.assertEqual(event.optional_metadata.unsigned_column_list, [False, True])
+
+    def test_default_charset(self):
+        create_query = "CREATE TABLE test_default_charset (name VARCHAR(50)) CHARACTER SET utf8mb4;"
+        insert_query = "INSERT INTO test_default_charset VALUES ('Hello, World!');"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        if self.isMariaDB():
+            self.assertEqual(event.optional_metadata.default_charset_collation, 45)
+        else:
+            self.assertEqual(event.optional_metadata.default_charset_collation, 255)
+
+    def test_column_charset(self):
+        create_query = "CREATE TABLE test_column_charset (col1 VARCHAR(50), col2 VARCHAR(50) CHARACTER SET binary, col3 VARCHAR(50) CHARACTER SET latin1);"
+        insert_query = "INSERT INTO test_column_charset VALUES ('python', 'mysql', 'replication');"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        if self.isMariaDB():
+            self.assertEqual(event.optional_metadata.column_charset, [45, 63, 8])
+        else:
+            self.assertEqual(event.optional_metadata.column_charset, [255, 63, 8])
+
+    def test_column_name(self):
+        create_query = "CREATE TABLE test_column_name (col_int INT, col_varchar VARCHAR(30), col_bool BOOL);"
+        insert_query = "INSERT INTO test_column_name VALUES (1, 'Hello', true);"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        self.assertEqual(event.optional_metadata.column_name_list, ['col_int', 'col_varchar', 'col_bool'])
+
+    def test_set_str_value(self):
+        create_query = "CREATE TABLE test_set_str_value (skills SET('Programming', 'Writing', 'Design'));"
+        insert_query = "INSERT INTO test_set_str_value VALUES ('Programming,Writing');"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        self.assertEqual(event.optional_metadata.set_str_value_list, [['Programming', 'Writing', 'Design']])
+
+    def test_enum_str_value(self):
+        create_query = "CREATE TABLE test_enum_str_value (pet ENUM('Dog', 'Cat'));"
+        insert_query = "INSERT INTO test_enum_str_value VALUES ('Cat');"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        self.assertEqual(event.optional_metadata.set_enum_str_value_list, [['Dog', 'Cat']])
+
+    def test_geometry_type(self):
+        create_query = "CREATE TABLE test_geometry_type (location POINT);"
+        insert_query = "INSERT INTO test_geometry_type VALUES (Point(37.123, 125.987));"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        self.assertEqual(event.optional_metadata.geometry_type_list, [1])
+
+    def test_simple_primary_key(self):
+        create_query = "CREATE TABLE test_simple_primary_key (c_key1 INT, c_key2 INT, c_not_key INT, PRIMARY KEY(c_key1, c_key2));"
+        insert_query = "INSERT INTO test_simple_primary_key VALUES (1, 2, 3);"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        self.assertEqual(event.optional_metadata.simple_primary_key_list, [0, 1])
+
+    def test_primary_key_with_prefix(self):
+        create_query = "CREATE TABLE test_primary_key_with_prefix (c_key1 CHAR(100), c_key2 CHAR(10), c_not_key INT, c_key3 CHAR(100), PRIMARY KEY(c_key1(5), c_key2, c_key3(10)));"
+        insert_query = "INSERT INTO test_primary_key_with_prefix VALUES('1', '2', 3, '4');"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        self.assertEqual(event.optional_metadata.primary_keys_with_prefix, {0: 5, 1: 0, 3: 10})
+
+    def test_enum_and_set_default_charset(self):
+        create_query = "CREATE TABLE test_enum_and_set_default_charset (pet ENUM('Dog', 'Cat'), skills SET('Programming', 'Writing', 'Design')) CHARACTER SET utf8mb4;"
+        insert_query = "INSERT INTO test_enum_and_set_default_charset VALUES('Dog', 'Design');"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        if self.isMariaDB():
+            self.assertEqual(event.optional_metadata.enum_and_set_collation_list, [45, 45])
+        else:
+            self.assertEqual(event.optional_metadata.enum_and_set_collation_list, [255, 255])
+
+    def test_enum_and_set_column_charset(self):
+        create_query = "CREATE TABLE test_enum_and_set_column_charset (pet ENUM('Dog', 'Cat') CHARACTER SET utf8mb4, number SET('00', '01', '10', '11') CHARACTER SET binary);"
+        insert_query = "INSERT INTO test_enum_and_set_column_charset VALUES('Cat', '10');"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        if self.isMariaDB():
+            self.assertEqual(event.optional_metadata.enum_and_set_collation_list, [45, 63])
+        else:
+            self.assertEqual(event.optional_metadata.enum_and_set_collation_list, [255, 63])
+
+    def test_visibility(self):
+        create_query = "CREATE TABLE test_visibility (name VARCHAR(50), secret_key VARCHAR(50) DEFAULT 'qwerty' INVISIBLE);"
+        insert_query = "INSERT INTO test_visibility VALUES('Audrey');"
+
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        if not self.isMariaDB():
+            self.assertEqual(event.optional_metadata.visibility_list, [True, False])
+
+    def tearDown(self):
+        self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")
+        super(TestOptionalMetaData, self).tearDown()
 
 if __name__ == "__main__":
     import unittest
