@@ -40,14 +40,18 @@ setup(
     url="https://github.com/julien-duponchelle/python-mysql-replication",
     author="Julien Duponchelle",
     author_email="julien@duponchelle.info",
-    description=("Pure Python Implementation of MySQL replication protocol "
-                 "build on top of PyMYSQL."),
+    description=(
+        "Pure Python Implementation of MySQL replication protocol "
+        "build on top of PyMYSQL."
+    ),
     long_description=long_description,
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     license="Apache 2",
-    packages=["pymysqlreplication",
-              "pymysqlreplication.constants",
-              "pymysqlreplication.tests"],
+    packages=[
+        "pymysqlreplication",
+        "pymysqlreplication.constants",
+        "pymysqlreplication.tests",
+    ],
     cmdclass={"test": TestCommand},
-    install_requires=['pymysql>=1.1.0'],
+    install_requires=["pymysql>=1.1.0"],
 )

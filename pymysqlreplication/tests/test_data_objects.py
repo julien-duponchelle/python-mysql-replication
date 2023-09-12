@@ -1,4 +1,5 @@
 import sys
+
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
@@ -18,42 +19,54 @@ class TestDataObjects(base.PyMySQLReplicationTestCase):
         return [GtidEvent]
 
     def test_column_is_primary(self):
-        col = Column(1,
-                     {"COLUMN_NAME": "test",
-                      "COLLATION_NAME": "utf8_general_ci",
-                      "CHARACTER_SET_NAME": "UTF8",
-                      "CHARACTER_OCTET_LENGTH": None,
-                      "DATA_TYPE": "tinyint",
-                      "COLUMN_COMMENT": "",
-                      "COLUMN_TYPE": "tinyint(2)",
-                      "COLUMN_KEY": "PRI"},
-                     None)
+        col = Column(
+            1,
+            {
+                "COLUMN_NAME": "test",
+                "COLLATION_NAME": "utf8_general_ci",
+                "CHARACTER_SET_NAME": "UTF8",
+                "CHARACTER_OCTET_LENGTH": None,
+                "DATA_TYPE": "tinyint",
+                "COLUMN_COMMENT": "",
+                "COLUMN_TYPE": "tinyint(2)",
+                "COLUMN_KEY": "PRI",
+            },
+            None,
+        )
         self.assertEqual(True, col.is_primary)
 
     def test_column_not_primary(self):
-        col = Column(1,
-                     {"COLUMN_NAME": "test",
-                      "COLLATION_NAME": "utf8_general_ci",
-                      "CHARACTER_SET_NAME": "UTF8",
-                      "CHARACTER_OCTET_LENGTH": None,
-                      "DATA_TYPE": "tinyint",
-                      "COLUMN_COMMENT": "",
-                      "COLUMN_TYPE": "tinyint(2)",
-                      "COLUMN_KEY": ""},
-                     None)
+        col = Column(
+            1,
+            {
+                "COLUMN_NAME": "test",
+                "COLLATION_NAME": "utf8_general_ci",
+                "CHARACTER_SET_NAME": "UTF8",
+                "CHARACTER_OCTET_LENGTH": None,
+                "DATA_TYPE": "tinyint",
+                "COLUMN_COMMENT": "",
+                "COLUMN_TYPE": "tinyint(2)",
+                "COLUMN_KEY": "",
+            },
+            None,
+        )
         self.assertEqual(False, col.is_primary)
 
     def test_column_serializable(self):
-        col = Column(1,
-                     {"COLUMN_NAME": "test",
-                      "COLLATION_NAME": "utf8_general_ci",
-                      "CHARACTER_SET_NAME": "UTF8",
-                      "CHARACTER_OCTET_LENGTH": None,
-                      "DATA_TYPE": "tinyint",
-                      "COLUMN_COMMENT": "",
-                      "COLUMN_TYPE": "tinyint(2)",
-                      "COLUMN_KEY": "PRI"},
-                     None)
+        col = Column(
+            1,
+            {
+                "COLUMN_NAME": "test",
+                "COLLATION_NAME": "utf8_general_ci",
+                "CHARACTER_SET_NAME": "UTF8",
+                "CHARACTER_OCTET_LENGTH": None,
+                "DATA_TYPE": "tinyint",
+                "COLUMN_COMMENT": "",
+                "COLUMN_TYPE": "tinyint(2)",
+                "COLUMN_KEY": "PRI",
+            },
+            None,
+        )
 
         serialized = col.serializable_data()
         self.assertIn("type", serialized)
