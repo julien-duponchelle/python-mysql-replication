@@ -63,7 +63,7 @@ class RowsEvent(BinLogEvent):
 
                     # ndb information
                     if self.extra_data_type == 0:
-                        self.nbd_info_length, self.nbd_info_format = struct.unpack('<BB', self.packet.read(1))
+                        self.nbd_info_length, self.nbd_info_format = struct.unpack('<BB', self.packet.read(2))
                         self.nbd_info = self.packet.read(self.nbd_info_length - 2)
                     # partition information
                     elif self.extra_data_type == 1:
