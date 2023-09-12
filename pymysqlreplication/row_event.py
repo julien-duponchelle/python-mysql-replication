@@ -81,12 +81,9 @@ class RowsEvent(BinLogEvent):
                         self.partition_id = struct.unpack("<H", self.packet.read(2))[0]
                 # etc
                 else:
-                    self.partition_id = struct.unpack("<H", self.packet.read(2))[0]
-            # etc
+                    self.extra_data = self.packet.read(self.extra_info_length - 3)
             else:
-                self.extra_data = self.packet.read(self.extra_info_length - 3)
-        else:
-            self.flags = struct.unpack("<H", self.packet.read(2))[0]
+                self.flags = struct.unpack("<H", self.packet.read(2))[0]
 
         # Body
         self.number_of_columns = self.packet.read_length_coded_binary()
