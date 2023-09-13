@@ -1759,8 +1759,12 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
-        self.assertEqual(event.table_obj.data['column_schemas'][0]['COLUMN_NAME'], 'name')
-        self.assertEqual(event.table_obj.data['column_schemas'][0]['COLUMN_COMMENT'], "")
+        self.assertEqual(
+            event.table_obj.data["column_schemas"][0]["COLUMN_NAME"], "name"
+        )
+        self.assertEqual(
+            event.table_obj.data["column_schemas"][0]["COLUMN_COMMENT"], ""
+        )
         self.assertEqual(len(column_schemas), 0)
 
     def test_sync_column_drop_event_table_schema(self):
@@ -1788,17 +1792,24 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
         self.assertEqual(len(column_schemas), 2)
-        self.assertEqual(len(event.table_obj.data['column_schemas']), 3)
-        self.assertEqual(column_schemas[0][0], 'drop_column1')
-        self.assertEqual(column_schemas[1][0], 'drop_column3')
-        self.assertEqual(event.table_obj.data['column_schemas'][0]['COLUMN_NAME'], 'drop_column1')
-        self.assertEqual(event.table_obj.data['column_schemas'][1]['COLUMN_NAME'], 'drop_column2')
-        self.assertEqual(event.table_obj.data['column_schemas'][2]['COLUMN_NAME'], 'drop_column3')
+        self.assertEqual(len(event.table_obj.data["column_schemas"]), 3)
+        self.assertEqual(column_schemas[0][0], "drop_column1")
+        self.assertEqual(column_schemas[1][0], "drop_column3")
+        self.assertEqual(
+            event.table_obj.data["column_schemas"][0]["COLUMN_NAME"], "drop_column1"
+        )
+        self.assertEqual(
+            event.table_obj.data["column_schemas"][1]["COLUMN_NAME"], "drop_column2"
+        )
+        self.assertEqual(
+            event.table_obj.data["column_schemas"][2]["COLUMN_NAME"], "drop_column3"
+        )
 
     def tearDown(self):
         self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")
         super(TestOptionalMetaData, self).tearDown()
-        
+
+
 if __name__ == "__main__":
     import unittest
 

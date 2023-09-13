@@ -12,7 +12,6 @@ from typing import Union, Optional
 
 
 class BinLogEvent(object):
-
     def __init__(
         self,
         from_packet,
@@ -30,7 +29,6 @@ class BinLogEvent(object):
         verify_checksum=False,
         optional_meta_data=False,
     ):
-
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type

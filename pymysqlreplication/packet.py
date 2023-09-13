@@ -91,7 +91,6 @@ class BinLogPacketWrapper(object):
         constants.MARIADB_START_ENCRYPTION_EVENT: event.MariadbStartEncryptionEvent,
     }
 
-
     def __init__(
         self,
         from_packet,
@@ -110,7 +109,6 @@ class BinLogPacketWrapper(object):
         verify_checksum,
         optional_meta_data,
     ):
-
         # -1 because we ignore the ok byte
         self.read_bytes = 0
         # Used when we want to override a value in the data buffer
@@ -163,7 +161,7 @@ class BinLogPacketWrapper(object):
             fail_on_table_metadata_unavailable=fail_on_table_metadata_unavailable,
             ignore_decode_errors=ignore_decode_errors,
             verify_checksum=verify_checksum,
-            optional_meta_data=optional_meta_data
+            optional_meta_data=optional_meta_data,
         )
         if not self.event._processed:
             self.event = None

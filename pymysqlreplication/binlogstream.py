@@ -153,7 +153,6 @@ class BinLogStreamReader(object):
 
     report_slave = None
 
-
     def __init__(
         self,
         connection_settings,
@@ -186,7 +185,6 @@ class BinLogStreamReader(object):
         enable_logging=True,
         optional_meta_data=False,
     ):
-
         """
         Attributes:
             ctl_connection_settings: Connection settings for cluster holding
@@ -588,7 +586,6 @@ class BinLogStreamReader(object):
             if not pkt.is_ok_packet():
                 continue
 
-
             binlog_event = BinLogPacketWrapper(
                 pkt,
                 self.table_map,
@@ -782,7 +779,6 @@ class BinLogStreamReader(object):
             else:
                 comment = f"{parameter}: {value}"
             logging.info(comment)
-
 
     def __iter__(self):
         return iter(self.fetchone, None)
