@@ -658,43 +658,6 @@ class OptionalMetaData:
         print("charset_collation_list: %s" % self.charset_collation_list)
         print("enum_and_set_collation_list: %s" % self.enum_and_set_collation_list)
 
-
-class OptionalMetaData:
-    def __init__(self):
-        self.unsigned_column_list = []
-        self.default_charset_collation = None
-        self.charset_collation = {}
-        self.column_charset = []
-        self.column_name_list = []
-        self.set_str_value_list = []
-        self.set_enum_str_value_list = []
-        self.geometry_type_list = []
-        self.simple_primary_key_list = []
-        self.primary_keys_with_prefix = {}
-        self.enum_and_set_default_charset = None
-        self.enum_and_set_charset_collation = {}
-        self.enum_and_set_default_column_charset_list = []
-        self.charset_collation_list = []
-        self.enum_and_set_collation_list = []
-        self.visibility_list = []
-
-    def dump(self):
-        print("=== %s ===" % self.__class__.__name__)
-        print("unsigned_column_list: %s" % self.unsigned_column_list)
-        print("default_charset_collation: %s" % self.default_charset_collation)
-        print("charset_collation: %s" % self.charset_collation)
-        print("column_charset: %s" % self.column_charset)
-        print("column_name_list: %s" % self.column_name_list)
-        print("set_str_value_list : %s" % self.set_str_value_list)
-        print("set_enum_str_value_list : %s" % self.set_enum_str_value_list)
-        print("geometry_type_list : %s" % self.geometry_type_list)
-        print("simple_primary_key_list: %s" % self.simple_primary_key_list)
-        print("primary_keys_with_prefix: %s" % self.primary_keys_with_prefix)
-        print("visibility_list: %s" % self.visibility_list)
-        print("charset_collation_list: %s" % self.charset_collation_list)
-        print("enum_and_set_collation_list: %s" % self.enum_and_set_collation_list)
-
-
 class TableMapEvent(BinLogEvent):
     """This event describes the structure of a table.
     It's sent before a change happens on a table.

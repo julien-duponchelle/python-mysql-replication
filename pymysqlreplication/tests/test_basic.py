@@ -562,6 +562,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
                 self.stream._BinLogStreamReader__fail_on_table_metadata_unavailable,
                 self.stream._BinLogStreamReader__ignore_decode_errors,
                 self.stream._BinLogStreamReader__verify_checksum,
+                self.stream._BinLogStreamReader__optional_meta_data,
             )
 
         self.stream.close()
