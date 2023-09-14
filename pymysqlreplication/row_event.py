@@ -24,6 +24,7 @@ class RowsEvent(BinLogEvent):
         self.__ignored_tables = kwargs["ignored_tables"]
         self.__only_schemas = kwargs["only_schemas"]
         self.__ignored_schemas = kwargs["ignored_schemas"]
+        self.none_sources = {} 
 
         #Header
         self.table_id = self._read_table_id()
@@ -123,11 +124,14 @@ class RowsEvent(BinLogEvent):
 
     def __read_values_name(self, column, null_bitmap, null_bitmap_index, cols_bitmap, unsigned, zerofill,
                            fixed_binary_length, i):
+        name = self.table_map[self.table_id].columns[i].name
 
         if BitGet(cols_bitmap, i) == 0:
+            self.none_sources[name] = 'cols_bitmap'
             return None
 
         if self._is_null(null_bitmap, null_bitmap_index):
+            self.none_sources[name] = 'null'
             return None
 
         if column.type == FIELD_TYPE.TINY:
@@ -182,18 +186,27 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.BLOB:
             return self.__read_string(column.length_size, column)
         elif column.type == FIELD_TYPE.DATETIME:
-            return self.__read_datetime()
+            ret = self.__read_datetime()
+            if ret is None:
+                self.none_sources[name] = 'out of datetime range'
+            return ret
         elif column.type == FIELD_TYPE.TIME:
             return self.__read_time()
         elif column.type == FIELD_TYPE.DATE:
-            return self.__read_date()
+            ret = self.__read_date()
+            if ret is None:
+                self.none_sources[name] = 'out of date range'
+            return ret
         elif column.type == FIELD_TYPE.TIMESTAMP:
             return datetime.datetime.fromtimestamp(
                 self.packet.read_uint32())
 
         # For new date format:
         elif column.type == FIELD_TYPE.DATETIME2:
-            return self.__read_datetime2(column)
+            ret = self.__read_datetime2(column)
+            if ret is None:
+                self.none_sources[name] = 'out of datetime2 range'
+            return ret
         elif column.type == FIELD_TYPE.TIME2:
             return self.__read_time2(column)
         elif column.type == FIELD_TYPE.TIMESTAMP2:
@@ -217,10 +230,14 @@ class RowsEvent(BinLogEvent):
             # We read set columns as a bitmap telling us which options
             # are enabled
             bit_mask = self.packet.read_uint_by_size(column.size)
-            return set(
+            set_value = set(
                 val for idx, val in enumerate(column.set_values)
                 if bit_mask & 2 ** idx
-            ) or None
+            )
+            if not set_value:
+                self.none_sources[column.name] = "empty set"
+                return None
+            return set_value
 
         elif column.type == FIELD_TYPE.BIT:
             return self.__read_bit(column)
@@ -465,16 +482,8 @@ class RowsEvent(BinLogEvent):
             if value is not None:
                 continue
 
-            category = "null"
-
-            column_type = [col.type for col in self.columns if col.name == column_name][0]
-            if column_type in (FIELD_TYPE.DATETIME, FIELD_TYPE.DATE, FIELD_TYPE.DATETIME2):
-                category = "out of datetime range"
-            elif column_type == FIELD_TYPE.SET:
-                category = "empty set"
-
+            category = self.none_sources.get(column_name, "null")
             result[column_name] = category
-
         return result
 
     def _dump(self):
@@ -584,15 +593,10 @@ class UpdateRowsEvent(RowsEvent):
     def _fetch_one_row(self):
         row = {}
 
-        changes = {}
-        updated_columns = []
-        column_types = {}
-
         row["before_values"] = self._read_column_data(self.columns_present_bitmap)
-        row["after_values"] = self._read_column_data(self.columns_present_bitmap2)
-        row["before_category_of_none"] = self._categorize_none(row["before_values"])
-        row["after_category_of_none"] = self._categorize_none(row["after_values"])
-
+        row['before_category_of_none'] = self._categorize_none(row["before_values"])
+        row['after_values'] = self._read_column_data(self.columns_present_bitmap2)
+        row['after_category_of_none'] = self._categorize_none(row["after_values"])
         return row
 
     def _dump(self):
