@@ -574,6 +574,24 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(binlog_event.event._is_event_valid, True)
         self.assertNotEqual(wrong_event.event._is_event_valid, True)
 
+    def test_categorize_none(self):
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            resume_stream=False,
+            only_events = [WriteRowsEvent]
+        )
+        query = "CREATE TABLE null_operation_update_example (col1 INT, col2 INT);"
+        self.execute(query)
+        query = "INSERT INTO null_operation_update_example (col1, col2) VALUES (NULL, 1);"
+        self.execute(query)
+        self.execute("COMMIT")
+        write_rows_event = self.stream.fetchone()
+        self.assertIsInstance(write_rows_event, WriteRowsEvent)
+        self.assertEqual(write_rows_event.rows[0]['category_of_none']['col1'], 'null')
+
+
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def ignoredEvents(self):
