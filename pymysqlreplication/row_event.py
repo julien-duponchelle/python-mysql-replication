@@ -8,7 +8,6 @@ from pymysql.charset import charset_by_name
 from enum import Enum
 
 from .event import BinLogEvent
-from .exceptions import TableMetadataUnavailableError
 from .constants import FIELD_TYPE
 from .constants import BINLOG
 from .column import Column
@@ -88,14 +87,6 @@ class RowsEvent(BinLogEvent):
         # Body
         self.number_of_columns = self.packet.read_length_coded_binary()
         self.columns = self.table_map[self.table_id].columns
-        column_schemas = self.table_map[self.table_id].column_schemas
-
-        if (
-            len(column_schemas) == 0
-        ):  # could not read the table metadata, probably already dropped
-            self.complete = False
-            if self._fail_on_table_metadata_unavailable:
-                raise TableMetadataUnavailableError(self.table)
 
     @staticmethod
     def _is_null(null_bitmap, position):
@@ -120,10 +111,6 @@ class RowsEvent(BinLogEvent):
             column = self.columns[i]
             name = self.table_map[self.table_id].columns[i].name
             unsigned = self.table_map[self.table_id].columns[i].unsigned
-            zerofill = self.table_map[self.table_id].columns[i].zerofill
-            fixed_binary_length = (
-                self.table_map[self.table_id].columns[i].fixed_binary_length
-            )
 
             values[name] = self.__read_values_name(
                 column,
@@ -131,8 +118,6 @@ class RowsEvent(BinLogEvent):
                 null_bitmap_index,
                 cols_bitmap,
                 unsigned,
-                zerofill,
-                fixed_binary_length,
                 i,
             )
 
@@ -142,15 +127,7 @@ class RowsEvent(BinLogEvent):
         return values
 
     def __read_values_name(
-        self,
-        column,
-        null_bitmap,
-        null_bitmap_index,
-        cols_bitmap,
-        unsigned,
-        zerofill,
-        fixed_binary_length,
-        i,
+        self, column, null_bitmap, null_bitmap_index, cols_bitmap, unsigned, i
     ):
         if BitGet(cols_bitmap, i) == 0:
             return None
@@ -161,32 +138,24 @@ class RowsEvent(BinLogEvent):
         if column.type == FIELD_TYPE.TINY:
             if unsigned:
                 ret = struct.unpack("<B", self.packet.read(1))[0]
-                if zerofill:
-                    ret = format(ret, "03d")
                 return ret
             else:
                 return struct.unpack("<b", self.packet.read(1))[0]
         elif column.type == FIELD_TYPE.SHORT:
             if unsigned:
                 ret = struct.unpack("<H", self.packet.read(2))[0]
-                if zerofill:
-                    ret = format(ret, "05d")
                 return ret
             else:
                 return struct.unpack("<h", self.packet.read(2))[0]
         elif column.type == FIELD_TYPE.LONG:
             if unsigned:
                 ret = struct.unpack("<I", self.packet.read(4))[0]
-                if zerofill:
-                    ret = format(ret, "010d")
                 return ret
             else:
                 return struct.unpack("<i", self.packet.read(4))[0]
         elif column.type == FIELD_TYPE.INT24:
             if unsigned:
                 ret = self.packet.read_uint24()
-                if zerofill:
-                    ret = format(ret, "08d")
                 return ret
             else:
                 return self.packet.read_int24()
@@ -201,12 +170,6 @@ class RowsEvent(BinLogEvent):
                 else self.__read_string(1, column)
             )
 
-            if fixed_binary_length and len(ret) < fixed_binary_length:
-                # Fixed-length binary fields are stored in the binlog
-                # without trailing zeros and must be padded with zeros up
-                # to the specified length at read time.
-                nr_pad = fixed_binary_length - len(ret)
-                ret += b"\x00" * nr_pad
             return ret
         elif column.type == FIELD_TYPE.NEWDECIMAL:
             return self.__read_new_decimal(column)
@@ -234,8 +197,6 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.LONGLONG:
             if unsigned:
                 ret = self.packet.read_uint64()
-                if zerofill:
-                    ret = format(ret, "020d")
                 return ret
             else:
                 return self.packet.read_int64()
@@ -497,6 +458,10 @@ class RowsEvent(BinLogEvent):
         print("Table: %s.%s" % (self.schema, self.table))
         print("Affected columns: %d" % self.number_of_columns)
         print("Changed rows: %d" % (len(self.rows)))
+        print(
+            "Column Name Information Flag: %s"
+            % self.table_map[self.table_id].column_name_flag
+        )
 
     def _fetch_rows(self):
         self.__rows = []
@@ -536,6 +501,7 @@ class DeleteRowsEvent(RowsEvent):
     def _dump(self):
         super()._dump()
         print("Values:")
+        print(self.table.data)
         for row in self.rows:
             print("--")
             for key in row["values"]:
@@ -699,59 +665,20 @@ class TableMapEvent(BinLogEvent):
         self.column_count = self.packet.read_length_coded_binary()
 
         self.columns = []
-
-        if self.table_id in table_map:
-            self.column_schemas = table_map[self.table_id].column_schemas
-        else:
-            self.column_schemas = self._ctl_connection._get_table_information(
-                self.schema, self.table
-            )
-
         self.dbms = self._ctl_connection._get_dbms()
-        ordinal_pos_loc = 0
-
-        if self.column_count != 0:
-            # Read columns meta data
-            column_types = bytearray(self.packet.read(self.column_count))
-            self.packet.read_length_coded_binary()
-            for i in range(0, len(column_types)):
-                column_type = column_types[i]
-                try:
-                    column_schema = self.column_schemas[ordinal_pos_loc]
-
-                    # only acknowledge the column definition if the iteration matches with ordinal position of
-                    # the column. this helps in maintaining support for restricted columnar access
-                    if i != (column_schema["ORDINAL_POSITION"] - 1):
-                        # raise IndexError to follow the workflow of dropping columns which are not matching the
-                        # underlying table schema
-                        raise IndexError
-
-                    ordinal_pos_loc += 1
-                except IndexError:
-                    # this is a dirty hack to prevent row events containing columns which have been dropped prior
-                    # to pymysqlreplication start, but replayed from binlog from blowing up the service.
-                    # TODO: this does not address the issue if the column other than the last one is dropped
-                    column_schema = {
-                        "COLUMN_NAME": "__dropped_col_{i}__".format(i=i),
-                        "COLLATION_NAME": None,
-                        "CHARACTER_SET_NAME": None,
-                        "CHARACTER_OCTET_LENGTH": None,
-                        "DATA_TYPE": "BLOB",
-                        "COLUMN_COMMENT": None,
-                        "COLUMN_TYPE": "BLOB",  # we don't know what it is, so let's not do anything with it.
-                        "COLUMN_KEY": "",
-                    }
-                col = Column(column_type, column_schema, from_packet)
-                self.columns.append(col)
-
-        self.table_obj = Table(
-            self.column_schemas, self.table_id, self.schema, self.table, self.columns
-        )
+        # Read columns meta data
+        column_types = bytearray(self.packet.read(self.column_count))
+        self.packet.read_length_coded_binary()
+        for i in range(0, len(column_types)):
+            column_type = column_types[i]
+            col = Column(column_type, from_packet)
+            self.columns.append(col)
 
         # ith column is nullable if (i - 1)th bit is set to True, not nullable otherwise
         ## Refer to definition of and call to row.event._is_null() to interpret bitmap corresponding to columns
         self.null_bitmask = self.packet.read((self.column_count + 7) / 8)
-        # optional meta Data
+        self.table_obj = Table(self.table_id, self.schema, self.table, self.columns)
+        table_map[self.table_id] = self.table_obj
         self.optional_metadata = self._get_optional_meta_data()
 
     def get_table(self):

@@ -176,7 +176,6 @@ class BinLogStreamReader(object):
         report_slave=None,
         slave_uuid=None,
         pymysql_wrapper=None,
-        fail_on_table_metadata_unavailable=False,
         slave_heartbeat=None,
         is_mariadb=False,
         annotate_rows_event=False,
@@ -210,9 +209,6 @@ class BinLogStreamReader(object):
             report_slave: Report slave in SHOW SLAVE HOSTS.
             slave_uuid: Report slave_uuid or replica_uuid in SHOW SLAVE HOSTS(MySQL 8.0.21-) or
                         SHOW REPLICAS(MySQL 8.0.22+) depends on your MySQL version.
-            fail_on_table_metadata_unavailable: Should raise exception if we
-                                                can't get table information on
-                                                row_events
             slave_heartbeat: (seconds) Should master actively send heartbeat on
                              connection. This also reduces traffic in GTID
                              replication on replication resumption (in case
@@ -249,7 +245,6 @@ class BinLogStreamReader(object):
         self.__allowed_events = self._allowed_event_list(
             only_events, ignored_events, filter_non_implemented_events
         )
-        self.__fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
         self.__ignore_decode_errors = ignore_decode_errors
         self.__verify_checksum = verify_checksum
 
@@ -596,7 +591,6 @@ class BinLogStreamReader(object):
                 self.__only_schemas,
                 self.__ignored_schemas,
                 self.__freeze_schema,
-                self.__fail_on_table_metadata_unavailable,
                 self.__ignore_decode_errors,
                 self.__verify_checksum,
             )
