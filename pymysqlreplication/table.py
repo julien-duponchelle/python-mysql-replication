@@ -2,8 +2,9 @@
 
 
 class Table(object):
-    def __init__(self, table_id, schema, table, columns, primary_key=None):
-        self.column_name_flag = False
+    def __init__(
+        self, table_id, schema, table, columns, primary_key=None, column_name_flag=False
+    ):
         if primary_key is None:
             primary_key = [c.data["name"] for c in columns if c.data["is_primary"]]
             if len(primary_key) == 0:
@@ -20,6 +21,7 @@ class Table(object):
                 "table": table,
                 "columns": columns,
                 "primary_key": primary_key,
+                "column_name_flag": column_name_flag,
             }
         )
 
