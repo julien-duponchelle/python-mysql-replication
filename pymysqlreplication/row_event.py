@@ -246,20 +246,13 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.YEAR:
             return self.packet.read_uint8() + 1900
         elif column.type == FIELD_TYPE.ENUM:
-            return column.enum_values[self.packet.read_uint_by_size(column.size)]
+            enum_index = self.packet.read_uint_by_size(column.size)
+            # unsupported
+            return None
         elif column.type == FIELD_TYPE.SET:
-            # We read set columns as a bitmap telling us which options
-            # are enabled
             bit_mask = self.packet.read_uint_by_size(column.size)
-            return (
-                set(
-                    val
-                    for idx, val in enumerate(column.set_values)
-                    if bit_mask & 2**idx
-                )
-                or None
-            )
-
+            # unsupported
+            return None
         elif column.type == FIELD_TYPE.BIT:
             return self.__read_bit(column)
         elif column.type == FIELD_TYPE.GEOMETRY:
