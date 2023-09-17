@@ -602,7 +602,6 @@ class UpdateRowsEvent(RowsEvent):
 
     def _dump(self):
         super()._dump()
-        print("Affected columns: %d" % self.number_of_columns)
         print("Values:")
         for row in self.rows:
             print("--")
