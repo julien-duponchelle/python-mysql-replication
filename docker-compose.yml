@@ -23,7 +23,7 @@ x-mariadb: &mariadb
 services:
   percona-8.0:
     <<: *mysql
-    image: percona:8.0.15-5
+    image: percona:8.0.23-14
     ports:
       - "3306:3306"
     environment:
@@ -31,7 +31,7 @@ services:
 
   percona-8.0-ctl:
     <<: *mysql
-    image: percona:8.0.15-5
+    image: percona:8.0.23-14
     ports:
       - "3307:3306"
     environment:
