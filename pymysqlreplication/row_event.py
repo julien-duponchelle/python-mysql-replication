@@ -807,6 +807,9 @@ class TableMapEvent(BinLogEvent):
         if not self.__optional_meta_data:
             # If optional_meta_data is False Do not sync Event Time Column Schemas
             return
+        if len(self.optional_metadata.column_name_list) == 0:
+            # May Be Now BINLOG_ROW_METADATA = FULL But Before Action BINLOG_ROW_METADATA Mode = MINIMAL
+            return
         charset_pos = 0
         enum_or_set_pos = 0
         enum_pos = 0
