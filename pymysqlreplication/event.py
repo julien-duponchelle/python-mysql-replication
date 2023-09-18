@@ -24,7 +24,6 @@ class BinLogEvent(object):
         only_schemas=None,
         ignored_schemas=None,
         freeze_schema=False,
-        fail_on_table_metadata_unavailable=False,
         ignore_decode_errors=False,
         verify_checksum=False,
         optional_meta_data=False,
@@ -36,7 +35,6 @@ class BinLogEvent(object):
         self.event_size = event_size
         self._ctl_connection = ctl_connection
         self.mysql_version = mysql_version
-        self._fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
         self._ignore_decode_errors = ignore_decode_errors
         self._verify_checksum = verify_checksum
         self._is_event_valid = None
