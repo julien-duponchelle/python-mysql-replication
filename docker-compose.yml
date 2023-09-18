@@ -21,17 +21,21 @@ x-mariadb: &mariadb
     --binlog-format=row
 
 services:
-  percona-5.7:
+  percona-8.0:
     <<: *mysql
-    image: percona:5.7
+    image: percona:8.0.15-5
     ports:
       - "3306:3306"
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD : "yes"
 
-  percona-5.7-ctl:
+  percona-8.0-ctl:
     <<: *mysql
-    image: percona:5.7
+    image: percona:8.0.15-5
     ports:
       - "3307:3306"
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
 
   mariadb-10.6:
     <<: *mariadb
