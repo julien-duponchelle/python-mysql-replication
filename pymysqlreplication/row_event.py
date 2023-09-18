@@ -856,7 +856,11 @@ class TableMapEvent(BinLogEvent):
 
             if column_idx in self.optional_metadata.simple_primary_key_list:
                 self.columns[column_idx].is_primary = True
-            if self.optional_metadata.visibility_list[column_idx]:
+
+            if (
+                self.optional_metadata.visibility_list
+                and self.optional_metadata.visibility_list[column_idx]
+            ):
                 self.columns[column_idx].visibility = True
 
         self.table_obj = Table(
