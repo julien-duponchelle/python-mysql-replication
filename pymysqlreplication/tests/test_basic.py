@@ -605,6 +605,12 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super(TestMultipleRowBinLogStreamReader, self).setUp()
+        if self.isMySQL8014AndMore():
+            self.execute("SET GLOBAL binlog_row_metadata='FULL';")
+            self.execute("SET GLOBAL binlog_row_image='FULL';")
+
     def ignoredEvents(self):
         return [GtidEvent, PreviousGtidsEvent]
 
@@ -714,45 +720,40 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[1]["values"]["id"], 2)
             self.assertEqual(event.rows[1]["values"]["data"], "World")
 
-    # erase temporary
-    # def test_ignore_decode_errors(self):
-    #     problematic_unicode_string = (
-    #         b'[{"text":"\xed\xa0\xbd \xed\xb1\x8d Some string"}]'
-    #     )
-    #     self.stream.close()
-    #     self.execute("CREATE TABLE test (data VARCHAR(50) CHARACTER SET utf8mb4)")
-    #     self.execute_with_args(
-    #         "INSERT INTO test (data) VALUES (%s)", (problematic_unicode_string)
-    #     )
-    #     self.execute("COMMIT")
-    #
-    #     # Initialize with ignore_decode_errors=False
-    #     self.stream = BinLogStreamReader(
-    #         self.database,
-    #         server_id=1024,
-    #         only_events=(WriteRowsEvent,),
-    #         ignore_decode_errors=False,
-    #     )
-    #     event = self.stream.fetchone()
-    #     event = self.stream.fetchone()
-    #     with self.assertRaises(UnicodeError):
-    #         event = self.stream.fetchone()
-    #         if event.table_map[event.table_id].column_name_flag:
-    #             data = event.rows[0]["values"]["data"]
-    #
-    #     # Initialize with ignore_decode_errors=True
-    #     self.stream = BinLogStreamReader(
-    #         self.database,
-    #         server_id=1024,
-    #         only_events=(WriteRowsEvent,),
-    #         ignore_decode_errors=True,
-    #     )
-    #     self.stream.fetchone()
-    #     self.stream.fetchone()
-    #     event = self.stream.fetchone()
-    #     if event.table_map[event.table_id].column_name_flag:
-    #         data = event.rows[0]["values"]["data"]
-    #         self.assertEqual(data, '[{"text":"  Some string"}]')
+    def test_ignore_decode_errors(self):
+        problematic_unicode_string = (
+            b'[{"text":"\xed\xa0\xbd \xed\xb1\x8d Some string"}]'
+        )
+        self.stream.close()
+        self.execute("CREATE TABLE test (data VARCHAR(50) CHARACTER SET utf8mb4)")
+        self.execute_with_args(
+            "INSERT INTO test (data) VALUES (%s)", (problematic_unicode_string)
+        )
+        self.execute("COMMIT")
+
+        # Initialize with ignore_decode_errors=False
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(WriteRowsEvent,),
+            ignore_decode_errors=False,
+        )
+        with self.assertRaises(UnicodeError):
+            event = self.stream.fetchone()
+            if event.table_map[event.table_id].column_name_flag:
+                data = event.rows[0]["values"]["data"]
+
+        # Initialize with ignore_decode_errors=True
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(WriteRowsEvent,),
+            ignore_decode_errors=True,
+        )
+        event = self.stream.fetchone()
+        if event.table_map[event.table_id].column_name_flag:
+            data = event.rows[0]["values"]["data"]
+            self.assertEqual(data, '[{"text":"  Some string"}]')
 
     def test_drop_column(self):
         self.stream.close()
@@ -774,15 +775,15 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         finally:
             self.resetBinLog()
 
-    @unittest.expectedFailure
     def test_alter_column(self):
+        if not self.isMySQL8014AndMore():
+            self.skipTest("Mysql version is under 8.0.14 - pass")
         self.stream.close()
         self.execute(
             "CREATE TABLE test_alter_column (id INTEGER(11), data VARCHAR(50))"
         )
         self.execute("INSERT INTO test_alter_column VALUES (1, 'A value')")
         self.execute("COMMIT")
-        # this is a problem only when column is added in position other than at the end
         self.execute(
             "ALTER TABLE test_alter_column ADD COLUMN another_data VARCHAR(50) AFTER id"
         )
@@ -796,16 +797,11 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             server_id=1024,
             only_events=(WriteRowsEvent,),
         )
-        event = self.stream.fetchone()  # insert with two values
-        # both of these asserts fail because of issue underlying proble described in issue #118
-        # because it got table schema info after the alter table, it wrongly assumes the second
-        # column of the first insert is 'another_data'
-        # ER: {'id': 1, 'data': 'A value'}
-        # AR: {'id': 1, 'another_data': 'A value'}
-        self.assertIn("data", event.rows[0]["values"])
-        self.assertNot("another_data", event.rows[0]["values"])
+        event = self.stream.fetchone()
         self.assertEqual(event.rows[0]["values"]["data"], "A value")
-        self.stream.fetchone()  # insert with three values
+        event = self.stream.fetchone()  # insert with three values
+        self.assertEqual(event.rows[0]["values"]["another_data"], "Another value")
+        self.assertEqual(event.rows[0]["values"]["data"], "A value")
 
 
 class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):

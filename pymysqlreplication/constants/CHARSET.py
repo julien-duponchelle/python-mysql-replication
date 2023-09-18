@@ -59,7 +59,7 @@ with open(
 ) as f:
     f.readline()  # pass header
     for line in f:
-        lines = line.split(",")
+        lines = line.rstrip("\n").split(",")
         if len(lines) != 5:
             continue
 

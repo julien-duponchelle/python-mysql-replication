@@ -259,14 +259,15 @@ class RowsEvent(BinLogEvent):
 
     def __read_string(self, size, column):
         string = self.packet.read_length_coded_pascal_string(size)
+        origin_string = string
         if column.character_set_name is not None:
             encoding = self.charset_to_encoding(column.character_set_name)
             decode_errors = "ignore" if self._ignore_decode_errors else "strict"
             try:
                 string = string.decode(encoding, decode_errors)
             except LookupError:
-                # If python does not support Mysql encoding type ex)swe7 it will not decoding
-                string = string.decode(errors=decode_errors)
+                # python does not support Mysql encoding type ex)swe7 it will not decoding then Show origin string
+                string = origin_string
         return string
 
     def __read_bit(self, column):
@@ -688,13 +689,6 @@ class TableMapEvent(BinLogEvent):
         self.table_obj = Table(self.table_id, self.schema, self.table, self.columns)
         table_map[self.table_id] = self.table_obj
         self.optional_metadata = self._get_optional_meta_data()
-
-        # We exclude 'CHAR' and 'INTERVAL' as they map to 'TINY' and 'ENUM' respectively
-        self.reverse_field_type = {
-            v: k
-            for k, v in vars(FIELD_TYPE).items()
-            if isinstance(v, int) and k not in ["CHAR", "INTERVAL"]
-        }
         self._sync_column_info()
 
     def get_table(self):
@@ -810,7 +804,6 @@ class TableMapEvent(BinLogEvent):
         if not self.__optional_meta_data:
             # If optional_meta_data is False Do not sync Event Time Column Schemas
             return
-
         charset_pos = 0
         enum_or_set_pos = 0
         enum_pos = 0
@@ -825,11 +818,9 @@ class TableMapEvent(BinLogEvent):
             if self._is_character_column(column_type, dbms=self.dbms):
                 charset_id = self.optional_metadata.charset_collation_list[charset_pos]
                 charset_pos += 1
-
                 encode_name, collation_name, charset_name = find_charset(
-                    charset_id, dbms=self.dbms
+                    str(charset_id), dbms=self.dbms
                 )
-
                 self.columns[column_idx].collation_name = collation_name
                 self.columns[column_idx].character_set_name = encode_name
 
@@ -840,7 +831,7 @@ class TableMapEvent(BinLogEvent):
                 enum_or_set_pos += 1
 
                 encode_name, collation_name, charset_name = find_charset(
-                    charset_id, dbms=self.dbms
+                    str(charset_id), dbms=self.dbms
                 )
 
                 self.columns[column_idx].collation_name = collation_name
@@ -1048,9 +1039,6 @@ class TableMapEvent(BinLogEvent):
         ]:
             return True
         return False
-
-    def _get_field_type_key(self, field_type_value):
-        return self.reverse_field_type.get(field_type_value, None)
 
 
 def find_encoding(charset: CHARSET.Charset):
