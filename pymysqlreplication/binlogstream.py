@@ -182,7 +182,6 @@ class BinLogStreamReader(object):
         ignore_decode_errors=False,
         verify_checksum=False,
         enable_logging=True,
-        optional_meta_data=False,
     ):
         """
         Attributes:
@@ -248,7 +247,7 @@ class BinLogStreamReader(object):
         )
         self.__ignore_decode_errors = ignore_decode_errors
         self.__verify_checksum = verify_checksum
-        self.__optional_meta_data = optional_meta_data
+        self.__optional_meta_data = False
 
         # We can't filter on packet level TABLE_MAP and rotate event because
         # we need them for handling other operations
@@ -570,6 +569,8 @@ class BinLogStreamReader(object):
                        By Applying this, provide properly mapped column information on UPDATE,DELETE,INSERT. 
                         """,
                 )
+            else:
+                self.__optional_meta_data = True
 
     def fetchone(self):
         while True:

@@ -207,13 +207,17 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.YEAR:
             return self.packet.read_uint8() + 1900
         elif column.type == FIELD_TYPE.ENUM:
-            self.packet.read_uint_by_size(column.size)
-            # unsupported
-            return None
+            return column.enum_values[self.packet.read_uint_by_size(column.size)]
         elif column.type == FIELD_TYPE.SET:
-            self.packet.read_uint_by_size(column.size)
-            # unsupported
-            return None
+            bit_mask = self.packet.read_uint_by_size(column.size)
+            return (
+                set(
+                    val
+                    for idx, val in enumerate(column.set_values)
+                    if bit_mask & 2**idx
+                )
+                or None
+            )
         elif column.type == FIELD_TYPE.BIT:
             return self.__read_bit(column)
         elif column.type == FIELD_TYPE.GEOMETRY:
@@ -463,6 +467,7 @@ class RowsEvent(BinLogEvent):
             "Column Name Information Flag: %s"
             % self.table_map[self.table_id].column_name_flag
         )
+        print(self.table_map[self.table_id].data)
 
     def _fetch_rows(self):
         self.__rows = []
@@ -802,9 +807,6 @@ class TableMapEvent(BinLogEvent):
         return optional_metadata
 
     def _sync_column_info(self):
-        column_schemas = []
-        if len(self.optional_metadata.column_name_list) == 0:
-            return
         if not self.__optional_meta_data:
             # If optional_meta_data is False Do not sync Event Time Column Schemas
             return
@@ -815,33 +817,10 @@ class TableMapEvent(BinLogEvent):
         set_pos = 0
 
         for column_idx in range(self.column_count):
-            column_schema = {
-                "COLUMN_NAME": None,
-                "COLLATION_NAME": None,
-                "CHARACTER_SET_NAME": None,
-                "CHARACTER_OCTET_LENGTH": None,
-                "DATA_TYPE": None,  # not sufficient data
-                "COLUMN_COMMENT": "",  # we don't know this Info from optional metadata info
-                "COLUMN_TYPE": None,  # not sufficient data
-                "COLUMN_KEY": "",
-                "ORDINAL_POSITION": None,
-            }
             column_type = self.columns[column_idx].type
             column_name = self.optional_metadata.column_name_list[column_idx]
-            data_type = self._get_field_type_key(column_type)
             column_data: Column = self.columns[column_idx]
             column_data.name = column_name
-
-            column_schema["COLUMN_NAME"] = column_name
-            column_schema["ORDINAL_POSITION"] = column_idx + 1
-
-            if data_type is not None:
-                data_type = data_type.lower()
-                column_schema["DATA_TYPE"] = data_type
-
-            if "max_length" in column_data.data:
-                max_length = column_data.max_length
-                column_schema["CHARACTER_OCTET_LENGTH"] = str(max_length)
 
             if self._is_character_column(column_type, dbms=self.dbms):
                 charset_id = self.optional_metadata.charset_collation_list[charset_pos]
@@ -850,8 +829,6 @@ class TableMapEvent(BinLogEvent):
                 encode_name, collation_name, charset_name = find_charset(
                     charset_id, dbms=self.dbms
                 )
-                column_schema["COLLATION_NAME"] = collation_name
-                column_schema["CHARACTER_SET_NAME"] = charset_name
 
                 self.columns[column_idx].collation_name = collation_name
                 self.columns[column_idx].character_set_name = encode_name
@@ -865,8 +842,6 @@ class TableMapEvent(BinLogEvent):
                 encode_name, collation_name, charset_name = find_charset(
                     charset_id, dbms=self.dbms
                 )
-                column_schema["COLLATION_NAME"] = collation_name
-                column_schema["CHARACTER_SET_NAME"] = charset_name
 
                 self.columns[column_idx].collation_name = collation_name
                 self.columns[column_idx].character_set_name = encode_name
@@ -875,17 +850,11 @@ class TableMapEvent(BinLogEvent):
                     enum_column_info = self.optional_metadata.set_enum_str_value_list[
                         enum_pos
                     ]
-                    enum_values = ",".join(enum_column_info)
-                    enum_format = f"enum({enum_values})"
-                    column_schema["COLUMN_TYPE"] = enum_format
                     self.columns[column_idx].enum_values = [""] + enum_column_info
                     enum_pos += 1
 
                 if self._is_set_column(column_type):
                     set_column_info = self.optional_metadata.set_str_value_list[set_pos]
-                    set_values = ",".join(set_column_info)
-                    set_format = f"set({set_values})"
-                    column_schema["COLUMN_TYPE"] = set_format
                     self.columns[column_idx].set_values = set_column_info
                     set_pos += 1
 
@@ -896,12 +865,12 @@ class TableMapEvent(BinLogEvent):
                 self.columns[column_idx].unsigned = True
 
             if column_idx in self.optional_metadata.simple_primary_key_list:
-                column_schema["COLUMN_KEY"] = "PRI"
-
-            column_schemas.append(column_schema)
+                self.columns[column_idx].is_primary = True
+            if self.optional_metadata.visibility_list[column_idx]:
+                self.columns[column_idx].visibility = True
 
         self.table_obj = Table(
-            column_schemas, self.table_id, self.schema, self.table, self.columns
+            self.table_id, self.schema, self.table, self.columns, column_name_flag=True
         )
 
     def _convert_include_non_numeric_column(self, signedness_bool_list):
