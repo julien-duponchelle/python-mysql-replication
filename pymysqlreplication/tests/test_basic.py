@@ -721,6 +721,8 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[1]["values"]["data"], "World")
 
     def test_ignore_decode_errors(self):
+        if self.isMySQL80AndMore():
+            self.skipTest("MYSQL 8 Version Pymysql Data Error Incorrect string value")
         problematic_unicode_string = (
             b'[{"text":"\xed\xa0\xbd \xed\xb1\x8d Some string"}]'
         )
@@ -740,8 +742,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         )
         with self.assertRaises(UnicodeError):
             event = self.stream.fetchone()
-            if event.table_map[event.table_id].column_name_flag:
-                data = event.rows[0]["values"]["data"]
+            data = event.rows[0]["values"]["data"]
 
         # Initialize with ignore_decode_errors=True
         self.stream = BinLogStreamReader(
@@ -1661,6 +1662,11 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
             )
 
     def test_visibility(self):
+        mysql_version = self.getMySQLVersion()
+        version = float(mysql_version.rsplit(".", 1)[0])
+        version_detail = int(mysql_version.rsplit(".", 1)[1])
+        if not (version >= 8.0 and version_detail >= 23):
+            self.skipTest("Mysql version  8.0.23 - visibility supprot")
         create_query = "CREATE TABLE test_visibility (name VARCHAR(50), secret_key VARCHAR(50) DEFAULT 'qwerty' INVISIBLE);"
         insert_query = "INSERT INTO test_visibility VALUES('Audrey');"
 
@@ -1697,12 +1703,7 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
-        self.assertEqual(
-            event.table_obj.data["column_schemas"][0]["COLUMN_NAME"], "name"
-        )
-        self.assertEqual(
-            event.table_obj.data["column_schemas"][0]["COLUMN_COMMENT"], ""
-        )
+        self.assertEqual(event.table_obj.data["columns"][0].name, "name")
         self.assertEqual(len(column_schemas), 0)
 
     def test_sync_column_drop_event_table_schema(self):
@@ -1730,18 +1731,12 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
         self.assertEqual(len(column_schemas), 2)
-        self.assertEqual(len(event.table_obj.data["column_schemas"]), 3)
+        self.assertEqual(len(event.table_obj.data["columns"]), 3)
         self.assertEqual(column_schemas[0][0], "drop_column1")
         self.assertEqual(column_schemas[1][0], "drop_column3")
-        self.assertEqual(
-            event.table_obj.data["column_schemas"][0]["COLUMN_NAME"], "drop_column1"
-        )
-        self.assertEqual(
-            event.table_obj.data["column_schemas"][1]["COLUMN_NAME"], "drop_column2"
-        )
-        self.assertEqual(
-            event.table_obj.data["column_schemas"][2]["COLUMN_NAME"], "drop_column3"
-        )
+        self.assertEqual(event.table_obj.data["columns"][0].name, "drop_column1")
+        self.assertEqual(event.table_obj.data["columns"][1].name, "drop_column2")
+        self.assertEqual(event.table_obj.data["columns"][2].name, "drop_column3")
 
     def tearDown(self):
         self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")
