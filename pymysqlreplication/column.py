@@ -19,7 +19,12 @@ class Column(object):
         self.name = None
         self.unsigned = False
         self.is_primary = False
+        self.charset_id = None
         self.character_set_name = None
+        self.collation_name = None
+        self.enum_values = None
+        self.set_values = None
+        self.visibility = False
 
         if self.type == FIELD_TYPE.VARCHAR:
             self.max_length = struct.unpack("<H", packet.read(2))[0]

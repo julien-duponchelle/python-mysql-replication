@@ -494,7 +494,6 @@ class DeleteRowsEvent(RowsEvent):
     def _dump(self):
         super()._dump()
         print("Values:")
-        print(self.table.data)
         for row in self.rows:
             print("--")
             for key in row["values"]:
