@@ -260,14 +260,18 @@ class RowsEvent(BinLogEvent):
     def __read_string(self, size, column):
         string = self.packet.read_length_coded_pascal_string(size)
         origin_string = string
+        decode_errors = "ignore" if self._ignore_decode_errors else "strict"
         if column.character_set_name is not None:
             encoding = self.charset_to_encoding(column.character_set_name)
-            decode_errors = "ignore" if self._ignore_decode_errors else "strict"
             try:
                 string = string.decode(encoding, decode_errors)
             except LookupError:
                 # python does not support Mysql encoding type ex)swe7 it will not decoding then Show origin string
                 string = origin_string
+        else:
+            # MYSQL 5.xx Version  Goes Here
+            # We don't know encoding type So apply Default Utf-8
+            string = string.decode(errors=decode_errors)
         return string
 
     def __read_bit(self, column):
