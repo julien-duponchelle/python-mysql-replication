@@ -290,7 +290,6 @@ class BinLogStreamReader(object):
         if self.__connected_ctl:
             # break reference cycle between stream reader and underlying
             # mysql connection object
-            self._ctl_connection._get_table_information = None
             self._ctl_connection.close()
             self.__connected_ctl = False
 
@@ -301,9 +300,9 @@ class BinLogStreamReader(object):
         self._ctl_connection_settings["cursorclass"] = DictCursor
         self._ctl_connection_settings["autocommit"] = True
         self._ctl_connection = self.pymysql_wrapper(**self._ctl_connection_settings)
-        self._ctl_connection._get_table_information = self.__get_table_information
         self._ctl_connection._get_dbms = self.__get_dbms
         self.__connected_ctl = True
+        self.__check_optional_meta_data()
 
     def __checksum_enabled(self):
         """Return True if binlog-checksum = CRC32. Only for MySQL > 5.6"""
@@ -548,6 +547,28 @@ class BinLogStreamReader(object):
 
         return prelude
 
+    def __check_optional_meta_data(self):
+        cur = self._ctl_connection.cursor()
+        cur.execute("SHOW VARIABLES LIKE 'BINLOG_ROW_METADATA';")
+        value = cur.fetchone()
+        if value is None:  # BinLog Variable Not exist It means Not Supported Version
+            logging.log(
+                logging.WARN,
+                """
+                    Before using MARIADB 10.5.0 and MYSQL 8.0.14 versions,
+                    use python-mysql-replication version Before 1.0 version """,
+            )
+        else:
+            value = value.get("Value", "")
+            if value.upper() != "FULL":
+                logging.log(
+                    logging.WARN,
+                    """
+                       Setting The Variable Value BINLOG_ROW_METADATA = FULL 
+                       By Applying this, provide properly mapped column information on UPDATE,DELETE,INSERT. 
+                        """,
+                )
+
     def fetchone(self):
         while True:
             if self.end_log_pos and self.is_past_end_log_pos:
@@ -708,38 +729,6 @@ class BinLogStreamReader(object):
             except KeyError:
                 pass
         return frozenset(events)
-
-    def __get_table_information(self, schema, table):
-        for i in range(1, 3):
-            try:
-                if not self.__connected_ctl:
-                    self.__connect_to_ctl()
-
-                cur = self._ctl_connection.cursor()
-                cur.execute(
-                    """
-                    SELECT
-                        COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME,
-                        COLUMN_COMMENT, COLUMN_TYPE, COLUMN_KEY, ORDINAL_POSITION,
-                        DATA_TYPE, CHARACTER_OCTET_LENGTH
-                    FROM
-                        information_schema.columns
-                    WHERE
-                        table_schema = %s AND table_name = %s
-                    """,
-                    (schema, table),
-                )
-                result = sorted(cur.fetchall(), key=lambda x: x["ORDINAL_POSITION"])
-                cur.close()
-
-                return result
-            except pymysql.OperationalError as error:
-                code, message = error.args
-                if code in MYSQL_EXPECTED_ERROR_CODES:
-                    self.__connected_ctl = False
-                    continue
-                else:
-                    raise error
 
     def __get_dbms(self):
         if not self.__connected_ctl:
