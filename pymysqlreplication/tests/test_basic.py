@@ -1537,7 +1537,7 @@ class TestLatin1(base.PyMySQLReplicationTestCase):
         assert event.query == r"CREATE TABLE test_latin1_\xd6\xc6\xdb (a INT)"
 
 
-class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
+class TestOptionalMetaData(base.PyMySQLReplicationPercona8TestCase):
     def setUp(self):
         super(TestOptionalMetaData, self).setUp()
         self.stream.close()
