@@ -468,7 +468,6 @@ class RowsEvent(BinLogEvent):
             "Column Name Information Flag: %s"
             % self.table_map[self.table_id].column_name_flag
         )
-        print(self.table_map[self.table_id].data)
 
     def _fetch_rows(self):
         self.__rows = []
@@ -508,7 +507,6 @@ class DeleteRowsEvent(RowsEvent):
     def _dump(self):
         super()._dump()
         print("Values:")
-        print(self.table.data)
         for row in self.rows:
             print("--")
             for key in row["values"]:
@@ -700,7 +698,8 @@ class TableMapEvent(BinLogEvent):
         print("Schema: %s" % (self.schema))
         print("Table: %s" % (self.table))
         print("Columns: %s" % (self.column_count))
-        self.optional_metadata.dump()
+        if self.__optional_meta_data:
+            self.optional_metadata.dump()
 
     def _get_optional_meta_data(self):
         """
