@@ -127,6 +127,8 @@ class RowsEvent(BinLogEvent):
         name = self.table_map[self.table_id].columns[i].name
 
         if BitGet(cols_bitmap, i) == 0:
+            # This block is only executed when binlog_row_image = MINIMAL.
+            # When binlog_row_image = FULL, this block does not execute.
             self.none_sources[name] = 'cols_bitmap'
             return None
 
