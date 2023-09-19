@@ -247,6 +247,7 @@ class BinLogStreamReader(object):
         )
         self.__ignore_decode_errors = ignore_decode_errors
         self.__verify_checksum = verify_checksum
+        self.__optional_meta_data = False
 
         # We can't filter on packet level TABLE_MAP and rotate event because
         # we need them for handling other operations
@@ -614,6 +615,7 @@ class BinLogStreamReader(object):
                 self.__freeze_schema,
                 self.__ignore_decode_errors,
                 self.__verify_checksum,
+                self.__optional_meta_data,
             )
 
             if binlog_event.event_type == ROTATE_EVENT:
@@ -736,6 +738,7 @@ class BinLogStreamReader(object):
 
         cur = self._ctl_connection.cursor()
         cur.execute("SELECT VERSION();")
+
         version_info = cur.fetchone().get("VERSION()", "")
 
         if "MariaDB" in version_info:

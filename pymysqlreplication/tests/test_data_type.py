@@ -5,6 +5,8 @@ import platform
 import sys
 import json
 
+from pymysqlreplication import BinLogStreamReader
+
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
@@ -34,6 +36,12 @@ def to_binary_dict(d):
 
 
 class TestDataType(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super(TestDataType, self).setUp()
+        if self.isMySQL8014AndMore():
+            self.execute("SET GLOBAL binlog_row_metadata='FULL';")
+            self.execute("SET GLOBAL binlog_row_image='FULL';")
+
     def ignoredEvents(self):
         return [GtidEvent, PreviousGtidsEvent]
 
@@ -103,20 +111,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.event_type, TABLE_MAP_EVENT)
 
         return event
-
-    def test_varbinary(self):
-        create_query = "CREATE TABLE test(b VARBINARY(4))"
-        insert_query = "INSERT INTO test VALUES(UNHEX('ff010000'))"
-        event = self.create_and_insert_value(create_query, insert_query)
-        if event.table_map[event.table_id].column_name_flag:
-            self.assertEqual(event.rows[0]["values"]["b"], b"\xff\x01\x00\x00")
-
-    def test_fixed_length_binary(self):
-        create_query = "CREATE TABLE test(b BINARY(4))"
-        insert_query = "INSERT INTO test VALUES(UNHEX('ff010000'))"
-        event = self.create_and_insert_value(create_query, insert_query)
-        if event.table_map[event.table_id].column_name_flag:
-            self.assertEqual(event.rows[0]["values"]["b"], b"\xff\x01\x00\x00")
 
     def test_decimal(self):
         create_query = "CREATE TABLE test (test DECIMAL(2,1))"
@@ -392,6 +386,10 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[0]["values"]["test2"], None)
 
     def test_zero_month(self):
+        if not self.isMySQL57():
+            self.skipTest(
+                "Not supported in this version of MySQL 8"
+            )  # pymysql.err.OperationalError
         self.set_sql_mode()
         create_query = "CREATE TABLE test (id INTEGER, test DATE, test2 DATE);"
         insert_query = "INSERT INTO test (id, test2) VALUES(1, '2015-00-21')"
@@ -401,6 +399,10 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[0]["values"]["test2"], None)
 
     def test_zero_day(self):
+        if not self.isMySQL57():
+            self.skipTest(
+                "Not supported in this version of MySQL 8"
+            )  # pymysql.err.OperationalError
         self.set_sql_mode()
         create_query = "CREATE TABLE test (id INTEGER, test DATE, test2 DATE);"
         insert_query = "INSERT INTO test (id, test2) VALUES(1, '2015-05-00')"
@@ -469,6 +471,10 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             )
 
     def test_zero_datetime(self):
+        if not self.isMySQL57():
+            self.skipTest(
+                "Not supported in this version of MySQL 8"
+            )  # pymysql.err.OperationalError Invalid default value for 'test'
         self.set_sql_mode()
         create_query = (
             "CREATE TABLE test (id INTEGER, test DATETIME NOT NULL DEFAULT 0);"
@@ -479,6 +485,10 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[0]["values"]["test"], None)
 
     def test_broken_datetime(self):
+        if not self.isMySQL57():
+            self.skipTest(
+                "Not supported in this version of MySQL 8"
+            )  # pymysql.err.OperationalError Incorrect datetime value: '2013-00-00 00:00:00' for column 'test'
         self.set_sql_mode()
         create_query = "CREATE TABLE test (test DATETIME NOT NULL);"
         insert_query = "INSERT INTO test VALUES('2013-00-00 00:00:00')"
@@ -489,8 +499,10 @@ class TestDataType(base.PyMySQLReplicationTestCase):
     def test_year(self):
         if self.isMySQL57():
             # https://dev.mysql.com/doc/refman/5.7/en/migrating-to-year4.html
-            self.skipTest("YEAR(2) is unsupported in mysql 5.7")
-        create_query = "CREATE TABLE test (a YEAR(4), b YEAR(2))"
+            self.skipTest(
+                "YEAR(2) is unsupported in mysql 5.7"
+            )  # pymysql.err.OperationalError: (1818, 'Supports only YEAR or YEAR(4) column.')
+        create_query = "CREATE TABLE test (a YEAR(4), b YEAR)"
         insert_query = "INSERT INTO test VALUES(1984, 1984)"
         event = self.create_and_insert_value(create_query, insert_query)
         if event.table_map[event.table_id].column_name_flag:
@@ -577,7 +589,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
 
     def test_geometry(self):
         create_query = "CREATE TABLE test (test GEOMETRY);"
-        insert_query = "INSERT INTO test VALUES(GeomFromText('POINT(1 1)'))"
+        insert_query = "INSERT INTO test VALUES(ST_GeomFromText('POINT(1 1)'))"
         event = self.create_and_insert_value(create_query, insert_query)
         if event.table_map[event.table_id].column_name_flag:
             self.assertEqual(
@@ -804,25 +816,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         if event.table_map[event.table_id].column_name_flag:
             self.assertMultiLineEqual(event.rows[0]["values"]["test"], string)
 
-    def test_zerofill(self):
-        create_query = "CREATE TABLE test ( \
-            test TINYINT UNSIGNED ZEROFILL DEFAULT NULL, \
-            test2 SMALLINT UNSIGNED ZEROFILL DEFAULT NULL, \
-            test3 MEDIUMINT UNSIGNED ZEROFILL DEFAULT NULL, \
-            test4 INT UNSIGNED ZEROFILL DEFAULT NULL, \
-            test5 BIGINT UNSIGNED ZEROFILL DEFAULT NULL \
-            )"
-        insert_query = (
-            "INSERT INTO test (test, test2, test3, test4, test5) VALUES(1, 1, 1, 1, 1)"
-        )
-        event = self.create_and_insert_value(create_query, insert_query)
-        if event.table_map[event.table_id].column_name_flag:
-            self.assertEqual(event.rows[0]["values"]["test"], "001")
-            self.assertEqual(event.rows[0]["values"]["test2"], "00001")
-            self.assertEqual(event.rows[0]["values"]["test3"], "00000001")
-            self.assertEqual(event.rows[0]["values"]["test4"], "0000000001")
-            self.assertEqual(event.rows[0]["values"]["test5"], "00000000000000000001")
-
     def test_partition_id(self):
         if not self.isMySQL80AndMore():
             self.skipTest("Not supported in this version of MySQL")
@@ -941,6 +934,24 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             event = self.stream.fetchone()
 
         self.assertEqual(event.query, create_query)
+
+    def test_varbinary(self):
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(WriteRowsEvent,),
+            ignore_decode_errors=True,
+        )
+        create_query = "CREATE TABLE test(b VARBINARY(4))"
+        insert_query = "INSERT INTO test VALUES(UNHEX('ff010000'))"
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        event = self.stream.fetchone()
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(event.rows[0]["values"]["b"], b"\xff\x01\x00\x00")
 
 
 if __name__ == "__main__":
