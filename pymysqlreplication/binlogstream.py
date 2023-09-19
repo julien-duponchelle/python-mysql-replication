@@ -176,7 +176,6 @@ class BinLogStreamReader(object):
         report_slave=None,
         slave_uuid=None,
         pymysql_wrapper=None,
-        fail_on_table_metadata_unavailable=False,
         slave_heartbeat=None,
         is_mariadb=False,
         annotate_rows_event=False,
@@ -210,9 +209,6 @@ class BinLogStreamReader(object):
             report_slave: Report slave in SHOW SLAVE HOSTS.
             slave_uuid: Report slave_uuid or replica_uuid in SHOW SLAVE HOSTS(MySQL 8.0.21-) or
                         SHOW REPLICAS(MySQL 8.0.22+) depends on your MySQL version.
-            fail_on_table_metadata_unavailable: Should raise exception if we
-                                                can't get table information on
-                                                row_events
             slave_heartbeat: (seconds) Should master actively send heartbeat on
                              connection. This also reduces traffic in GTID
                              replication on replication resumption (in case
@@ -249,9 +245,9 @@ class BinLogStreamReader(object):
         self.__allowed_events = self._allowed_event_list(
             only_events, ignored_events, filter_non_implemented_events
         )
-        self.__fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
         self.__ignore_decode_errors = ignore_decode_errors
         self.__verify_checksum = verify_checksum
+        self.__optional_meta_data = False
 
         # We can't filter on packet level TABLE_MAP and rotate event because
         # we need them for handling other operations
@@ -295,7 +291,6 @@ class BinLogStreamReader(object):
         if self.__connected_ctl:
             # break reference cycle between stream reader and underlying
             # mysql connection object
-            self._ctl_connection._get_table_information = None
             self._ctl_connection.close()
             self.__connected_ctl = False
 
@@ -306,9 +301,9 @@ class BinLogStreamReader(object):
         self._ctl_connection_settings["cursorclass"] = DictCursor
         self._ctl_connection_settings["autocommit"] = True
         self._ctl_connection = self.pymysql_wrapper(**self._ctl_connection_settings)
-        self._ctl_connection._get_table_information = self.__get_table_information
         self._ctl_connection._get_dbms = self.__get_dbms
         self.__connected_ctl = True
+        self.__check_optional_meta_data()
 
     def __checksum_enabled(self):
         """Return True if binlog-checksum = CRC32. Only for MySQL > 5.6"""
@@ -553,6 +548,30 @@ class BinLogStreamReader(object):
 
         return prelude
 
+    def __check_optional_meta_data(self):
+        cur = self._ctl_connection.cursor()
+        cur.execute("SHOW VARIABLES LIKE 'BINLOG_ROW_METADATA';")
+        value = cur.fetchone()
+        if value is None:  # BinLog Variable Not exist It means Not Supported Version
+            logging.log(
+                logging.WARN,
+                """
+                    Before using MARIADB 10.5.0 and MYSQL 8.0.14 versions,
+                    use python-mysql-replication version Before 1.0 version """,
+            )
+        else:
+            value = value.get("Value", "")
+            if value.upper() != "FULL":
+                logging.log(
+                    logging.WARN,
+                    """
+                       Setting The Variable Value BINLOG_ROW_METADATA = FULL 
+                       By Applying this, provide properly mapped column information on UPDATE,DELETE,INSERT. 
+                        """,
+                )
+            else:
+                self.__optional_meta_data = True
+
     def fetchone(self):
         while True:
             if self.end_log_pos and self.is_past_end_log_pos:
@@ -596,9 +615,9 @@ class BinLogStreamReader(object):
                 self.__only_schemas,
                 self.__ignored_schemas,
                 self.__freeze_schema,
-                self.__fail_on_table_metadata_unavailable,
                 self.__ignore_decode_errors,
                 self.__verify_checksum,
+                self.__optional_meta_data,
             )
 
             if binlog_event.event_type == ROTATE_EVENT:
@@ -715,44 +734,13 @@ class BinLogStreamReader(object):
                 pass
         return frozenset(events)
 
-    def __get_table_information(self, schema, table):
-        for i in range(1, 3):
-            try:
-                if not self.__connected_ctl:
-                    self.__connect_to_ctl()
-
-                cur = self._ctl_connection.cursor()
-                cur.execute(
-                    """
-                    SELECT
-                        COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME,
-                        COLUMN_COMMENT, COLUMN_TYPE, COLUMN_KEY, ORDINAL_POSITION,
-                        DATA_TYPE, CHARACTER_OCTET_LENGTH
-                    FROM
-                        information_schema.columns
-                    WHERE
-                        table_schema = %s AND table_name = %s
-                    """,
-                    (schema, table),
-                )
-                result = sorted(cur.fetchall(), key=lambda x: x["ORDINAL_POSITION"])
-                cur.close()
-
-                return result
-            except pymysql.OperationalError as error:
-                code, message = error.args
-                if code in MYSQL_EXPECTED_ERROR_CODES:
-                    self.__connected_ctl = False
-                    continue
-                else:
-                    raise error
-
     def __get_dbms(self):
         if not self.__connected_ctl:
             self.__connect_to_ctl()
 
         cur = self._ctl_connection.cursor()
         cur.execute("SELECT VERSION();")
+
         version_info = cur.fetchone().get("VERSION()", "")
 
         if "MariaDB" in version_info:
