@@ -161,9 +161,10 @@ class PyMySQLReplicationMariaDbTestCase(PyMySQLReplicationTestCase):
         bin_log_basename = bin_log_basename.split("/")[-1]
         return bin_log_basename
 
+
 class PyMySQLReplicationPercona8TestCase(PyMySQLReplicationTestCase):
     def setUp(self):
-        super().setUp()        
+        super().setUp()
         # default
         self.database = {
             "host": os.environ.get("MYSQL_8_0") or "localhost",
