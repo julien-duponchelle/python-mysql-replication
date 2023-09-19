@@ -895,6 +895,32 @@ class TestDataType(base.PyMySQLReplicationTestCase):
 
 
 class TestDataTypeVersion8(base.PyMySQLReplicationPercona8TestCase):
+    def ignoredEvents(self):
+        return [GtidEvent, PreviousGtidsEvent]
+
+    def create_and_insert_value(self, create_query, insert_query):
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        # QueryEvent for the Create Table
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        # QueryEvent for the BEGIN
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
+
+        event = self.stream.fetchone()
+        if self.isMySQL56AndMore():
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
+        else:
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
+        self.assertIsInstance(event, WriteRowsEvent)
+        return event
+
     def test_partition_id(self):
         if not self.isMySQL80AndMore():
             self.skipTest("Not supported in this version of MySQL")
