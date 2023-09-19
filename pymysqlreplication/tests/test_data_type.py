@@ -894,7 +894,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.query, create_query)
 
 
-class TestDataTypeVersion8(base.PyMySQLReplicationPercona8TestCase):
+class TestDataTypeVersion8(base.PyMySQLReplicationVersion8TestCase):
     def ignoredEvents(self):
         return [GtidEvent, PreviousGtidsEvent]
 

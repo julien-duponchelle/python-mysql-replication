@@ -162,7 +162,7 @@ class PyMySQLReplicationMariaDbTestCase(PyMySQLReplicationTestCase):
         return bin_log_basename
 
 
-class PyMySQLReplicationPercona8TestCase(PyMySQLReplicationTestCase):
+class PyMySQLReplicationVersion8TestCase(PyMySQLReplicationTestCase):
     def setUp(self):
         super().setUp()
         # default
