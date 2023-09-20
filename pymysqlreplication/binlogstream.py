@@ -565,12 +565,10 @@ class BinLogStreamReader(object):
                 logging.log(
                     logging.WARN,
                     """
-                       Setting The Variable Value BINLOG_ROW_METADATA = FULL 
+                       Setting The Variable Value BINLOG_ROW_METADATA = FULL, BINLOG_ROW_IMAGE = FULL. 
                        By Applying this, provide properly mapped column information on UPDATE,DELETE,INSERT. 
                         """,
                 )
-            else:
-                self.__optional_meta_data = True
 
     def fetchone(self):
         while True:
