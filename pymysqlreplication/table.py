@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 class Table(object):
     def __init__(
         self, table_id, schema, table, columns, primary_key=None, column_name_flag=False

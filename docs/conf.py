@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # Python MySQL Replication documentation build configuration file, created by
 # sphinx-quickstart on Sun Sep 30 15:04:27 2012.
 #

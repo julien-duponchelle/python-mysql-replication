@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import struct
 import logging
 from distutils.version import LooseVersion

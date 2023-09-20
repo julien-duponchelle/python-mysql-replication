@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import pymysql
 import copy
 from pymysqlreplication import BinLogStreamReader
