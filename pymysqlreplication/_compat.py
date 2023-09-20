@@ -1,1 +1,0 @@
-text_type = str

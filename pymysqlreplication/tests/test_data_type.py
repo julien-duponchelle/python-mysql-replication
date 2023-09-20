@@ -18,15 +18,13 @@ from pymysqlreplication.tests import base
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 from pymysqlreplication.event import *
-from pymysqlreplication._compat import text_type
-
 
 __all__ = ["TestDataType"]
 
 
 def to_binary_dict(d):
     def encode_value(v):
-        if isinstance(v, text_type):
+        if isinstance(v, str):
             return v.encode()
         if isinstance(v, list):
             return [encode_value(x) for x in v]
