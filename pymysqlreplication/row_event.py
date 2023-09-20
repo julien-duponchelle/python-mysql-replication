@@ -478,14 +478,14 @@ class RowsEvent(BinLogEvent):
         mask = ((1 << size) - 1)
         return binary & mask
 
-    def _categorize_none(self, column_data):
+    def _get_none_sources(self, column_data):
         result = {}
         for column_name, value in column_data.items():
             if value is not None:
                 continue
 
-            category = self.none_sources.get(column_name, "null")
-            result[column_name] = category
+            source = self.none_sources.get(column_name, "null")
+            result[column_name] = source
         return result
 
     def _dump(self):
@@ -527,7 +527,7 @@ class DeleteRowsEvent(RowsEvent):
         row = {}
 
         row["values"] = self._read_column_data(self.columns_present_bitmap)
-        row["category_of_none"] = self._categorize_none(row["values"])
+        row["none_sources"] = self._get_none_sources(row["values"])
 
         return row
 
@@ -538,7 +538,7 @@ class DeleteRowsEvent(RowsEvent):
             print("--")
             for key in row["values"]:
                 print("*", key, ":", row["values"][key],
-                      "(%s)" % row["category_of_none"][key] if key in row["category_of_none"] else "")
+                      "(%s)" % row["none_sources"][key] if key in row["none_sources"] else "")
 
 class WriteRowsEvent(RowsEvent):
     """This event is triggered when a row in database is added
@@ -557,7 +557,7 @@ class WriteRowsEvent(RowsEvent):
         row = {}
 
         row["values"] = self._read_column_data(self.columns_present_bitmap)
-        row["category_of_none"] = self._categorize_none(row["values"])
+        row["none_sources"] = self._get_none_sources(row["values"])
 
         return row
 
@@ -568,7 +568,7 @@ class WriteRowsEvent(RowsEvent):
             print("--")
             for key in row["values"]:
                 print("*", key, ":", row["values"][key],
-                      "(%s)" % row["category_of_none"][key] if key in row["category_of_none"] else "")
+                      "(%s)" % row["none_sources"][key] if key in row["none_sources"] else "")
 
 
 class UpdateRowsEvent(RowsEvent):
@@ -596,9 +596,9 @@ class UpdateRowsEvent(RowsEvent):
         row = {}
 
         row["before_values"] = self._read_column_data(self.columns_present_bitmap)
-        row['before_category_of_none'] = self._categorize_none(row["before_values"])
-        row['after_values'] = self._read_column_data(self.columns_present_bitmap2)
-        row['after_category_of_none'] = self._categorize_none(row["after_values"])
+        row["before_none_source"] = self._get_none_sources(row["before_values"])
+        row["after_values"] = self._read_column_data(self.columns_present_bitmap2)
+        row["after_none_source"] = self._get_none_sources(row["after_values"])
         return row
 
     def _dump(self):
@@ -608,15 +608,15 @@ class UpdateRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["before_values"]:
-                if key in row["before_category_of_none"]:
+                if key in row["before_none_source"]:
                     before_value_info = "%s(%s)" % (row["before_values"][key],
-                                                    row["before_category_of_none"][key])
+                                                    row["before_none_source"][key])
                 else:
                     before_value_info = row["before_values"][key]
 
-                if key in row["after_category_of_none"]:
+                if key in row["after_none_source"]:
                     after_value_info = "%s(%s)" % (row["after_values"][key],
-                                                    row["after_category_of_none"][key])
+                                                    row["after_none_source"][key])
                 else:
                     after_value_info = row["after_values"][key]
 
