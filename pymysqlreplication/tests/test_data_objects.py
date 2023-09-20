@@ -1,4 +1,3 @@
-import sys
 import unittest
 from pymysqlreplication.column import Column
 from pymysqlreplication.table import Table

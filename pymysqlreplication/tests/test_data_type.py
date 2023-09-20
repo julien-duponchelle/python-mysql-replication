@@ -1,6 +1,5 @@
 import copy
 import platform
-import sys
 import json
 from pymysqlreplication import BinLogStreamReader
 import unittest

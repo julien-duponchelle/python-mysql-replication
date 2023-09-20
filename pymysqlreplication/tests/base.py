@@ -2,7 +2,6 @@ import pymysql
 import copy
 from pymysqlreplication import BinLogStreamReader
 import os
-import sys
 import unittest
 
 base = unittest.TestCase
