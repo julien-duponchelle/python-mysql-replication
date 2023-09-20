@@ -377,11 +377,12 @@ class BinLogPacketWrapper(object):
         if length == 0:
             # handle NULL value
             return None
-        payload = self.read(length)
-        self.unread(payload)
+        until_read = self.read_bytes + length
         t = self.read_uint8()
-
-        return self.read_binary_json_type(t, length)
+        value = self.read_binary_json_type(t, length)
+        if self.read_bytes < until_read:
+            self.read(until_read - self.read_bytes)
+        return value
 
     def read_binary_json_type(self, t, length):
         large = t in (JSONB_TYPE_LARGE_OBJECT, JSONB_TYPE_LARGE_ARRAY)
@@ -437,6 +438,7 @@ class BinLogPacketWrapper(object):
         raise ValueError("Json type %d is not handled" % t)
 
     def read_binary_json_object(self, length, large):
+        offset = self.read_bytes
         if large:
             elements = self.read_uint32()
             size = self.read_uint32()
@@ -468,7 +470,12 @@ class BinLogPacketWrapper(object):
             read_offset_or_inline(self, large) for _ in range(elements)
         ]
 
-        keys = [self.read(x[1]) for x in key_offset_lengths]
+        keys = []
+        for i in range(elements):
+            skip_bytes = key_offset_lengths[i][0] + offset - self.read_bytes
+            if skip_bytes != 0:
+                self.read(skip_bytes)
+            keys.append(self.read(key_offset_lengths[i][1]))
 
         out = {}
         for i in range(elements):
