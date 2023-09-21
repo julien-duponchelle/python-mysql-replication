@@ -24,7 +24,7 @@ class RowsEvent(BinLogEvent):
         self.__ignored_tables = kwargs["ignored_tables"]
         self.__only_schemas = kwargs["only_schemas"]
         self.__ignored_schemas = kwargs["ignored_schemas"]
-        self.none_sources = {} 
+        self.__none_sources = {}
 
         #Header
         self.table_id = self._read_table_id()
@@ -129,11 +129,11 @@ class RowsEvent(BinLogEvent):
         if BitGet(cols_bitmap, i) == 0:
             # This block is only executed when binlog_row_image = MINIMAL.
             # When binlog_row_image = FULL, this block does not execute.
-            self.none_sources[name] = 'cols_bitmap'
+            self.__none_sources[name] = 'cols_bitmap'
             return None
 
         if self._is_null(null_bitmap, null_bitmap_index):
-            self.none_sources[name] = 'null'
+            self.__none_sources[name] = 'null'
             return None
 
         if column.type == FIELD_TYPE.TINY:
@@ -190,14 +190,14 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.DATETIME:
             ret = self.__read_datetime()
             if ret is None:
-                self.none_sources[name] = 'out of datetime range'
+                self.__none_sources[name] = 'out of datetime range'
             return ret
         elif column.type == FIELD_TYPE.TIME:
             return self.__read_time()
         elif column.type == FIELD_TYPE.DATE:
             ret = self.__read_date()
             if ret is None:
-                self.none_sources[name] = 'out of date range'
+                self.__none_sources[name] = 'out of date range'
             return ret
         elif column.type == FIELD_TYPE.TIMESTAMP:
             return datetime.datetime.fromtimestamp(
@@ -207,7 +207,7 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.DATETIME2:
             ret = self.__read_datetime2(column)
             if ret is None:
-                self.none_sources[name] = 'out of datetime2 range'
+                self.__none_sources[name] = 'out of datetime2 range'
             return ret
         elif column.type == FIELD_TYPE.TIME2:
             return self.__read_time2(column)
@@ -232,14 +232,14 @@ class RowsEvent(BinLogEvent):
             # We read set columns as a bitmap telling us which options
             # are enabled
             bit_mask = self.packet.read_uint_by_size(column.size)
-            set_value = set(
+            ret = set(
                 val for idx, val in enumerate(column.set_values)
                 if bit_mask & 2 ** idx
             )
-            if not set_value:
-                self.none_sources[column.name] = "empty set"
+            if not ret:
+                self.__none_sources[column.name] = "empty set"
                 return None
-            return set_value
+            return ret
 
         elif column.type == FIELD_TYPE.BIT:
             return self.__read_bit(column)
@@ -484,7 +484,7 @@ class RowsEvent(BinLogEvent):
             if value is not None:
                 continue
 
-            source = self.none_sources.get(column_name, "null")
+            source = self.__none_sources.get(column_name, "null")
             result[column_name] = source
         return result
 
@@ -537,8 +537,11 @@ class DeleteRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["values"]:
-                print("*", key, ":", row["values"][key],
-                      "(%s)" % row["none_sources"][key] if key in row["none_sources"] else "")
+                none_source = row["none_sources"][key] if key in row["none_sources"] else ""
+                if none_source:
+                    print("*", key, ":", row["values"][key], f"({none_source})")
+                else:
+                    print("*", key, ":", row["values"][key])
 
 class WriteRowsEvent(RowsEvent):
     """This event is triggered when a row in database is added
@@ -567,8 +570,11 @@ class WriteRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["values"]:
-                print("*", key, ":", row["values"][key],
-                      "(%s)" % row["none_sources"][key] if key in row["none_sources"] else "")
+                none_source = row["none_sources"][key] if key in row["none_sources"] else ""
+                if none_source:
+                    print("*", key, ":", row["values"][key], f"({none_source})")
+                else:
+                    print("*", key, ":", row["values"][key])
 
 
 class UpdateRowsEvent(RowsEvent):
@@ -620,9 +626,7 @@ class UpdateRowsEvent(RowsEvent):
                 else:
                     after_value_info = row["after_values"][key]
 
-                print("*%s:%s=>%s" % (key,
-                                      before_value_info,
-                                      after_value_info))
+                print(f"*{key}:{before_value_info}=>{after_value_info}")
 
 class TableMapEvent(BinLogEvent):
     """This event describes the structure of a table.
