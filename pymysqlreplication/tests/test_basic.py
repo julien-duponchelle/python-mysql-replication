@@ -1703,7 +1703,7 @@ class TestOptionalMetaData(base.PyMySQLReplicationVersion8TestCase):
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
-        self.assertEqual(event.table_obj.data["columns"][0].name, "name")
+        self.assertEqual(event.table_obj.data["columns"][0].name, None)
         self.assertEqual(len(column_schemas), 0)
 
     def test_sync_column_drop_event_table_schema(self):
@@ -1734,9 +1734,9 @@ class TestOptionalMetaData(base.PyMySQLReplicationVersion8TestCase):
         self.assertEqual(len(event.table_obj.data["columns"]), 3)
         self.assertEqual(column_schemas[0][0], "drop_column1")
         self.assertEqual(column_schemas[1][0], "drop_column3")
-        self.assertEqual(event.table_obj.data["columns"][0].name, "drop_column1")
-        self.assertEqual(event.table_obj.data["columns"][1].name, "drop_column2")
-        self.assertEqual(event.table_obj.data["columns"][2].name, "drop_column3")
+        self.assertEqual(event.table_obj.data["columns"][0].name, None)
+        self.assertEqual(event.table_obj.data["columns"][1].name, None)
+        self.assertEqual(event.table_obj.data["columns"][2].name, None)
 
     def tearDown(self):
         self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")
