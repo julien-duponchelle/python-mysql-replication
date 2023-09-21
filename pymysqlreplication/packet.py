@@ -104,9 +104,9 @@ class BinLogPacketWrapper(object):
         only_schemas,
         ignored_schemas,
         freeze_schema,
-        fail_on_table_metadata_unavailable,
         ignore_decode_errors,
         verify_checksum,
+        optional_meta_data,
     ):
         # -1 because we ignore the ok byte
         self.read_bytes = 0
@@ -145,6 +145,7 @@ class BinLogPacketWrapper(object):
 
         if event_class not in allowed_events:
             return
+
         self.event = event_class(
             self,
             event_size_without_header,
@@ -156,9 +157,9 @@ class BinLogPacketWrapper(object):
             only_schemas=only_schemas,
             ignored_schemas=ignored_schemas,
             freeze_schema=freeze_schema,
-            fail_on_table_metadata_unavailable=fail_on_table_metadata_unavailable,
             ignore_decode_errors=ignore_decode_errors,
             verify_checksum=verify_checksum,
+            optional_meta_data=optional_meta_data,
         )
         if not self.event._processed:
             self.event = None

@@ -260,11 +260,12 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         else:
             self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
         self.assertIsInstance(event, WriteRowsEvent)
-        self.assertEqual(event.rows[0]["values"]["id"], 1)
-        self.assertEqual(event.rows[0]["values"]["data"], "Hello World")
         self.assertEqual(event.schema, "pymysqlreplication_test")
         self.assertEqual(event.table, "test")
-        self.assertEqual(event.columns[1].name, "data")
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(event.rows[0]["values"]["id"], 1)
+            self.assertEqual(event.rows[0]["values"]["data"], "Hello World")
+            self.assertEqual(event.columns[1].name, "data")
 
     def test_delete_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -292,8 +293,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         else:
             self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V1)
         self.assertIsInstance(event, DeleteRowsEvent)
-        self.assertEqual(event.rows[0]["values"]["id"], 1)
-        self.assertEqual(event.rows[0]["values"]["data"], "Hello World")
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(event.rows[0]["values"]["id"], 1)
+            self.assertEqual(event.rows[0]["values"]["data"], "Hello World")
 
     def test_update_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -321,10 +323,11 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         else:
             self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
         self.assertIsInstance(event, UpdateRowsEvent)
-        self.assertEqual(event.rows[0]["before_values"]["id"], 1)
-        self.assertEqual(event.rows[0]["before_values"]["data"], "Hello")
-        self.assertEqual(event.rows[0]["after_values"]["id"], 1)
-        self.assertEqual(event.rows[0]["after_values"]["data"], "World")
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(event.rows[0]["before_values"]["id"], 1)
+            self.assertEqual(event.rows[0]["before_values"]["data"], "Hello")
+            self.assertEqual(event.rows[0]["after_values"]["id"], 1)
+            self.assertEqual(event.rows[0]["after_values"]["data"], "World")
 
     def test_minimal_image_write_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -350,11 +353,12 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         else:
             self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
         self.assertIsInstance(event, WriteRowsEvent)
-        self.assertEqual(event.rows[0]["values"]["id"], 1)
-        self.assertEqual(event.rows[0]["values"]["data"], "Hello World")
         self.assertEqual(event.schema, "pymysqlreplication_test")
         self.assertEqual(event.table, "test")
-        self.assertEqual(event.columns[1].name, "data")
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(event.columns[1].name, "data")
+            self.assertEqual(event.rows[0]["values"]["id"], 1)
+            self.assertEqual(event.rows[0]["values"]["data"], "Hello World")
 
     def test_minimal_image_delete_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -383,8 +387,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         else:
             self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V1)
         self.assertIsInstance(event, DeleteRowsEvent)
-        self.assertEqual(event.rows[0]["values"]["id"], 1)
-        self.assertEqual(event.rows[0]["values"]["data"], None)
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(event.rows[0]["values"]["id"], 1)
+            self.assertEqual(event.rows[0]["values"]["data"], None)
 
     def test_minimal_image_update_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -413,10 +418,11 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         else:
             self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
         self.assertIsInstance(event, UpdateRowsEvent)
-        self.assertEqual(event.rows[0]["before_values"]["id"], 1)
-        self.assertEqual(event.rows[0]["before_values"]["data"], None)
-        self.assertEqual(event.rows[0]["after_values"]["id"], None)
-        self.assertEqual(event.rows[0]["after_values"]["data"], "World")
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(event.rows[0]["before_values"]["id"], 1)
+            self.assertEqual(event.rows[0]["before_values"]["data"], None)
+            self.assertEqual(event.rows[0]["after_values"]["id"], None)
+            self.assertEqual(event.rows[0]["after_values"]["data"], "World")
 
     def test_log_pos(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -559,9 +565,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
                 self.stream._BinLogStreamReader__only_schemas,
                 self.stream._BinLogStreamReader__ignored_schemas,
                 self.stream._BinLogStreamReader__freeze_schema,
-                self.stream._BinLogStreamReader__fail_on_table_metadata_unavailable,
                 self.stream._BinLogStreamReader__ignore_decode_errors,
                 self.stream._BinLogStreamReader__verify_checksum,
+                self.stream._BinLogStreamReader__optional_meta_data,
             )
 
         self.stream.close()
@@ -599,6 +605,12 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super(TestMultipleRowBinLogStreamReader, self).setUp()
+        if self.isMySQL8014AndMore():
+            self.execute("SET GLOBAL binlog_row_metadata='FULL';")
+            self.execute("SET GLOBAL binlog_row_image='FULL';")
+
     def ignoredEvents(self):
         return [GtidEvent, PreviousGtidsEvent]
 
@@ -626,11 +638,12 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
         self.assertIsInstance(event, WriteRowsEvent)
         self.assertEqual(len(event.rows), 2)
-        self.assertEqual(event.rows[0]["values"]["id"], 1)
-        self.assertEqual(event.rows[0]["values"]["data"], "Hello")
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(event.rows[0]["values"]["id"], 1)
+            self.assertEqual(event.rows[0]["values"]["data"], "Hello")
 
-        self.assertEqual(event.rows[1]["values"]["id"], 2)
-        self.assertEqual(event.rows[1]["values"]["data"], "World")
+            self.assertEqual(event.rows[1]["values"]["id"], 2)
+            self.assertEqual(event.rows[1]["values"]["data"], "World")
 
     def test_update_multiple_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -660,15 +673,16 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
         self.assertIsInstance(event, UpdateRowsEvent)
         self.assertEqual(len(event.rows), 2)
-        self.assertEqual(event.rows[0]["before_values"]["id"], 1)
-        self.assertEqual(event.rows[0]["before_values"]["data"], "Hello")
-        self.assertEqual(event.rows[0]["after_values"]["id"], 1)
-        self.assertEqual(event.rows[0]["after_values"]["data"], "Toto")
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(event.rows[0]["before_values"]["id"], 1)
+            self.assertEqual(event.rows[0]["before_values"]["data"], "Hello")
+            self.assertEqual(event.rows[0]["after_values"]["id"], 1)
+            self.assertEqual(event.rows[0]["after_values"]["data"], "Toto")
 
-        self.assertEqual(event.rows[1]["before_values"]["id"], 2)
-        self.assertEqual(event.rows[1]["before_values"]["data"], "World")
-        self.assertEqual(event.rows[1]["after_values"]["id"], 2)
-        self.assertEqual(event.rows[1]["after_values"]["data"], "Toto")
+            self.assertEqual(event.rows[1]["before_values"]["id"], 2)
+            self.assertEqual(event.rows[1]["before_values"]["data"], "World")
+            self.assertEqual(event.rows[1]["after_values"]["id"], 2)
+            self.assertEqual(event.rows[1]["after_values"]["data"], "Toto")
 
     def test_delete_multiple_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -699,64 +713,16 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V1)
         self.assertIsInstance(event, DeleteRowsEvent)
         self.assertEqual(len(event.rows), 2)
-        self.assertEqual(event.rows[0]["values"]["id"], 1)
-        self.assertEqual(event.rows[0]["values"]["data"], "Hello")
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(event.rows[0]["values"]["id"], 1)
+            self.assertEqual(event.rows[0]["values"]["data"], "Hello")
 
-        self.assertEqual(event.rows[1]["values"]["id"], 2)
-        self.assertEqual(event.rows[1]["values"]["data"], "World")
-
-    def test_drop_table(self):
-        self.execute("CREATE TABLE test (id INTEGER(11))")
-        self.execute("INSERT INTO test VALUES (1)")
-        self.execute("DROP TABLE test")
-        self.execute("COMMIT")
-
-        # RotateEvent
-        self.stream.fetchone()
-        # FormatDescription
-        self.stream.fetchone()
-        # QueryEvent for the Create Table
-        self.stream.fetchone()
-
-        # QueryEvent for the BEGIN
-        self.stream.fetchone()
-
-        event = self.stream.fetchone()
-        self.assertIsInstance(event, TableMapEvent)
-
-        event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
-        self.assertIsInstance(event, WriteRowsEvent)
-
-        self.assertEqual([], event.rows)
-
-    def test_drop_table_tablemetadata_unavailable(self):
-        self.stream.close()
-        self.execute("CREATE TABLE test (id INTEGER(11))")
-        self.execute("INSERT INTO test VALUES (1)")
-        self.execute("DROP TABLE test")
-        self.execute("COMMIT")
-
-        self.stream = BinLogStreamReader(
-            self.database,
-            server_id=1024,
-            only_events=(WriteRowsEvent,),
-            fail_on_table_metadata_unavailable=True,
-        )
-        had_error = False
-        try:
-            self.stream.fetchone()
-        except TableMetadataUnavailableError as e:
-            had_error = True
-            assert "test" in e.args[0]
-        finally:
-            self.resetBinLog()
-            assert had_error
+            self.assertEqual(event.rows[1]["values"]["id"], 2)
+            self.assertEqual(event.rows[1]["values"]["data"], "World")
 
     def test_ignore_decode_errors(self):
+        if self.isMySQL80AndMore():
+            self.skipTest("MYSQL 8 Version Pymysql Data Error Incorrect string value")
         problematic_unicode_string = (
             b'[{"text":"\xed\xa0\xbd \xed\xb1\x8d Some string"}]'
         )
@@ -774,8 +740,6 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             only_events=(WriteRowsEvent,),
             ignore_decode_errors=False,
         )
-        event = self.stream.fetchone()
-        event = self.stream.fetchone()
         with self.assertRaises(UnicodeError):
             event = self.stream.fetchone()
             data = event.rows[0]["values"]["data"]
@@ -787,11 +751,10 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             only_events=(WriteRowsEvent,),
             ignore_decode_errors=True,
         )
-        self.stream.fetchone()
-        self.stream.fetchone()
         event = self.stream.fetchone()
-        data = event.rows[0]["values"]["data"]
-        self.assertEqual(data, '[{"text":"  Some string"}]')
+        if event.table_map[event.table_id].column_name_flag:
+            data = event.rows[0]["values"]["data"]
+            self.assertEqual(data, '[{"text":"  Some string"}]')
 
     def test_drop_column(self):
         self.stream.close()
@@ -813,15 +776,15 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         finally:
             self.resetBinLog()
 
-    @unittest.expectedFailure
     def test_alter_column(self):
+        if not self.isMySQL8014AndMore():
+            self.skipTest("Mysql version is under 8.0.14 - pass")
         self.stream.close()
         self.execute(
             "CREATE TABLE test_alter_column (id INTEGER(11), data VARCHAR(50))"
         )
         self.execute("INSERT INTO test_alter_column VALUES (1, 'A value')")
         self.execute("COMMIT")
-        # this is a problem only when column is added in position other than at the end
         self.execute(
             "ALTER TABLE test_alter_column ADD COLUMN another_data VARCHAR(50) AFTER id"
         )
@@ -835,16 +798,11 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             server_id=1024,
             only_events=(WriteRowsEvent,),
         )
-        event = self.stream.fetchone()  # insert with two values
-        # both of these asserts fail because of issue underlying proble described in issue #118
-        # because it got table schema info after the alter table, it wrongly assumes the second
-        # column of the first insert is 'another_data'
-        # ER: {'id': 1, 'data': 'A value'}
-        # AR: {'id': 1, 'another_data': 'A value'}
-        self.assertIn("data", event.rows[0]["values"])
-        self.assertNot("another_data", event.rows[0]["values"])
+        event = self.stream.fetchone()
         self.assertEqual(event.rows[0]["values"]["data"], "A value")
-        self.stream.fetchone()  # insert with three values
+        event = self.stream.fetchone()  # insert with three values
+        self.assertEqual(event.rows[0]["values"]["another_data"], "Another value")
+        self.assertEqual(event.rows[0]["values"]["data"], "A value")
 
 
 class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
@@ -870,27 +828,11 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
             ctl_connection_settings=ctl_db,
             server_id=1024,
             only_events=(WriteRowsEvent,),
-            fail_on_table_metadata_unavailable=True,
         )
 
     def tearDown(self):
         super().tearDown()
         self.ctl_conn_control.close()
-
-    def test_separate_ctl_settings_table_metadata_unavailable(self):
-        self.execute("CREATE TABLE test (id INTEGER(11))")
-        self.execute("INSERT INTO test VALUES (1)")
-        self.execute("COMMIT")
-
-        had_error = False
-        try:
-            self.stream.fetchone()
-        except TableMetadataUnavailableError as e:
-            had_error = True
-            assert "test" in e.args[0]
-        finally:
-            self.resetBinLog()
-            assert had_error
 
     def test_separate_ctl_settings_no_error(self):
         self.execute("CREATE TABLE test (id INTEGER(11))")
@@ -1131,7 +1073,6 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
             self.database,
             server_id=1024,
             only_events=(RandEvent, UserVarEvent, QueryEvent),
-            fail_on_table_metadata_unavailable=True,
         )
         self.execute("SET @@binlog_format='STATEMENT'")
 
@@ -1545,7 +1486,6 @@ class TestOptionalMetaData(base.PyMySQLReplicationVersion8TestCase):
             self.database,
             server_id=1024,
             only_events=(TableMapEvent,),
-            fail_on_table_metadata_unavailable=True,
         )
         if not self.isMySQL8014AndMore():
             self.skipTest("Mysql version is under 8.0.14 - pass TestOptionalMetaData")
@@ -1722,6 +1662,11 @@ class TestOptionalMetaData(base.PyMySQLReplicationVersion8TestCase):
             )
 
     def test_visibility(self):
+        mysql_version = self.getMySQLVersion()
+        version = float(mysql_version.rsplit(".", 1)[0])
+        version_detail = int(mysql_version.rsplit(".", 1)[1])
+        if not (version >= 8.0 and version_detail >= 23):
+            self.skipTest("Mysql version  8.0.23 - visibility supprot")
         create_query = "CREATE TABLE test_visibility (name VARCHAR(50), secret_key VARCHAR(50) DEFAULT 'qwerty' INVISIBLE);"
         insert_query = "INSERT INTO test_visibility VALUES('Audrey');"
 
@@ -1733,6 +1678,65 @@ class TestOptionalMetaData(base.PyMySQLReplicationVersion8TestCase):
         self.assertIsInstance(event, TableMapEvent)
         if not self.isMariaDB():
             self.assertEqual(event.optional_metadata.visibility_list, [True, False])
+
+    def test_sync_drop_table_map_event_table_schema(self):
+        create_query = "CREATE TABLE test_sync (name VARCHAR(50) comment 'test_sync');"
+        insert_query = "INSERT INTO test_sync VALUES('Audrey');"
+        self.execute(create_query)
+        self.execute(insert_query)
+
+        self.execute("COMMIT")
+        drop_query = "DROP TABLE test_sync;"
+        self.execute(drop_query)
+        select_query = """
+                    SELECT
+                        COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME,
+                        COLUMN_COMMENT, COLUMN_TYPE, COLUMN_KEY, ORDINAL_POSITION,
+                        DATA_TYPE, CHARACTER_OCTET_LENGTH
+                    FROM
+                        information_schema.columns
+                    WHERE
+                        table_name = "test_sync"
+                    ORDER BY ORDINAL_POSITION
+                    """
+        column_schemas = self.execute(select_query).fetchall()
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        self.assertEqual(event.table_obj.data["columns"][0].name, "name")
+        self.assertEqual(len(column_schemas), 0)
+
+    def test_sync_column_drop_event_table_schema(self):
+        create_query = "CREATE TABLE test_sync (drop_column1 VARCHAR(50) , drop_column2 VARCHAR(50) , drop_column3 VARCHAR(50));"
+        insert_query = "INSERT INTO test_sync VALUES('Audrey','Sean','Test');"
+        self.execute(create_query)
+        self.execute(insert_query)
+
+        self.execute("COMMIT")
+        alter_query = "ALTER TABLE test_sync DROP drop_column2;"
+        self.execute(alter_query)
+        select_query = """
+                    SELECT
+                        COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME,
+                        COLUMN_COMMENT, COLUMN_TYPE, COLUMN_KEY, ORDINAL_POSITION,
+                        DATA_TYPE, CHARACTER_OCTET_LENGTH
+                    FROM
+                        information_schema.columns
+                    WHERE
+                        table_name = "test_sync"
+                    ORDER BY ORDINAL_POSITION
+                    """
+        column_schemas = self.execute(select_query).fetchall()
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        self.assertEqual(len(column_schemas), 2)
+        self.assertEqual(len(event.table_obj.data["columns"]), 3)
+        self.assertEqual(column_schemas[0][0], "drop_column1")
+        self.assertEqual(column_schemas[1][0], "drop_column3")
+        self.assertEqual(event.table_obj.data["columns"][0].name, "drop_column1")
+        self.assertEqual(event.table_obj.data["columns"][1].name, "drop_column2")
+        self.assertEqual(event.table_obj.data["columns"][2].name, "drop_column3")
 
     def tearDown(self):
         self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")

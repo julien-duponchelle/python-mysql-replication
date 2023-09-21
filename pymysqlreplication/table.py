@@ -3,7 +3,7 @@
 
 class Table(object):
     def __init__(
-        self, column_schemas, table_id, schema, table, columns, primary_key=None
+        self, table_id, schema, table, columns, primary_key=None, column_name_flag=False
     ):
         if primary_key is None:
             primary_key = [c.data["name"] for c in columns if c.data["is_primary"]]
@@ -16,12 +16,12 @@ class Table(object):
 
         self.__dict__.update(
             {
-                "column_schemas": column_schemas,
                 "table_id": table_id,
                 "schema": schema,
                 "table": table,
                 "columns": columns,
                 "primary_key": primary_key,
+                "column_name_flag": column_name_flag,
             }
         )
 
