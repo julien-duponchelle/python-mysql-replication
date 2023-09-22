@@ -619,9 +619,9 @@ class UpdateRowsEvent(RowsEvent):
         row = {}
 
         row["before_values"] = self._read_column_data(self.columns_present_bitmap)
-        row["before_none_source"] = self._get_none_sources(row["before_values"])
+        row["before_none_sources"] = self._get_none_sources(row["before_values"])
         row["after_values"] = self._read_column_data(self.columns_present_bitmap2)
-        row["after_none_source"] = self._get_none_sources(row["after_values"])
+        row["after_none_sources"] = self._get_none_sources(row["after_values"])
         return row
 
     def _dump(self):
@@ -630,18 +630,18 @@ class UpdateRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["before_values"]:
-                if key in row["before_none_source"]:
+                if key in row["before_none_sources"]:
                     before_value_info = "%s(%s)" % (
                         row["before_values"][key],
-                        row["before_none_source"][key],
+                        row["before_none_sources"][key],
                     )
                 else:
                     before_value_info = row["before_values"][key]
 
-                if key in row["after_none_source"]:
+                if key in row["after_none_sources"]:
                     after_value_info = "%s(%s)" % (
                         row["after_values"][key],
-                        row["after_none_source"][key],
+                        row["after_none_sources"][key],
                     )
                 else:
                     after_value_info = row["after_values"][key]
