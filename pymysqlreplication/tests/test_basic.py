@@ -621,8 +621,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         write_rows_event = self.stream.fetchone()
         self.assertIsInstance(write_rows_event, WriteRowsEvent)
 
-        if write_rows_event.rows[0].get("none_sources"):
-            self.assertEqual(write_rows_event.rows[0]["none_sources"]["col1"], "null")
+        none_sources = write_rows_event.rows[0].get("none_sources")
+        if none_sources:
+            self.assertEqual(none_sources["col1"], "null")
 
     def test_get_none_invalid(self):
         self.execute("SET SESSION SQL_MODE='ALLOW_INVALID_DATES'")
