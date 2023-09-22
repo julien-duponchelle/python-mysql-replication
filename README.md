@@ -89,6 +89,7 @@ Projects using this library
 * Aventri MySQL Monitor (https://github.com/aventri/mysql-monitor)
 * BitSwanPump: A real-time stream processor  (https://github.com/LibertyAces/BitSwanPump)
 * clickhouse-mysql-data-reader: https://github.com/Altinity/clickhouse-mysql-data-reader
+* py-mysql-elasticsearch-sync: https://github.com/jaehyeonpy/py-mysql-elasticsearch-sync
 
 MySQL server settings
 =========================
