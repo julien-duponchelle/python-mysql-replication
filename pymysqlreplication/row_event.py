@@ -137,11 +137,11 @@ class RowsEvent(BinLogEvent):
         if BitGet(cols_bitmap, i) == 0:
             # This block is only executed when binlog_row_image = MINIMAL.
             # When binlog_row_image = FULL, this block does not execute.
-            self.__none_sources[name] = 'cols_bitmap'
+            self.__none_sources[name] = "cols_bitmap"
             return None
 
         if self._is_null(null_bitmap, null_bitmap_index):
-            self.__none_sources[name] = 'null'
+            self.__none_sources[name] = "null"
             return None
 
         if column.type == FIELD_TYPE.TINY:
@@ -187,14 +187,14 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.DATETIME:
             ret = self.__read_datetime()
             if ret is None:
-                self.__none_sources[name] = 'out of datetime range'
+                self.__none_sources[name] = "out of datetime range"
             return ret
         elif column.type == FIELD_TYPE.TIME:
             return self.__read_time()
         elif column.type == FIELD_TYPE.DATE:
             ret = self.__read_date()
             if ret is None:
-                self.__none_sources[name] = 'out of date range'
+                self.__none_sources[name] = "out of date range"
             return ret
         elif column.type == FIELD_TYPE.TIMESTAMP:
             return datetime.datetime.utcfromtimestamp(self.packet.read_uint32())
@@ -203,7 +203,7 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.DATETIME2:
             ret = self.__read_datetime2(column)
             if ret is None:
-                self.__none_sources[name] = 'out of datetime2 range'
+                self.__none_sources[name] = "out of datetime2 range"
             return ret
         elif column.type == FIELD_TYPE.TIME2:
             return self.__read_time2(column)
@@ -547,11 +547,14 @@ class DeleteRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["values"]:
-                none_source = row["none_sources"][key] if key in row["none_sources"] else ""
+                none_source = (
+                    row["none_sources"][key] if key in row["none_sources"] else ""
+                )
                 if none_source:
                     print("*", key, ":", row["values"][key], f"({none_source})")
                 else:
                     print("*", key, ":", row["values"][key])
+
 
 class WriteRowsEvent(RowsEvent):
     """This event is triggered when a row in database is added
@@ -580,7 +583,9 @@ class WriteRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["values"]:
-                none_source = row["none_sources"][key] if key in row["none_sources"] else ""
+                none_source = (
+                    row["none_sources"][key] if key in row["none_sources"] else ""
+                )
                 if none_source:
                     print("*", key, ":", row["values"][key], f"({none_source})")
                 else:
@@ -626,14 +631,18 @@ class UpdateRowsEvent(RowsEvent):
             print("--")
             for key in row["before_values"]:
                 if key in row["before_none_source"]:
-                    before_value_info = "%s(%s)" % (row["before_values"][key],
-                                                    row["before_none_source"][key])
+                    before_value_info = "%s(%s)" % (
+                        row["before_values"][key],
+                        row["before_none_source"][key],
+                    )
                 else:
                     before_value_info = row["before_values"][key]
 
                 if key in row["after_none_source"]:
-                    after_value_info = "%s(%s)" % (row["after_values"][key],
-                                                    row["after_none_source"][key])
+                    after_value_info = "%s(%s)" % (
+                        row["after_values"][key],
+                        row["after_none_source"][key],
+                    )
                 else:
                     after_value_info = row["after_values"][key]
 

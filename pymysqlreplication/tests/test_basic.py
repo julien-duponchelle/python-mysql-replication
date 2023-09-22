@@ -609,23 +609,31 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.database,
             server_id=1024,
             resume_stream=False,
-            only_events=[WriteRowsEvent]
+            only_events=[WriteRowsEvent],
         )
         query = "CREATE TABLE null_operation_update_example (col1 INT, col2 INT);"
         self.execute(query)
-        query = "INSERT INTO null_operation_update_example (col1, col2) VALUES (NULL, 1);"
+        query = (
+            "INSERT INTO null_operation_update_example (col1, col2) VALUES (NULL, 1);"
+        )
         self.execute(query)
         self.execute("COMMIT")
         write_rows_event = self.stream.fetchone()
         self.assertIsInstance(write_rows_event, WriteRowsEvent)
-        self.assertEqual(write_rows_event.rows[0]['none_sources']['col1'], 'null')
+        self.assertEqual(write_rows_event.rows[0]["none_sources"]["col1"], "null")
 
     def test_get_none_invalid(self):
         self.execute("SET SESSION SQL_MODE='ALLOW_INVALID_DATES'")
-        self.execute("CREATE TABLE test_table (col0 INT, col1 VARCHAR(10), col2 DATETIME, col3 DATE, col4 SET('a', 'b', 'c'))")
-        self.execute("INSERT INTO test_table VALUES (NULL, NULL, '0000-00-00 00:00:00', NULL, NULL)")
+        self.execute(
+            "CREATE TABLE test_table (col0 INT, col1 VARCHAR(10), col2 DATETIME, col3 DATE, col4 SET('a', 'b', 'c'))"
+        )
+        self.execute(
+            "INSERT INTO test_table VALUES (NULL, NULL, '0000-00-00 00:00:00', NULL, NULL)"
+        )
         self.resetBinLog()
-        self.execute("UPDATE test_table SET col1 = NULL, col2 = NULL, col3='0000-00-00',col4 = 'd' WHERE col0 IS NULL")
+        self.execute(
+            "UPDATE test_table SET col1 = NULL, col2 = NULL, col3='0000-00-00',col4 = 'd' WHERE col0 IS NULL"
+        )
         self.execute("COMMIT")
 
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
@@ -639,16 +647,20 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         else:
             self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
         self.assertIsInstance(event, UpdateRowsEvent)
-        self.assertEqual(event.rows[0]["before_none_source"]["col0"], 'null')
-        self.assertEqual(event.rows[0]["before_none_source"]["col1"], 'null')
-        self.assertEqual(event.rows[0]["before_none_source"]["col2"], 'out of datetime2 range')
-        self.assertEqual(event.rows[0]["before_none_source"]["col3"], 'null')
-        self.assertEqual(event.rows[0]["before_none_source"]["col4"], 'null')
-        self.assertEqual(event.rows[0]["after_none_source"]["col0"], 'null')
-        self.assertEqual(event.rows[0]["after_none_source"]["col1"], 'null')
-        self.assertEqual(event.rows[0]["after_none_source"]["col2"], 'null')
-        self.assertEqual(event.rows[0]["after_none_source"]["col3"], 'out of date range')
-        self.assertEqual(event.rows[0]["after_none_source"]["col4"], 'empty set')
+        self.assertEqual(event.rows[0]["before_none_source"]["col0"], "null")
+        self.assertEqual(event.rows[0]["before_none_source"]["col1"], "null")
+        self.assertEqual(
+            event.rows[0]["before_none_source"]["col2"], "out of datetime2 range"
+        )
+        self.assertEqual(event.rows[0]["before_none_source"]["col3"], "null")
+        self.assertEqual(event.rows[0]["before_none_source"]["col4"], "null")
+        self.assertEqual(event.rows[0]["after_none_source"]["col0"], "null")
+        self.assertEqual(event.rows[0]["after_none_source"]["col1"], "null")
+        self.assertEqual(event.rows[0]["after_none_source"]["col2"], "null")
+        self.assertEqual(
+            event.rows[0]["after_none_source"]["col3"], "out of date range"
+        )
+        self.assertEqual(event.rows[0]["after_none_source"]["col4"], "empty set")
 
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
