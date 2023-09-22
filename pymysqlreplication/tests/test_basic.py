@@ -649,20 +649,23 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         else:
             self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
         self.assertIsInstance(event, UpdateRowsEvent)
-        
-        if event.rows[0].get("before_none_sources"):
-            self.assertEqual(event.rows[0]["before_none_sources"]["col0"], "null")
-            self.assertEqual(event.rows[0]["before_none_sources"]["col1"], "null")
-            self.assertEqual(event.rows[0]["before_none_sources"]["col2"], "out of datetime2 range")
-            self.assertEqual(event.rows[0]["before_none_sources"]["col3"], "null")
-            self.assertEqual(event.rows[0]["before_none_sources"]["col4"], "null")
 
-        if event.rows[0].get("after_none_sources"):
-            self.assertEqual(event.rows[0]["after_none_sources"]["col0"], "null")
-            self.assertEqual(event.rows[0]["after_none_sources"]["col1"], "null")
-            self.assertEqual(event.rows[0]["after_none_sources"]["col2"], "null")
-            self.assertEqual(event.rows[0]["after_none_sources"]["col3"], "out of date range")
-            self.assertEqual(event.rows[0]["after_none_sources"]["col4"], "empty set")
+        before_none_sources = event.rows[0].get("before_none_sources")
+        after_none_sources = event.rows[0].get("after_none_sources")
+
+        if before_none_sources:
+            self.assertEqual(before_none_sources["col0"], "null")
+            self.assertEqual(before_none_sources["col1"], "null")
+            self.assertEqual(before_none_sources["col2"], "out of datetime2 range")
+            self.assertEqual(before_none_sources["col3"], "null")
+            self.assertEqual(before_none_sources["col4"], "null")
+
+        if after_none_sources:
+            self.assertEqual(after_none_sources["col0"], "null")
+            self.assertEqual(after_none_sources["col1"], "null")
+            self.assertEqual(after_none_sources["col2"], "null")
+            self.assertEqual(after_none_sources["col3"], "out of date range")
+            self.assertEqual(after_none_sources["col4"], "empty set")
 
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):

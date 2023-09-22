@@ -487,7 +487,7 @@ class RowsEvent(BinLogEvent):
     def _get_none_sources(self, column_data):
         result = {}
         for column_name, value in column_data.items():
-            if value is not None:
+            if (column_name is None) or (value is not None):
                 continue
 
             source = self.__none_sources.get(column_name, "null")
