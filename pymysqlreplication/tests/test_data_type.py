@@ -21,7 +21,7 @@ from pymysqlreplication.event import *
 from pymysqlreplication._compat import text_type
 
 
-__all__ = ["TestDataType"]
+__all__ = ["TestDataType", "TestDataTypeVersion8"]
 
 
 def to_binary_dict(d):
@@ -952,6 +952,50 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         if event.table_map[event.table_id].column_name_flag:
             self.assertEqual(event.rows[0]["values"]["b"], b"\xff\x01\x00\x00")
+
+
+class TestDataTypeVersion8(base.PyMySQLReplicationVersion8TestCase):
+    def ignoredEvents(self):
+        return [GtidEvent, PreviousGtidsEvent]
+
+    def create_and_insert_value(self, create_query, insert_query):
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute("COMMIT")
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        # QueryEvent for the Create Table
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        # QueryEvent for the BEGIN
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
+
+        event = self.stream.fetchone()
+        if self.isMySQL56AndMore():
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
+        else:
+            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
+        self.assertIsInstance(event, WriteRowsEvent)
+        return event
+
+    def test_partition_id(self):
+        if not self.isMySQL80AndMore():
+            self.skipTest("Not supported in this version of MySQL")
+        create_query = "CREATE TABLE test (id INTEGER) \
+            PARTITION BY RANGE (id) ( \
+                PARTITION p0 VALUES LESS THAN (1),   \
+                PARTITION p1 VALUES LESS THAN (2),   \
+                PARTITION p2 VALUES LESS THAN (3),   \
+                PARTITION p3 VALUES LESS THAN (4),   \
+                PARTITION p4 VALUES LESS THAN (5)    \
+            )"
+        insert_query = "INSERT INTO test (id) VALUES(3)"
+        event = self.create_and_insert_value(create_query, insert_query)
+        self.assertEqual(event.extra_data_type, 1)
+        self.assertEqual(event.partition_id, 3)
 
 
 if __name__ == "__main__":
