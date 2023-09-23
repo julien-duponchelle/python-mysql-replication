@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import struct
 
 from pymysqlreplication import constants, event, row_event

@@ -1,15 +1,8 @@
-# -*- coding: utf-8 -*-
-
 import pymysql
 import copy
 from pymysqlreplication import BinLogStreamReader
 import os
-import sys
-
-if sys.version_info < (2, 7):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 base = unittest.TestCase
 

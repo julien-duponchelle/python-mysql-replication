@@ -1,16 +1,8 @@
-# -*- coding: utf-8 -*-
-
 import copy
 import platform
-import sys
 import json
-
 from pymysqlreplication import BinLogStreamReader
-
-if sys.version_info < (2, 7):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 from decimal import Decimal
 
@@ -18,15 +10,13 @@ from pymysqlreplication.tests import base
 from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 from pymysqlreplication.event import *
-from pymysqlreplication._compat import text_type
-
 
 __all__ = ["TestDataType", "TestDataTypeVersion8"]
 
 
 def to_binary_dict(d):
     def encode_value(v):
-        if isinstance(v, text_type):
+        if isinstance(v, str):
             return v.encode()
         if isinstance(v, list):
             return [encode_value(x) for x in v]

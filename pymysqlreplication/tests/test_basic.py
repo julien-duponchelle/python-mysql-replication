@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
 import copy
 import io
 import os
-import sys
 import time
-
 import pymysql
-
-if sys.version_info < (2, 7):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 from pymysqlreplication.tests import base
 from pymysqlreplication import BinLogStreamReader

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Original code from PyMySQL
 # Copyright (c) 2010 PyMySQL contributors
 #
