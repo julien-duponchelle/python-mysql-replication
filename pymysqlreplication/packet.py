@@ -164,11 +164,8 @@ def parse_opaque(data: bytes):
     if type_ in [FIELD_TYPE.NEWDECIMAL, FIELD_TYPE.DECIMAL]:
         return decode_decimal(data)
     elif type_ in [FIELD_TYPE.TIME, FIELD_TYPE.TIME2]:
-        # TO-DO: parse decode_TIME
-        decode_decimal(data)
-        return None
+        return decode_time(data)
     elif type_ in [FIELD_TYPE.DATE, FIELD_TYPE.DATETIME, FIELD_TYPE.DATETIME2]:
-        # TO-DO: parse decode_DATETIME
         return decode_datetime(data)
     else:
         return data.decode(errors="ignore")

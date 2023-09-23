@@ -1,3 +1,4 @@
+import datetime
 import decimal
 import struct
 import sys
@@ -97,13 +98,56 @@ def decode_decimal(data: bytes):
 
 
 def decode_time(data: bytes):
-    # TO-DO
-    pass
+    v = parse_int64(data)
+
+    if v == 0:
+        return datetime.time(hour=0, minute=0, second=0)
+
+    sign = ""
+    if v < 0:
+        sign = "-"
+        v = -v
+
+    int_part = v >> 24
+    hour = (int_part >> 12) % (1 << 10)
+    min = (int_part >> 6) % (1 << 6)
+    sec = int_part % (1 << 6)
+    frac = v % (1 << 24)
+    return datetime.time(hour=hour, minute=min, second=sec, microsecond=frac)
 
 
-def decode_datetime(data: bytes):
-    # TO-DO
-    pass
+def decode_datetime(data):
+    v = parse_int64(data)
+
+    if v == 0:
+        # datetime parse Error
+        return "0000-00-00 00:00:00"
+
+    if v < 0:
+        v = -v
+
+    int_part = v >> 24
+    ymd = int_part >> 17
+    ym = ymd >> 5
+    hms = int_part % (1 << 17)
+
+    year = ym // 13
+    month = ym % 13
+    day = ymd % (1 << 5)
+    hour = hms >> 12
+    minute = (hms >> 6) % (1 << 6)
+    second = hms % (1 << 6)
+    frac = v % (1 << 24)
+
+    return datetime.datetime(
+        year=year,
+        month=month,
+        day=day,
+        hour=hour,
+        minute=minute,
+        second=second,
+        microsecond=frac,
+    )
 
 
 def parse_int16(data: bytes):
