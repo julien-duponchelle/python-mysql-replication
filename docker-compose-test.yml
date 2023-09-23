@@ -37,6 +37,15 @@ services:
     networks:
       - default
 
+  percona-8.0:
+    <<: *mysql
+    image: percona:8.0
+    platform: linux/amd64
+    ports:
+      - "3309:3306"
+    networks:
+      - default
+
   mariadb-10.6:
     <<: *mariadb
     image: mariadb:10.6
@@ -61,6 +70,8 @@ services:
         MYSQL_5_7: percona-5.7
         MYSQL_5_7_CTL: percona-5.7-ctl
         MYSQL_5_7_CTL_PORT: 3306
+        MYSQL_8_0: percona-8.0
+        MYSQL_8_0_PORT: 3306
         MARIADB_10_6: mariadb-10.6
         MARIADB_10_6_PORT: 3306
 
@@ -72,7 +83,7 @@ services:
         
         while :
         do
-          if mysql -h percona-5.7 --user=root --execute "SELECT version();" 2>&1 >/dev/null && mysql -h percona-5.7-ctl --user=root --execute "SELECT version();" 2>&1 >/dev/null; then
+          if mysql -h percona-5.7 --user=root --execute "SELECT version();" 2>&1 >/dev/null && mysql -h percona-5.7-ctl --user=root --execute "SELECT version();" 2>&1 >/dev/null && mysql -h percona-8.0 --user=root --execute "SELECT version();" 2>&1 >/dev/null; then
             break
           fi
           sleep 1
@@ -87,6 +98,7 @@ services:
     depends_on:
       - percona-5.7
       - percona-5.7-ctl
+      - percona-8.0
 
 networks:
   default:

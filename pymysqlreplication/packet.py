@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+import struct
 
 from pymysqlreplication import constants, event, row_event
 from pymysqlreplication.constants import FIELD_TYPE

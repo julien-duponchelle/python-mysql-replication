@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 UNKNOWN_EVENT = 0x00
 START_EVENT_V3 = 0x01
 QUERY_EVENT = 0x02

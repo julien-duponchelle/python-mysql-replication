@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
 import copy
 import io
 import os
-import sys
 import time
-
 import pymysql
-
-if sys.version_info < (2, 7):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 from pymysqlreplication.tests import base
 from pymysqlreplication import BinLogStreamReader
@@ -1478,7 +1471,7 @@ class TestLatin1(base.PyMySQLReplicationTestCase):
         assert event.query == r"CREATE TABLE test_latin1_\xd6\xc6\xdb (a INT)"
 
 
-class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
+class TestOptionalMetaData(base.PyMySQLReplicationVersion8TestCase):
     def setUp(self):
         super(TestOptionalMetaData, self).setUp()
         self.stream.close()
@@ -1703,7 +1696,7 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
-        self.assertEqual(event.table_obj.data["columns"][0].name, "name")
+        self.assertEqual(event.table_obj.data["columns"][0].name, None)
         self.assertEqual(len(column_schemas), 0)
 
     def test_sync_column_drop_event_table_schema(self):
@@ -1734,9 +1727,9 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         self.assertEqual(len(event.table_obj.data["columns"]), 3)
         self.assertEqual(column_schemas[0][0], "drop_column1")
         self.assertEqual(column_schemas[1][0], "drop_column3")
-        self.assertEqual(event.table_obj.data["columns"][0].name, "drop_column1")
-        self.assertEqual(event.table_obj.data["columns"][1].name, "drop_column2")
-        self.assertEqual(event.table_obj.data["columns"][2].name, "drop_column3")
+        self.assertEqual(event.table_obj.data["columns"][0].name, None)
+        self.assertEqual(event.table_obj.data["columns"][1].name, None)
+        self.assertEqual(event.table_obj.data["columns"][2].name, None)
 
     def tearDown(self):
         self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")
