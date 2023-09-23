@@ -30,6 +30,7 @@ __all__ = [
     "TestStatementConnectionSetting",
     "TestRowsQueryLogEvents",
     "TestOptionalMetaData",
+    "TestColumnValueNoneSources",
 ]
 
 
@@ -602,71 +603,6 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         wrong_event = create_binlog_packet_wrapper(wrong_packet)
         self.assertEqual(binlog_event.event._is_event_valid, True)
         self.assertNotEqual(wrong_event.event._is_event_valid, True)
-
-    def test_get_none(self):
-        self.stream.close()
-        self.stream = BinLogStreamReader(
-            self.database,
-            server_id=1024,
-            resume_stream=False,
-            only_events=[WriteRowsEvent],
-        )
-        query = "CREATE TABLE null_operation_update_example (col1 INT, col2 INT);"
-        self.execute(query)
-        query = (
-            "INSERT INTO null_operation_update_example (col1, col2) VALUES (NULL, 1);"
-        )
-        self.execute(query)
-        self.execute("COMMIT")
-        write_rows_event = self.stream.fetchone()
-        self.assertIsInstance(write_rows_event, WriteRowsEvent)
-
-        none_sources = write_rows_event.rows[0].get("none_sources")
-        if none_sources:
-            self.assertEqual(none_sources["col1"], "null")
-
-    def test_get_none_invalid(self):
-        self.execute("SET SESSION SQL_MODE='ALLOW_INVALID_DATES'")
-        self.execute(
-            "CREATE TABLE test_table (col0 INT, col1 VARCHAR(10), col2 DATETIME, col3 DATE, col4 SET('a', 'b', 'c'))"
-        )
-        self.execute(
-            "INSERT INTO test_table VALUES (NULL, NULL, '0000-00-00 00:00:00', NULL, NULL)"
-        )
-        self.resetBinLog()
-        self.execute(
-            "UPDATE test_table SET col1 = NULL, col2 = NULL, col3='0000-00-00', col4='d' WHERE col0 IS NULL"
-        )
-        self.execute("COMMIT")
-
-        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
-        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
-        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
-        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
-
-        event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
-        self.assertIsInstance(event, UpdateRowsEvent)
-
-        before_none_sources = event.rows[0].get("before_none_sources")
-        after_none_sources = event.rows[0].get("after_none_sources")
-
-        if before_none_sources:
-            self.assertEqual(before_none_sources["col0"], "null")
-            self.assertEqual(before_none_sources["col1"], "null")
-            self.assertEqual(before_none_sources["col2"], "out of datetime2 range")
-            self.assertEqual(before_none_sources["col3"], "null")
-            self.assertEqual(before_none_sources["col4"], "null")
-
-        if after_none_sources:
-            self.assertEqual(after_none_sources["col0"], "null")
-            self.assertEqual(after_none_sources["col1"], "null")
-            self.assertEqual(after_none_sources["col2"], "null")
-            self.assertEqual(after_none_sources["col3"], "out of date range")
-            self.assertEqual(after_none_sources["col4"], "empty set")
 
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
@@ -1806,6 +1742,85 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
     def tearDown(self):
         self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")
         super(TestOptionalMetaData, self).tearDown()
+
+
+class TestColumnValueNoneSources(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super(TestColumnValueNoneSources, self).setUp()
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(TableMapEvent,),
+        )
+        if not self.isMySQL8014AndMore():
+            self.skipTest("Mysql version is under 8.0.14 - pass TestOptionalMetaData")
+        self.execute("SET GLOBAL binlog_row_metadata='FULL';")
+
+    def test_get_none(self):
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            resume_stream=False,
+            only_events=[WriteRowsEvent],
+        )
+        query = "CREATE TABLE null_operation_update_example (col1 INT, col2 INT);"
+        self.execute(query)
+        query = (
+            "INSERT INTO null_operation_update_example (col1, col2) VALUES (NULL, 1);"
+        )
+        self.execute(query)
+        self.execute("COMMIT")
+        write_rows_event = self.stream.fetchone()
+        self.assertIsInstance(write_rows_event, WriteRowsEvent)
+
+        none_sources = write_rows_event.rows[0].get("none_sources")
+        if none_sources:
+            self.assertEqual(none_sources["col1"], "null")
+
+    def test_get_none_invalid(self):
+        self.execute("SET SESSION SQL_MODE='ALLOW_INVALID_DATES'")
+        self.execute(
+            "CREATE TABLE test_table (col0 INT, col1 VARCHAR(10), col2 DATETIME, col3 DATE, col4 SET('a', 'b', 'c'))"
+        )
+        self.execute(
+            "INSERT INTO test_table VALUES (NULL, NULL, '0000-00-00 00:00:00', NULL, NULL)"
+        )
+        self.resetBinLog()
+        self.execute(
+            "UPDATE test_table SET col1 = NULL, col2 = NULL, col3='0000-00-00', col4='d' WHERE col0 IS NULL"
+        )
+        self.execute("COMMIT")
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
+
+        event = self.stream.fetchone()
+        if self.isMySQL56AndMore():
+            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V2)
+        else:
+            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
+        self.assertIsInstance(event, UpdateRowsEvent)
+
+        before_none_sources = event.rows[0].get("before_none_sources")
+        after_none_sources = event.rows[0].get("after_none_sources")
+
+        if before_none_sources:
+            self.assertEqual(before_none_sources["col0"], "null")
+            self.assertEqual(before_none_sources["col1"], "null")
+            self.assertEqual(before_none_sources["col2"], "out of datetime2 range")
+            self.assertEqual(before_none_sources["col3"], "null")
+            self.assertEqual(before_none_sources["col4"], "null")
+
+        if after_none_sources:
+            self.assertEqual(after_none_sources["col0"], "null")
+            self.assertEqual(after_none_sources["col1"], "null")
+            self.assertEqual(after_none_sources["col2"], "null")
+            self.assertEqual(after_none_sources["col3"], "out of date range")
+            self.assertEqual(after_none_sources["col4"], "empty set")
 
 
 if __name__ == "__main__":
