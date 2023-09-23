@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # This is a sample script in order to make benchmark
 # on library speed.
 #

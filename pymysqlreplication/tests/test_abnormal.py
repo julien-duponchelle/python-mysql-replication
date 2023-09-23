@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test abnormal conditions, such as caused by a MySQL crash
 """
 import os.path

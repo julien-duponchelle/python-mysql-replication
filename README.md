@@ -65,6 +65,8 @@ Featured
 
 [Near Zero Downtime Migration from MySQL to DynamoDB](https://aws.amazon.com/ko/blogs/big-data/near-zero-downtime-migration-from-mysql-to-dynamodb/) (by YongSeong Lee, Amazon Web Services)
 
+[Enable change data capture on Amazon RDS for MySQL applications that are using XA transactions](https://aws.amazon.com/ko/blogs/database/enable-change-data-capture-on-amazon-rds-for-mysql-applications-that-are-using-xa-transactions/) (by Baruch Assif, Amazon Web Services)
+
 Projects using this library
 ===========================
 
