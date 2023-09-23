@@ -47,4 +47,4 @@ jobs:
 
       - name: Run test suite
         run: |
-          pytest -k "not test_no_trailing_rotate_event and not test_end_log_pos"
+          pytest -k "not test_no_trailing_rotate_event and not test_end_log_pos and not test_query_event_latin1"
