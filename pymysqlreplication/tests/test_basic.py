@@ -1737,7 +1737,7 @@ class TestOptionalMetaData(base.PyMySQLReplicationVersion8TestCase):
         super(TestOptionalMetaData, self).tearDown()
 
 
-class TestColumnValueNoneSources(base.PyMySQLReplicationTestCase):
+class TestColumnValueNoneSources(base.PyMySQLReplicationVersion8TestCase):
     def setUp(self):
         super(TestColumnValueNoneSources, self).setUp()
         self.stream.close()
@@ -1747,7 +1747,9 @@ class TestColumnValueNoneSources(base.PyMySQLReplicationTestCase):
             only_events=(TableMapEvent,),
         )
         if not self.isMySQL8014AndMore():
-            self.skipTest("Mysql version is under 8.0.14 - pass TestOptionalMetaData")
+            self.skipTest(
+                "Mysql version is under 8.0.14 - pass TestColumnValueNoneSources"
+            )
         self.execute("SET GLOBAL binlog_row_metadata='FULL';")
 
     def test_get_none(self):
@@ -1788,6 +1790,8 @@ class TestColumnValueNoneSources(base.PyMySQLReplicationTestCase):
 
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
         self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        self.assertIsInstance(self.stream.fetchone(), PreviousGtidsEvent)
+        self.assertIsInstance(self.stream.fetchone(), GtidEvent)
         self.assertIsInstance(self.stream.fetchone(), QueryEvent)
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
