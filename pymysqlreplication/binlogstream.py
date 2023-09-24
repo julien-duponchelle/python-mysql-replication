@@ -567,6 +567,8 @@ class BinLogStreamReader(object):
                        By Applying this, provide properly mapped column information on UPDATE,DELETE,INSERT. 
                         """,
                 )
+            else:
+                self.__optional_meta_data = True
 
     def fetchone(self):
         while True:

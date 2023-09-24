@@ -6,6 +6,7 @@ import zlib
 
 from pymysqlreplication.constants.STATUS_VAR_KEY import *
 from pymysqlreplication.exceptions import StatusVariableMismatch
+from pymysqlreplication.util.bytes import parse_decimal_from_bytes
 from typing import Union, Optional
 
 
@@ -781,9 +782,7 @@ class UserVarEvent(BinLogEvent):
         self.precision = self.temp_value_buffer[0]
         self.decimals = self.temp_value_buffer[1]
         raw_decimal = self.temp_value_buffer[2:]
-        return self._parse_decimal_from_bytes(
-            raw_decimal, self.precision, self.decimals
-        )
+        return parse_decimal_from_bytes(raw_decimal, self.precision, self.decimals)
 
     def _read_default(self) -> bytes:
         """
@@ -791,57 +790,6 @@ class UserVarEvent(BinLogEvent):
         Used when the type is None.
         """
         return self.packet.read(self.value_len)
-
-    @staticmethod
-    def _parse_decimal_from_bytes(
-        raw_decimal: bytes, precision: int, decimals: int
-    ) -> decimal.Decimal:
-        """
-        Parse decimal from bytes.
-        """
-        digits_per_integer = 9
-        compressed_bytes = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4]
-        integral = precision - decimals
-
-        uncomp_integral, comp_integral = divmod(integral, digits_per_integer)
-        uncomp_fractional, comp_fractional = divmod(decimals, digits_per_integer)
-
-        res = "-" if not raw_decimal[0] & 0x80 else ""
-        mask = -1 if res == "-" else 0
-        raw_decimal = bytearray([raw_decimal[0] ^ 0x80]) + raw_decimal[1:]
-
-        def decode_decimal_decompress_value(comp_indx, data, mask):
-            size = compressed_bytes[comp_indx]
-            if size > 0:
-                databuff = bytearray(data[:size])
-                for i in range(size):
-                    databuff[i] = (databuff[i] ^ mask) & 0xFF
-                return size, int.from_bytes(databuff, byteorder="big")
-            return 0, 0
-
-        pointer, value = decode_decimal_decompress_value(
-            comp_integral, raw_decimal, mask
-        )
-        res += str(value)
-
-        for _ in range(uncomp_integral):
-            value = struct.unpack(">i", raw_decimal[pointer : pointer + 4])[0] ^ mask
-            res += "%09d" % value
-            pointer += 4
-
-        res += "."
-
-        for _ in range(uncomp_fractional):
-            value = struct.unpack(">i", raw_decimal[pointer : pointer + 4])[0] ^ mask
-            res += "%09d" % value
-            pointer += 4
-
-        size, value = decode_decimal_decompress_value(
-            comp_fractional, raw_decimal[pointer:], mask
-        )
-        if size > 0:
-            res += "%0*d" % (comp_fractional, value)
-        return decimal.Decimal(res)
 
     def _dump(self) -> None:
         super(UserVarEvent, self)._dump()
