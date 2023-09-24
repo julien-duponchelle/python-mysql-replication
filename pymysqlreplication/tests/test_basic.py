@@ -596,6 +596,33 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(binlog_event.event._is_event_valid, True)
         self.assertNotEqual(wrong_event.event._is_event_valid, True)
 
+    def test_json_update(self):
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database, server_id=1024, only_events=[UpdateRowsEvent]
+        )
+        create_query = (
+            "CREATE TABLE setting_table( id SERIAL AUTO_INCREMENT, setting JSON);"
+        )
+        insert_query = """INSERT INTO setting_table (setting) VALUES ('{"btn": true, "model": false}');"""
+
+        update_query = """  UPDATE setting_table
+                            SET setting = JSON_REMOVE(setting, '$.model')
+                            WHERE id=1;
+                        """
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute(update_query)
+        self.execute("COMMIT;")
+        event = self.stream.fetchone()
+
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(
+                event.rows[0]["before_values"]["setting"],
+                {b"btn": True, b"model": False},
+            ),
+            self.assertEqual(event.rows[0]["after_values"]["setting"], {b"btn": True}),
+
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def setUp(self):

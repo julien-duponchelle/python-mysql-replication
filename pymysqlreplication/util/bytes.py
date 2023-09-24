@@ -27,18 +27,15 @@ def decode_variable_length(data: bytes):
     max_count = 5
     if len(data) < max_count:
         max_count = len(data)
-
     pos = 0
     length = 0
     for _ in range(max_count):
         v = data[pos]
         length |= (v & 0x7F) << (7 * pos)
-
+        pos += 1
         if v & 0x80 == 0:
             if length > sys.maxsize - 1:
                 return 0, 0
-
-            pos += 1
             return int(length), pos
 
     return 0, 0
@@ -103,11 +100,8 @@ def decode_time(data: bytes):
     if v == 0:
         return datetime.time(hour=0, minute=0, second=0)
 
-    sign = ""
     if v < 0:
-        sign = "-"
         v = -v
-
     int_part = v >> 24
     hour = (int_part >> 12) % (1 << 10)
     min = (int_part >> 6) % (1 << 6)

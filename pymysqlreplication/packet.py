@@ -133,7 +133,7 @@ def parse_json_object_or_array(bytes, is_small, is_object):
             return None
         values[i] = parse_json(json_type, bytes[value_offset:])
     if not is_object:
-        return values
+        return list(values.values())
     out = {}
     for i in range(count):
         out[keys[i]] = values[i]
