@@ -677,10 +677,20 @@ class BinLogStreamReader(object):
                 ] = binlog_event.event.get_table()
 
             # event is none if we have filter it on packet level
-            # we filter also not allowed events
-            if binlog_event.event is None or (
-                binlog_event.event.__class__ not in self.__allowed_events
-            ):
+            if binlog_event.event is None:
+                logging.log(
+                    logging.WARN,
+                    """
+                      A pymysql.OperationalError error occurred, causing a fake rotate event and initialization of the table_map
+                    """,
+                )
+                continue
+            # we filter not allowed events
+            if binlog_event.event.__class__ not in self.__allowed_events:
+                logging.log(
+                    logging.INFO,
+                    binlog_event.event.__class__ + "is not allowed events",
+                )
                 continue
 
             if binlog_event.event_type == FORMAT_DESCRIPTION_EVENT:
