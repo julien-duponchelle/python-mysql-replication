@@ -92,6 +92,7 @@ Projects using this library
 * BitSwanPump: A real-time stream processor  (https://github.com/LibertyAces/BitSwanPump)
 * clickhouse-mysql-data-reader: https://github.com/Altinity/clickhouse-mysql-data-reader
 * py-mysql-elasticsearch-sync: https://github.com/jaehyeonpy/py-mysql-elasticsearch-sync
+* synch: Sync data from other DB to ClickHouse (https://github.com/long2ice/synch)
 
 MySQL server settings
 =========================
