@@ -3,7 +3,7 @@ import struct
 import datetime
 import decimal
 import zlib
-import orjson
+import json
 
 from pymysqlreplication.constants.STATUS_VAR_KEY import *
 from pymysqlreplication.exceptions import StatusVariableMismatch
@@ -85,7 +85,7 @@ class BinLogEvent(object):
         }
         binlog_event_dict.update(self._to_json())
 
-        return orjson.dumps(binlog_event_dict)
+        return json.dumps(binlog_event_dict)
 
     def _to_json(self):
         """Core data change to json for the event"""
