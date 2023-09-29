@@ -479,6 +479,16 @@ class RowsEvent(BinLogEvent):
             % self.table_map[self.table_id].column_name_flag
         )
 
+    def _to_json(self):
+        rows_event_dict = {
+            "table": (self.schema, self.table),
+            "affected_columns": self.number_of_columns,
+            "changed_rows": len(self.rows),
+            "flag": self.table_map[self.table_id].column_name_flag,
+        }
+        rows_event_dict.update(self._to_json_rows())
+        return rows_event_dict
+
     def _fetch_rows(self):
         self.__rows = []
 
@@ -487,6 +497,18 @@ class RowsEvent(BinLogEvent):
 
         while self.packet.read_bytes < self.event_size:
             self.__rows.append(self._fetch_one_row())
+
+    def _convert_to_isofromat(self):
+        if (
+            self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2
+            or self.event_type == BINLOG.UPDATE_ROWS_EVENT_V1
+        ):
+            for row in self.rows:
+                row["before_values"]["d1"] = row["before_values"]["d1"].isoformat()
+                row["after_values"]["d1"] = row["after_values"]["d1"].isoformat()
+        else:
+            for row in self.rows:
+                row["values"]["d1"] = row["values"]["d1"].isoformat()
 
     @property
     def rows(self):
@@ -522,6 +544,10 @@ class DeleteRowsEvent(RowsEvent):
             for key in row["values"]:
                 print("*", key, ":", row["values"][key])
 
+    def _to_json_rows(self):
+        self._convert_to_isofromat()
+        return {"rows": self.rows}
+
 
 class WriteRowsEvent(RowsEvent):
     """This event is triggered when a row in database is added
@@ -549,6 +575,10 @@ class WriteRowsEvent(RowsEvent):
             print("--")
             for key in row["values"]:
                 print("*", key, ":", row["values"][key])
+
+    def _to_json_rows(self):
+        self._convert_to_isofromat()
+        return {"rows": self.rows}
 
 
 class UpdateRowsEvent(RowsEvent):
@@ -593,6 +623,10 @@ class UpdateRowsEvent(RowsEvent):
                     % (key, row["before_values"][key], row["after_values"][key])
                 )
 
+    def _to_json_rows(self):
+        self._convert_to_isofromat()
+        return {"rows": self.rows}
+
 
 class OptionalMetaData:
     def __init__(self):
@@ -628,6 +662,23 @@ class OptionalMetaData:
         print("visibility_list: %s" % self.visibility_list)
         print("charset_collation_list: %s" % self.charset_collation_list)
         print("enum_and_set_collation_list: %s" % self.enum_and_set_collation_list)
+
+    def to_json(self):
+        return {
+            "unsigned_column_list": self.unsigned_column_list,
+            "default_charset_collation": self.default_charset_collation,
+            "charset_collation": self.charset_collation,
+            "column_charset": self.column_charset,
+            "column_name_list": self.column_name_list,
+            "set_str_value_list": self.set_str_value_list,
+            "set_enum_str_value_list": self.set_enum_str_value_list,
+            "geometry_type_list": self.geometry_type_list,
+            "simple_primary_key_list": self.simple_primary_key_list,
+            "primary_keys_with_prefix": self.primary_keys_with_prefix,
+            "visibility_list": self.visibility_list,
+            "charset_collation_list": self.charset_collation_list,
+            "enum_and_set_collation_list": self.enum_and_set_collation_list,
+        }
 
 
 class TableMapEvent(BinLogEvent):
@@ -709,6 +760,19 @@ class TableMapEvent(BinLogEvent):
         print("Columns: %s" % (self.column_count))
         if self.__optional_meta_data:
             self.optional_metadata.dump()
+
+    def _to_json(self):
+        result_dict = {
+            "table_id": self.table_id,
+            "schema": self.schema,
+            "table": self.table,
+            "columns": self.column_count,
+        }
+
+        if self.optional_metadata:
+            result_dict.update(self.optional_metadata.to_json())
+
+        return result_dict
 
     def _get_optional_meta_data(self):
         """
