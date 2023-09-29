@@ -3,10 +3,10 @@ import struct
 import datetime
 import decimal
 import zlib
+import orjson
 
 from pymysqlreplication.constants.STATUS_VAR_KEY import *
 from pymysqlreplication.exceptions import StatusVariableMismatch
-from pymysqlreplication.util.bytes import parse_decimal_from_bytes
 from typing import Union, Optional
 
 
@@ -41,6 +41,7 @@ class BinLogEvent(object):
         # the event will be skipped
         self._processed = True
         self.complete = True
+        self.datetime = datetime.datetime.utcfromtimestamp(self.timestamp).isoformat()
         self._verify_event()
 
     def _read_table_id(self):
@@ -63,10 +64,7 @@ class BinLogEvent(object):
 
     def dump(self):
         print("=== %s ===" % (self.__class__.__name__))
-        print(
-            "Date: %s"
-            % (datetime.datetime.utcfromtimestamp(self.timestamp).isoformat())
-        )
+        print("Date: %s" % (self.datetime))
         print("Log position: %d" % self.packet.log_pos)
         print("Event size: %d" % (self.event_size))
         print("Read bytes: %d" % (self.packet.read_bytes))
@@ -75,6 +73,22 @@ class BinLogEvent(object):
 
     def _dump(self):
         """Core data dumped for the event"""
+        pass
+
+    def to_json(self):
+        binlog_event_dict = {
+            "evnet_type": self.event_type,
+            "date": self.datetime,
+            "log_pos": self.packet.log_pos,
+            "event_size": self.event_size,
+            "read_bytes": self.packet.read_bytes,
+        }
+        binlog_event_dict.update(self._to_json())
+
+        return orjson.dumps(binlog_event_dict)
+
+    def _to_json(self):
+        """Core data change to json for the event"""
         pass
 
 
@@ -129,6 +143,16 @@ class GtidEvent(BinLogEvent):
             print("last_committed: %d" % self.last_committed)
             print("sequence_number: %d" % self.sequence_number)
 
+    def _to_json(self):
+        gtid_event_dict = {
+            "commit": self.commit_flag,
+            "gtid_next": self.gtid,
+        }
+        if hasattr(self, "last_committed"):
+            gtid_event_dict["last_committed"] = self.last_committed
+            gtid_event_dict["sequence_number"] = self.sequence_number
+        return gtid_event_dict
+
     def __repr__(self):
         return '<GtidEvent "%s">' % self.gtid
 
@@ -174,6 +198,9 @@ class PreviousGtidsEvent(BinLogEvent):
     def _dump(self):
         print("previous_gtids: %s" % self._previous_gtids)
 
+    def _to_json(self):
+        return {"previous_gtids": self._previous_gtids}
+
     def __repr__(self):
         return '<PreviousGtidsEvent "%s">' % self._previous_gtids
 
@@ -205,6 +232,9 @@ class MariadbGtidEvent(BinLogEvent):
         print("Flags:", self.flags)
         print("GTID:", self.gtid)
 
+    def _to_json(self):
+        return {"flags": self.flags, "gtid": self.gtid}
+
 
 class MariadbBinLogCheckPointEvent(BinLogEvent):
     """
@@ -227,6 +257,9 @@ class MariadbBinLogCheckPointEvent(BinLogEvent):
     def _dump(self):
         print("Filename:", self.filename)
 
+    def _to_json(self):
+        return {"Filename": self.filename}
+
 
 class MariadbAnnotateRowsEvent(BinLogEvent):
     """
@@ -244,6 +277,9 @@ class MariadbAnnotateRowsEvent(BinLogEvent):
     def _dump(self):
         super()._dump()
         print("SQL statement :", self.sql_statement)
+
+    def _to_json(self):
+        return {"sql_statement": self.sql_statement}
 
 
 class MariadbGtidListEvent(BinLogEvent):
@@ -294,6 +330,9 @@ class MariadbGtidListEvent(BinLogEvent):
             for i in range(self.gtid_length)
         ]
 
+    def _to_json(self):
+        return {"gtid_length": self.gtid_length, "gtid_list": self.gtid_list}
+
 
 class RotateEvent(BinLogEvent):
     """
@@ -316,6 +355,9 @@ class RotateEvent(BinLogEvent):
         print("Position: %d" % self.position)
         print("Next binlog file: %s" % self.next_binlog)
         print()
+
+    def to_json(self):
+        return {"position": self.position, "next_binlog": self.next_binlog}
 
 
 class XAPrepareEvent(BinLogEvent):
@@ -351,6 +393,13 @@ class XAPrepareEvent(BinLogEvent):
         print("XID formatID: %d" % self.xid_format_id)
         print("XID: %s" % self.xid)
 
+    def _to_json(self):
+        return {
+            "one_phase": self.one_phase,
+            "xid_format_id": self.xid_format_id,
+            "xid": self.xid,
+        }
+
 
 class FormatDescriptionEvent(BinLogEvent):
     """
@@ -374,6 +423,12 @@ class FormatDescriptionEvent(BinLogEvent):
         print("Binlog version: %s" % self.binlog_version)
         print("MySQL version: %s" % self.mysql_version_str)
 
+    def _to_json(self):
+        return {
+            "binlog_version": self.binlog_version,
+            "mysql_version_str": self.mysql_version_str,
+        }
+
 
 class StopEvent(BinLogEvent):
     pass
@@ -395,6 +450,9 @@ class XidEvent(BinLogEvent):
     def _dump(self):
         super()._dump()
         print("Transaction ID: %d" % (self.xid))
+
+    def _to_json(self):
+        return {"transaction_id": self.xid}
 
 
 class HeartbeatLogEvent(BinLogEvent):
@@ -428,6 +486,9 @@ class HeartbeatLogEvent(BinLogEvent):
     def _dump(self):
         super()._dump()
         print("Current binlog: %s" % (self.ident))
+
+    def _to_json(self):
+        return {"current_binlog": self.ident}
 
 
 class QueryEvent(BinLogEvent):
@@ -476,6 +537,13 @@ class QueryEvent(BinLogEvent):
         print("Schema: %s" % (self.schema))
         print("Execution time: %d" % (self.execution_time))
         print("Query: %s" % (self.query))
+
+    def _to_json(self):
+        return {
+            "schema": self.schema.decode('utf-8'),
+            "execution_time": self.execution_time,
+            "query": self.query
+        }
 
     def _read_status_vars_value_for_key(self, key):
         """parse status variable VALUE for given KEY
@@ -585,6 +653,9 @@ class BeginLoadQueryEvent(BinLogEvent):
         print("File id: %d" % (self.file_id))
         print("Block data: %s" % (self.block_data))
 
+    def _to_json(self):
+        return {"file_id": self.file_id, "block_data": self.block_data}
+
 
 class ExecuteLoadQueryEvent(BinLogEvent):
     """
@@ -632,6 +703,19 @@ class ExecuteLoadQueryEvent(BinLogEvent):
         print("End pos: %d" % (self.end_pos))
         print("Dup handling flags: %d" % (self.dup_handling_flags))
 
+    def _to_json(self):
+        return {
+            "slave_proxy_id": self.slave_proxy_id,
+            "execution_time": self.execution_time,
+            "schema_length": self.schema_length,
+            "error_code": self.error_code,
+            "status_vars_length": self.status_vars_length,
+            "file_id": self.file_id,
+            "start_pos": self.start_pos,
+            "end_pos": self.end_pos,
+            "dup_handling_flags": self.dup_handling_flags,
+        }
+
 
 class IntvarEvent(BinLogEvent):
     """
@@ -654,6 +738,9 @@ class IntvarEvent(BinLogEvent):
         super()._dump()
         print("type: %d" % (self.type))
         print("Value: %d" % (self.value))
+
+    def _to_json(self):
+        return {"type": self.type, "value": self.value}
 
 
 class RandEvent(BinLogEvent):
@@ -688,6 +775,9 @@ class RandEvent(BinLogEvent):
         super()._dump()
         print("seed1: %d" % (self.seed1))
         print("seed2: %d" % (self.seed2))
+
+    def _to_json(self):
+        return {"seed1": self.seed1, "seed2": self.seed2}
 
 
 class UserVarEvent(BinLogEvent):
@@ -782,7 +872,9 @@ class UserVarEvent(BinLogEvent):
         self.precision = self.temp_value_buffer[0]
         self.decimals = self.temp_value_buffer[1]
         raw_decimal = self.temp_value_buffer[2:]
-        return parse_decimal_from_bytes(raw_decimal, self.precision, self.decimals)
+        return self._parse_decimal_from_bytes(
+            raw_decimal, self.precision, self.decimals
+        )
 
     def _read_default(self) -> bytes:
         """
@@ -790,6 +882,57 @@ class UserVarEvent(BinLogEvent):
         Used when the type is None.
         """
         return self.packet.read(self.value_len)
+
+    @staticmethod
+    def _parse_decimal_from_bytes(
+        raw_decimal: bytes, precision: int, decimals: int
+    ) -> decimal.Decimal:
+        """
+        Parse decimal from bytes.
+        """
+        digits_per_integer = 9
+        compressed_bytes = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4]
+        integral = precision - decimals
+
+        uncomp_integral, comp_integral = divmod(integral, digits_per_integer)
+        uncomp_fractional, comp_fractional = divmod(decimals, digits_per_integer)
+
+        res = "-" if not raw_decimal[0] & 0x80 else ""
+        mask = -1 if res == "-" else 0
+        raw_decimal = bytearray([raw_decimal[0] ^ 0x80]) + raw_decimal[1:]
+
+        def decode_decimal_decompress_value(comp_indx, data, mask):
+            size = compressed_bytes[comp_indx]
+            if size > 0:
+                databuff = bytearray(data[:size])
+                for i in range(size):
+                    databuff[i] = (databuff[i] ^ mask) & 0xFF
+                return size, int.from_bytes(databuff, byteorder="big")
+            return 0, 0
+
+        pointer, value = decode_decimal_decompress_value(
+            comp_integral, raw_decimal, mask
+        )
+        res += str(value)
+
+        for _ in range(uncomp_integral):
+            value = struct.unpack(">i", raw_decimal[pointer : pointer + 4])[0] ^ mask
+            res += "%09d" % value
+            pointer += 4
+
+        res += "."
+
+        for _ in range(uncomp_fractional):
+            value = struct.unpack(">i", raw_decimal[pointer : pointer + 4])[0] ^ mask
+            res += "%09d" % value
+            pointer += 4
+
+        size, value = decode_decimal_decompress_value(
+            comp_fractional, raw_decimal[pointer:], mask
+        )
+        if size > 0:
+            res += "%0*d" % (comp_fractional, value)
+        return decimal.Decimal(res)
 
     def _dump(self) -> None:
         super(UserVarEvent, self)._dump()
@@ -803,6 +946,20 @@ class UserVarEvent(BinLogEvent):
             print("Charset: %s" % self.charset)
             print("Value: %s" % self.value)
             print("Flags: %s" % self.flags)
+
+    def _to_json(self):
+        user_var_event_dict = {
+            "user_variable_name": self.name,
+        }
+        if not self.is_null:
+            user_var_event_dict["type"] = self.type_to_codes_and_method.get(
+                self.type, ["UNKNOWN_TYPE"]
+            )[0]
+            user_var_event_dict["charset"] = self.charset
+            user_var_event_dict["value"] = self.value
+            user_var_event_dict["flags"] = self.flags
+
+        return user_var_event_dict
 
 
 class MariadbStartEncryptionEvent(BinLogEvent):
@@ -833,6 +990,13 @@ class MariadbStartEncryptionEvent(BinLogEvent):
         print("Key version: %d" % self.key_version)
         print(f"Nonce: {self.nonce}")
 
+    def _to_json(self):
+        return {
+            "schema": self.schema,
+            "key_version": self.key_version,
+            "nonce": self.nonce,
+        }
+
 
 class RowsQueryLogEvent(BinLogEvent):
     """
@@ -852,10 +1016,13 @@ class RowsQueryLogEvent(BinLogEvent):
         self.query_length = self.packet.read_uint8()
         self.query = self.packet.read(self.query_length).decode("utf-8")
 
-    def dump(self):
+    def _dump(self):
         print("=== %s ===" % (self.__class__.__name__))
         print("Query length: %d" % self.query_length)
         print("Query: %s" % self.query)
+
+    def _to_json(self):
+        return {"query_length": self.query_length, "query": self.query}
 
 
 class NotImplementedEvent(BinLogEvent):
