@@ -540,9 +540,9 @@ class QueryEvent(BinLogEvent):
 
     def _to_json(self):
         return {
-            "schema": self.schema.decode('utf-8'),
+            "schema": self.schema.decode("utf-8"),
             "execution_time": self.execution_time,
-            "query": self.query
+            "query": self.query,
         }
 
     def _read_status_vars_value_for_key(self, key):
