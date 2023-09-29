@@ -9,6 +9,7 @@ from .event import BinLogEvent
 from .constants import FIELD_TYPE
 from .constants import BINLOG
 from .constants import CHARSET
+from .constants import NONE_SOURCE
 from .column import Column
 from .table import Table
 from .bitmap import BitCount, BitGet
@@ -135,11 +136,11 @@ class RowsEvent(BinLogEvent):
         if BitGet(cols_bitmap, i) == 0:
             # This block is only executed when binlog_row_image = MINIMAL.
             # When binlog_row_image = FULL, this block does not execute.
-            self.__none_sources[name] = "cols_bitmap"
+            self.__none_sources[name] = NONE_SOURCE.COLS_BITMAP
             return None
 
         if self._is_null(null_bitmap, null_bitmap_index):
-            self.__none_sources[name] = "null"
+            self.__none_sources[name] = NONE_SOURCE.NULL
             return None
 
         if column.type == FIELD_TYPE.TINY:
@@ -185,14 +186,14 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.DATETIME:
             ret = self.__read_datetime()
             if ret is None:
-                self.__none_sources[name] = "out of datetime range"
+                self.__none_sources[name] = NONE_SOURCE.OUT_OF_DATETIME_RANGE
             return ret
         elif column.type == FIELD_TYPE.TIME:
             return self.__read_time()
         elif column.type == FIELD_TYPE.DATE:
             ret = self.__read_date()
             if ret is None:
-                self.__none_sources[name] = "out of date range"
+                self.__none_sources[name] = NONE_SOURCE.OUT_OF_DATE_RANGE
             return ret
         elif column.type == FIELD_TYPE.TIMESTAMP:
             return datetime.datetime.utcfromtimestamp(self.packet.read_uint32())
@@ -201,7 +202,7 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.DATETIME2:
             ret = self.__read_datetime2(column)
             if ret is None:
-                self.__none_sources[name] = "out of datetime2 range"
+                self.__none_sources[name] = NONE_SOURCE.OUT_OF_DATETIME2_RANGE
             return ret
         elif column.type == FIELD_TYPE.TIME2:
             return self.__read_time2(column)
@@ -232,10 +233,10 @@ class RowsEvent(BinLogEvent):
                     if bit_mask & (1 << idx)
                 }
                 if not ret:
-                    self.__none_sources[column.name] = "empty set"
+                    self.__none_sources[column.name] = NONE_SOURCE.EMPTY_SET
                     return None
                 return ret
-            self.__none_sources[column.name] = "empty set"
+            self.__none_sources[column.name] = NONE_SOURCE.EMPTY_SET
             return None
         elif column.type == FIELD_TYPE.BIT:
             return self.__read_bit(column)
@@ -244,7 +245,7 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.JSON:
             return self.packet.read_binary_json(column.length_size)
         else:
-            raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
+            raise NotImplementedError("Unknown MySQL column type: %d" % column.type)
 
     def __add_fsp_to_time(self, time, column):
         """Read and add the fractional part of time
