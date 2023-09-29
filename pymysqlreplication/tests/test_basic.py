@@ -1322,7 +1322,7 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
         super(TestStatementConnectionSetting, self).tearDown()
 
 
-class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
+class TestMariadbBinlogStreamReader(base.PyMySQLReplicationTestCase):
     def test_binlog_checkpoint_event(self):
         self.stream.close()
         self.stream = BinLogStreamReader(
@@ -1353,7 +1353,7 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         self.assertEqual(event.filename, self.bin_log_basename() + ".000001")
 
 
-class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationMariaDbTestCase):
+class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationTestCase):
     def test_annotate_rows_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
@@ -1498,7 +1498,7 @@ class TestLatin1(base.PyMySQLReplicationTestCase):
         assert event.query == r"CREATE TABLE test_latin1_\xd6\xc6\xdb (a INT)"
 
 
-class TestOptionalMetaData(base.PyMySQLReplicationVersion8TestCase):
+class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
     def setUp(self):
         super(TestOptionalMetaData, self).setUp()
         self.stream.close()
