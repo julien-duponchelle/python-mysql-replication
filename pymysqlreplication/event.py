@@ -145,8 +145,10 @@ class GtidEvent(BinLogEvent):
 
     def _to_json(self):
         gtid_event_dict = {
+            "event_name": type(self).__name__,
             "commit": self.commit_flag,
             "gtid_next": self.gtid,
+            "event_name": type(self),
         }
         if hasattr(self, "last_committed"):
             gtid_event_dict["last_committed"] = self.last_committed
@@ -199,7 +201,10 @@ class PreviousGtidsEvent(BinLogEvent):
         print("previous_gtids: %s" % self._previous_gtids)
 
     def _to_json(self):
-        return {"previous_gtids": self._previous_gtids}
+        return {
+            "event_name": type(self).__name__,
+            "previous_gtids": self._previous_gtids,
+        }
 
     def __repr__(self):
         return '<PreviousGtidsEvent "%s">' % self._previous_gtids
@@ -233,7 +238,11 @@ class MariadbGtidEvent(BinLogEvent):
         print("GTID:", self.gtid)
 
     def _to_json(self):
-        return {"flags": self.flags, "gtid": self.gtid}
+        return {
+            "event_name": type(self).__name__,
+            "flags": self.flags,
+            "gtid": self.gtid,
+        }
 
 
 class MariadbBinLogCheckPointEvent(BinLogEvent):
@@ -258,7 +267,7 @@ class MariadbBinLogCheckPointEvent(BinLogEvent):
         print("Filename:", self.filename)
 
     def _to_json(self):
-        return {"Filename": self.filename}
+        return {"event_name": type(self).__name__, "Filename": self.filename}
 
 
 class MariadbAnnotateRowsEvent(BinLogEvent):
@@ -279,7 +288,7 @@ class MariadbAnnotateRowsEvent(BinLogEvent):
         print("SQL statement :", self.sql_statement)
 
     def _to_json(self):
-        return {"sql_statement": self.sql_statement}
+        return {"event_name": type(self).__name__, "sql_statement": self.sql_statement}
 
 
 class MariadbGtidListEvent(BinLogEvent):
@@ -331,7 +340,11 @@ class MariadbGtidListEvent(BinLogEvent):
         ]
 
     def _to_json(self):
-        return {"gtid_length": self.gtid_length, "gtid_list": self.gtid_list}
+        return {
+            "event_name": type(self).__name__,
+            "gtid_length": self.gtid_length,
+            "gtid_list": self.gtid_list,
+        }
 
 
 class RotateEvent(BinLogEvent):
@@ -357,7 +370,11 @@ class RotateEvent(BinLogEvent):
         print()
 
     def to_json(self):
-        return {"position": self.position, "next_binlog": self.next_binlog}
+        return {
+            "event_name": type(self).__name__,
+            "position": self.position,
+            "next_binlog": self.next_binlog,
+        }
 
 
 class XAPrepareEvent(BinLogEvent):
@@ -395,6 +412,7 @@ class XAPrepareEvent(BinLogEvent):
 
     def _to_json(self):
         return {
+            "event_name": type(self).__name__,
             "one_phase": self.one_phase,
             "xid_format_id": self.xid_format_id,
             "xid": self.xid,
@@ -425,6 +443,7 @@ class FormatDescriptionEvent(BinLogEvent):
 
     def _to_json(self):
         return {
+            "event_name": type(self).__name__,
             "binlog_version": self.binlog_version,
             "mysql_version_str": self.mysql_version_str,
         }
@@ -452,7 +471,7 @@ class XidEvent(BinLogEvent):
         print("Transaction ID: %d" % (self.xid))
 
     def _to_json(self):
-        return {"transaction_id": self.xid}
+        return {"event_name": type(self).__name__, "transaction_id": self.xid}
 
 
 class HeartbeatLogEvent(BinLogEvent):
@@ -488,7 +507,7 @@ class HeartbeatLogEvent(BinLogEvent):
         print("Current binlog: %s" % (self.ident))
 
     def _to_json(self):
-        return {"current_binlog": self.ident}
+        return {"event_name": type(self).__name__, "current_binlog": self.ident}
 
 
 class QueryEvent(BinLogEvent):
@@ -540,6 +559,7 @@ class QueryEvent(BinLogEvent):
 
     def _to_json(self):
         return {
+            "event_name": type(self).__name__,
             "schema": self.schema.decode("utf-8"),
             "execution_time": self.execution_time,
             "query": self.query,
@@ -654,7 +674,11 @@ class BeginLoadQueryEvent(BinLogEvent):
         print("Block data: %s" % (self.block_data))
 
     def _to_json(self):
-        return {"file_id": self.file_id, "block_data": self.block_data}
+        return {
+            "event_name": type(self).__name__,
+            "file_id": self.file_id,
+            "block_data": self.block_data,
+        }
 
 
 class ExecuteLoadQueryEvent(BinLogEvent):
@@ -705,6 +729,7 @@ class ExecuteLoadQueryEvent(BinLogEvent):
 
     def _to_json(self):
         return {
+            "event_name": type(self).__name__,
             "slave_proxy_id": self.slave_proxy_id,
             "execution_time": self.execution_time,
             "schema_length": self.schema_length,
@@ -740,7 +765,11 @@ class IntvarEvent(BinLogEvent):
         print("Value: %d" % (self.value))
 
     def _to_json(self):
-        return {"type": self.type, "value": self.value}
+        return {
+            "event_name": type(self).__name__,
+            "type": self.type,
+            "value": self.value,
+        }
 
 
 class RandEvent(BinLogEvent):
@@ -777,7 +806,11 @@ class RandEvent(BinLogEvent):
         print("seed2: %d" % (self.seed2))
 
     def _to_json(self):
-        return {"seed1": self.seed1, "seed2": self.seed2}
+        return {
+            "event_name": type(self).__name__,
+            "seed1": self.seed1,
+            "seed2": self.seed2,
+        }
 
 
 class UserVarEvent(BinLogEvent):
@@ -949,6 +982,7 @@ class UserVarEvent(BinLogEvent):
 
     def _to_json(self):
         user_var_event_dict = {
+            "event_name": type(self).__name__,
             "user_variable_name": self.name,
         }
         if not self.is_null:
@@ -992,6 +1026,7 @@ class MariadbStartEncryptionEvent(BinLogEvent):
 
     def _to_json(self):
         return {
+            "event_name": type(self).__name__,
             "schema": self.schema,
             "key_version": self.key_version,
             "nonce": self.nonce,
@@ -1022,7 +1057,11 @@ class RowsQueryLogEvent(BinLogEvent):
         print("Query: %s" % self.query)
 
     def _to_json(self):
-        return {"query_length": self.query_length, "query": self.query}
+        return {
+            "event_name": type(self).__name__,
+            "query_length": self.query_length,
+            "query": self.query,
+        }
 
 
 class NotImplementedEvent(BinLogEvent):

@@ -546,7 +546,7 @@ class DeleteRowsEvent(RowsEvent):
 
     def _to_json_rows(self):
         self._convert_to_isofromat()
-        return {"rows": self.rows}
+        return {"event_name": type(self).__name__, "rows": self.rows}
 
 
 class WriteRowsEvent(RowsEvent):
@@ -578,7 +578,7 @@ class WriteRowsEvent(RowsEvent):
 
     def _to_json_rows(self):
         self._convert_to_isofromat()
-        return {"rows": self.rows}
+        return {"event_name": type(self).__name__, "rows": self.rows}
 
 
 class UpdateRowsEvent(RowsEvent):
@@ -625,7 +625,7 @@ class UpdateRowsEvent(RowsEvent):
 
     def _to_json_rows(self):
         self._convert_to_isofromat()
-        return {"rows": self.rows}
+        return {"event_name": type(self).__name__, "rows": self.rows}
 
 
 class OptionalMetaData:
@@ -763,6 +763,7 @@ class TableMapEvent(BinLogEvent):
 
     def _to_json(self):
         result_dict = {
+            "event_name": type(self).__name__,
             "table_id": self.table_id,
             "schema": self.schema,
             "table": self.table,
