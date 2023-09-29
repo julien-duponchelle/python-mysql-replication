@@ -148,7 +148,6 @@ class GtidEvent(BinLogEvent):
             "event_name": type(self).__name__,
             "commit": self.commit_flag,
             "gtid_next": self.gtid,
-            "event_name": type(self),
         }
         if hasattr(self, "last_committed"):
             gtid_event_dict["last_committed"] = self.last_committed
