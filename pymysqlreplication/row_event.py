@@ -663,7 +663,7 @@ class OptionalMetaData:
         print("charset_collation_list: %s" % self.charset_collation_list)
         print("enum_and_set_collation_list: %s" % self.enum_and_set_collation_list)
 
-    def to_json(self):
+    def _to_json(self):
         return {
             "unsigned_column_list": self.unsigned_column_list,
             "default_charset_collation": self.default_charset_collation,
