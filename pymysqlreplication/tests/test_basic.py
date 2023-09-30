@@ -1324,6 +1324,8 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
 
 class TestMariadbBinlogStreamReader(base.PyMySQLReplicationTestCase):
     def test_binlog_checkpoint_event(self):
+        if not self.isMariaDB():
+            self.skipTest("Database is not mariadb")
         self.stream.close()
         self.stream = BinLogStreamReader(
             self.database, server_id=1023, blocking=False, is_mariadb=True
@@ -1355,6 +1357,8 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationTestCase):
 
 class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationTestCase):
     def test_annotate_rows_event(self):
+        if not self.isMariaDB():
+            self.skipTest("Database is not mariadb")
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
         # Insert first event
@@ -1383,6 +1387,8 @@ class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, MariadbAnnotateRowsEvent)
 
     def test_start_encryption_event(self):
+        if not self.isMariaDB():
+            self.skipTest("Database is not mariadb")
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
         query = "INSERT INTO test (data) VALUES('Hello World')"
@@ -1421,6 +1427,8 @@ class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationTestCase):
         self.assertEqual(len(nonce), 12)
 
     def test_gtid_list_event(self):
+        if not self.isMariaDB():
+            self.skipTest("Database is not mariadb")
         # set max_binlog_size to create new binlog file
         query = "SET GLOBAL max_binlog_size=4096"
         self.execute(query)
