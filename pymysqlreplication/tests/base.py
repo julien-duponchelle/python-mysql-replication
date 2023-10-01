@@ -2,8 +2,22 @@ import pymysql
 import copy
 from pymysqlreplication import BinLogStreamReader
 import os
+import json
+import pytest
+
 import unittest
 
+
+def get_databases():
+    databases = {}
+    with open(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+    ) as f:
+        databases = json.load(f)
+    return databases
+
+
+databases = get_databases()
 base = unittest.TestCase
 
 
@@ -11,8 +25,10 @@ class PyMySQLReplicationTestCase(base):
     def ignoredEvents(self):
         return []
 
-    def setUp(self, charset="utf8"):
-        # default
+    @pytest.fixture(autouse=True)
+    def setUpDBMS(self, get_dbms):
+        self.database = databases[get_dbms]
+        """
         self.database = {
             "host": os.environ.get("MYSQL_5_7") or "localhost",
             "user": "root",
@@ -22,7 +38,10 @@ class PyMySQLReplicationTestCase(base):
             "charset": charset,
             "db": "pymysqlreplication_test",
         }
+        """
 
+    def setUp(self, charset="utf8"):
+        # default
         self.conn_control = None
         db = copy.copy(self.database)
         db["db"] = None

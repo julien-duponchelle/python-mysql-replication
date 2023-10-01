@@ -1,8 +1,5 @@
-import copy
 import io
-import os
 import time
-import pymysql
 import unittest
 
 from pymysqlreplication.tests import base
@@ -826,42 +823,22 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
 
 class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
-    def setUp(self):
+    def setUp(self, charset="utf8"):
         super().setUp()
-        self.stream.close()
-        ctl_db = copy.copy(self.database)
-        ctl_db["db"] = None
-        ctl_db["port"] = int(os.environ.get("MYSQL_5_7_CTL_PORT") or 3307)
-        ctl_db["host"] = os.environ.get("MYSQL_5_7_CTL") or "localhost"
-        self.ctl_conn_control = pymysql.connect(**ctl_db)
-        self.ctl_conn_control.cursor().execute(
-            "DROP DATABASE IF EXISTS pymysqlreplication_test"
-        )
-        self.ctl_conn_control.cursor().execute(
-            "CREATE DATABASE pymysqlreplication_test"
-        )
-        self.ctl_conn_control.close()
-        ctl_db["db"] = "pymysqlreplication_test"
-        self.ctl_conn_control = pymysql.connect(**ctl_db)
         self.stream = BinLogStreamReader(
             self.database,
-            ctl_connection_settings=ctl_db,
             server_id=1024,
             only_events=(WriteRowsEvent,),
         )
-
-    def tearDown(self):
-        super().tearDown()
-        self.ctl_conn_control.close()
 
     def test_separate_ctl_settings_no_error(self):
         self.execute("CREATE TABLE test (id INTEGER(11))")
         self.execute("INSERT INTO test VALUES (1)")
         self.execute("DROP TABLE test")
         self.execute("COMMIT")
-        self.ctl_conn_control.cursor().execute("CREATE TABLE test (id INTEGER(11))")
-        self.ctl_conn_control.cursor().execute("INSERT INTO test VALUES (1)")
-        self.ctl_conn_control.cursor().execute("COMMIT")
+        self.conn_control.cursor().execute("CREATE TABLE test (id INTEGER(11))")
+        self.conn_control.cursor().execute("INSERT INTO test VALUES (1)")
+        self.conn_control.cursor().execute("COMMIT")
         try:
             self.stream.fetchone()
         except Exception as e:
