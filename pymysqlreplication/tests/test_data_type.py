@@ -715,7 +715,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             % (string_value,)
         )
         event = self.create_and_insert_value(create_query, insert_query)
-        print(event.rows[0])
         if event.table_map[event.table_id].column_name_flag:
             self.assertEqual(
                 event.rows[0]["values"]["value"],
