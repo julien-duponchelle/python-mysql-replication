@@ -54,5 +54,6 @@ jobs:
           done
 
       - name: Run tests for MariaDB
+        working-directory: pymysqlreplication/tests
         run: |
-          pytest -m mariadb -k "not test_no_trailing_rotate_event and not test_end_log_pos and not test_query_event_latin1"
+          pytest -m mariadb -k "not test_no_trailing_rotate_event and not test_end_log_pos and not test_query_event_latin1" --dbms=mariadb-10
