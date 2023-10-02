@@ -211,3 +211,6 @@
 * Fix Bug table map event read null_bitmask packet
 * Fix Timestamp conversion to return UTC instead of local timezone
 * Optimize Handler_read_rnd by removing ORDER BY clause
+
+0.45.0 02/10/2023
+* Fix Json object, Array parse Error
