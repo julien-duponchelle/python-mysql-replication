@@ -48,7 +48,7 @@ jobs:
       - name: Run test suite
         working-directory: pymysqlreplication/tests
         run: |
-          dbms_versions=("mysql-5" "mysql-8")
+          dbms_versions=("mysql-5" "mysql-5-ctl" "mysql-8")
           for version in "${dbms_versions[@]}"; do
             pytest -k "not test_no_trailing_rotate_event and not test_end_log_pos and not test_query_event_latin1" --dbms=$version
           done
