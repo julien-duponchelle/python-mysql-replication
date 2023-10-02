@@ -17,7 +17,6 @@ def get_databases():
     return databases
 
 
-databases = get_databases()
 base = unittest.TestCase
 
 
@@ -27,6 +26,9 @@ class PyMySQLReplicationTestCase(base):
 
     @pytest.fixture(autouse=True)
     def setUpDBMS(self, get_dbms):
+        databases = get_databases()
+        # For local testing, set the get_dbms parameter to one of the following values: 'mysql-5', 'mysql-8', mariadb-10'.
+        # This value should correspond to the desired database configuration specified in the 'config.json' file.
         self.database = databases[get_dbms]
         """
         self.database = {

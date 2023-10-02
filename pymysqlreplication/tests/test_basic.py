@@ -10,6 +10,7 @@ from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 from pymysqlreplication.packet import BinLogPacketWrapper
 from pymysql.protocol import MysqlPacket
+import pytest
 
 __all__ = [
     "TestBasicBinLogStreamReader",
@@ -1299,6 +1300,7 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
         super(TestStatementConnectionSetting, self).tearDown()
 
 
+@pytest.mark.mariadb
 class TestMariadbBinlogStreamReader(base.PyMySQLReplicationTestCase):
     def setUp(self):
         super().setUp()
@@ -1335,6 +1337,7 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(event.filename, self.bin_log_basename() + ".000001")
 
 
+@pytest.mark.mariadb
 class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationTestCase):
     def setUp(self):
         super().setUp()
@@ -1485,6 +1488,7 @@ class TestLatin1(base.PyMySQLReplicationTestCase):
         assert event.query == r"CREATE TABLE test_latin1_\xd6\xc6\xdb (a INT)"
 
 
+@pytest.mark.mariadb
 class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
     def setUp(self):
         super(TestOptionalMetaData, self).setUp()
