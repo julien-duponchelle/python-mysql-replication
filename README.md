@@ -1,5 +1,6 @@
 python-mysql-replication
 ========================
+![Logo](logo.svg)
 
 <a href="https://travis-ci.org/noplay/python-mysql-replication"><img src="https://travis-ci.org/noplay/python-mysql-replication.svg?branch=master"></a>&nbsp;
 <a href="https://pypi.python.org/pypi/mysql-replication"><img src="http://img.shields.io/pypi/dm/mysql-replication.svg"></a>
