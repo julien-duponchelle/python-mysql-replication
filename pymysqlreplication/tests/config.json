@@ -1,0 +1,38 @@
+{
+  "mysql-5": {
+    "host": "localhost",
+    "user": "root",
+    "passwd": "",
+    "port": 3306,
+    "use_unicode": true,
+    "charset": "utf8",
+    "db": "pymysqlreplication_test"
+  },
+  "mysql-5-ctl": {
+    "host": "localhost",
+    "user": "root",
+    "passwd": "",
+    "port": 3307,
+    "use_unicode": true,
+    "charset": "utf8",
+    "db": "pymysqlreplication_test"
+  },
+  "mariadb-10": {
+    "host": "localhost",
+    "user": "root",
+    "passwd": "",
+    "port": 3308,
+    "use_unicode": true,
+    "charset": "utf8",
+    "db": "pymysqlreplication_test"
+  },
+  "mysql-8": {
+    "host": "localhost",
+    "user": "root",
+    "passwd": "",
+    "port": 3309,
+    "use_unicode": true,
+    "charset": "utf8",
+    "db": "pymysqlreplication_test"
+  }
+}

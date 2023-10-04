@@ -1,8 +1,5 @@
-import copy
 import io
-import os
 import time
-import pymysql
 import unittest
 
 from pymysqlreplication.tests import base
@@ -13,6 +10,7 @@ from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 from pymysqlreplication.packet import BinLogPacketWrapper
 from pymysql.protocol import MysqlPacket
+import pytest
 
 __all__ = [
     "TestBasicBinLogStreamReader",
@@ -826,42 +824,22 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
 
 class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
-    def setUp(self):
+    def setUp(self, charset="utf8"):
         super().setUp()
-        self.stream.close()
-        ctl_db = copy.copy(self.database)
-        ctl_db["db"] = None
-        ctl_db["port"] = int(os.environ.get("MYSQL_5_7_CTL_PORT") or 3307)
-        ctl_db["host"] = os.environ.get("MYSQL_5_7_CTL") or "localhost"
-        self.ctl_conn_control = pymysql.connect(**ctl_db)
-        self.ctl_conn_control.cursor().execute(
-            "DROP DATABASE IF EXISTS pymysqlreplication_test"
-        )
-        self.ctl_conn_control.cursor().execute(
-            "CREATE DATABASE pymysqlreplication_test"
-        )
-        self.ctl_conn_control.close()
-        ctl_db["db"] = "pymysqlreplication_test"
-        self.ctl_conn_control = pymysql.connect(**ctl_db)
         self.stream = BinLogStreamReader(
             self.database,
-            ctl_connection_settings=ctl_db,
             server_id=1024,
             only_events=(WriteRowsEvent,),
         )
-
-    def tearDown(self):
-        super().tearDown()
-        self.ctl_conn_control.close()
 
     def test_separate_ctl_settings_no_error(self):
         self.execute("CREATE TABLE test (id INTEGER(11))")
         self.execute("INSERT INTO test VALUES (1)")
         self.execute("DROP TABLE test")
         self.execute("COMMIT")
-        self.ctl_conn_control.cursor().execute("CREATE TABLE test (id INTEGER(11))")
-        self.ctl_conn_control.cursor().execute("INSERT INTO test VALUES (1)")
-        self.ctl_conn_control.cursor().execute("COMMIT")
+        self.conn_control.cursor().execute("CREATE TABLE test (id INTEGER(11))")
+        self.conn_control.cursor().execute("INSERT INTO test VALUES (1)")
+        self.conn_control.cursor().execute("COMMIT")
         try:
             self.stream.fetchone()
         except Exception as e:
@@ -1322,7 +1300,13 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
         super(TestStatementConnectionSetting, self).tearDown()
 
 
-class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
+@pytest.mark.mariadb
+class TestMariadbBinlogStreamReader(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super().setUp()
+        if not self.isMariaDB():
+            self.skipTest("Skipping the entire class for MariaDB")
+
     def test_binlog_checkpoint_event(self):
         self.stream.close()
         self.stream = BinLogStreamReader(
@@ -1353,7 +1337,13 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         self.assertEqual(event.filename, self.bin_log_basename() + ".000001")
 
 
-class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationMariaDbTestCase):
+@pytest.mark.mariadb
+class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super().setUp()
+        if not self.isMariaDB():
+            self.skipTest("Skipping the entire class for MariaDB")
+
     def test_annotate_rows_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
@@ -1498,7 +1488,8 @@ class TestLatin1(base.PyMySQLReplicationTestCase):
         assert event.query == r"CREATE TABLE test_latin1_\xd6\xc6\xdb (a INT)"
 
 
-class TestOptionalMetaData(base.PyMySQLReplicationVersion8TestCase):
+@pytest.mark.mariadb
+class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
     def setUp(self):
         super(TestOptionalMetaData, self).setUp()
         self.stream.close()

@@ -942,7 +942,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[0]["values"]["b"], b"\xff\x01\x00\x00")
 
 
-class TestDataTypeVersion8(base.PyMySQLReplicationVersion8TestCase):
+class TestDataTypeVersion8(base.PyMySQLReplicationTestCase):
     def ignoredEvents(self):
         return [GtidEvent, PreviousGtidsEvent]
 
