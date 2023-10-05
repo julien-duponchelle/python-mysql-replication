@@ -41,7 +41,7 @@ class Charsets:
             self._by_name[_charset.dbms][_charset.name] = _charset
 
     def by_id(self, id, dbms="mysql"):
-        return self._by_id.get(dbms, {}).get(id)
+        return self._by_id.get(dbms, {}).get(int(id))
 
     def by_name(self, name, dbms="mysql"):
         if name == "utf8":
