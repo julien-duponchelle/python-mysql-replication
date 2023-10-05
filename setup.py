@@ -29,7 +29,7 @@ class TestCommand(Command):
         unittest.main(tests, argv=sys.argv[:1])
 
 
-version = "0.45.0"
+version = "0.45.1"
 
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
@@ -45,9 +45,12 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     license="Apache 2",
-    packages=["pymysqlreplication",
-              "pymysqlreplication.constants",
-              "pymysqlreplication.tests"],
+    packages=[
+        "pymysqlreplication",
+        "pymysqlreplication.constants",
+        "pymysqlreplication.tests",
+        "pymysqlreplication.util",
+    ],
     cmdclass={"test": TestCommand},
     install_requires=['pymysql>=1.1.0'],
 )
