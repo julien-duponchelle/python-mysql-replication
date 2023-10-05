@@ -211,3 +211,17 @@
 * Fix Bug table map event read null_bitmask packet
 * Fix Timestamp conversion to return UTC instead of local timezone
 * Optimize Handler_read_rnd by removing ORDER BY clause
+
+0.45.0 02/10/2023
+* Fix Json object, Array parse Error
+
+1.0.0 02/10/2023
+* remove column schema
+* Mysql 8.0.14 version support Table map Event optional metaData extraction
+* Sync Column from optional metaData
+* Fix parsing of incorrect bytes in 'extradata' for 'rows event'
+* Fix remove duplicate Affected columns output
+* Enhance Code Quality with Ruff, Black, and Pre-commit
+* Enhance Testing with MySQL8 & Update GitHub Actions
+* Add Logging when fake rotate event occured
+* update logo
