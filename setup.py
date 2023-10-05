@@ -50,6 +50,7 @@ setup(
         "pymysqlreplication",
         "pymysqlreplication.constants",
         "pymysqlreplication.tests",
+        "pymysqlreplication.util",
     ],
     cmdclass={"test": TestCommand},
     install_requires=["pymysql>=1.1.0"],
