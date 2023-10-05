@@ -1056,15 +1056,6 @@ class TableMapEvent(BinLogEvent):
         return False
 
 
-def find_encoding(charset: CHARSET.Charset):
-    encode = None
-    if charset.is_binary:
-        encode = "utf8"
-    else:
-        encode = charset.encoding
-    return encode
-
-
 def find_charset(charset_id, dbms="mysql"):
     encode = None
     collation_name = None
@@ -1074,7 +1065,7 @@ def find_charset(charset_id, dbms="mysql"):
         encode = "utf8"
         charset_name = "utf8"
     else:
-        encode = find_encoding(charset)
+        encode = charset.encoding
         collation_name = charset.collation
         charset_name = charset.name
     return encode, collation_name, charset_name
