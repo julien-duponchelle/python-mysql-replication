@@ -225,3 +225,6 @@
 * Enhance Testing with MySQL8 & Update GitHub Actions
 * Add Logging when fake rotate event occured
 * update logo
+
+1.0.1 05/10/2023
+* add util module
