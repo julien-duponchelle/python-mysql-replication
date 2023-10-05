@@ -228,3 +228,7 @@
 
 1.0.1 05/10/2023
 * add util module
+
+1.0.2 05/10/2023
+* Delete charset_list.csv and add directly in CHARSET.py
+
