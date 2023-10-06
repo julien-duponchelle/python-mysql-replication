@@ -258,6 +258,7 @@ class BinLogStreamReader(object):
 
         # Store table meta information
         self.table_map = {}
+        self.__table_id_to_name = {}
         self.log_pos = log_pos
         self.end_log_pos = end_log_pos
         self.log_file = log_file
@@ -616,6 +617,7 @@ class BinLogStreamReader(object):
                 self.__ignore_decode_errors,
                 self.__verify_checksum,
                 self.__optional_meta_data,
+                self.__table_id_to_name,
             )
 
             if binlog_event.event_type == ROTATE_EVENT:

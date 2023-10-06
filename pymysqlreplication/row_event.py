@@ -23,9 +23,15 @@ class RowsEvent(BinLogEvent):
         self.__ignored_tables = kwargs["ignored_tables"]
         self.__only_schemas = kwargs["only_schemas"]
         self.__ignored_schemas = kwargs["ignored_schemas"]
+        self.__optional_meta_data = kwargs["optional_meta_data"]
+        self.__table_id_to_name = kwargs["table_id_to_name"]
 
         # Header
-        self.table_id = self._read_table_id()
+        table_id = self._read_table_id()
+        if self.__optional_meta_data:
+            self.table_id = table_id
+        else:
+            self.table_id = self.__table_id_to_name[table_id]
 
         # Additional information
         try:
@@ -645,8 +651,9 @@ class TableMapEvent(BinLogEvent):
         self.__ignored_schemas = kwargs["ignored_schemas"]
         self.__freeze_schema = kwargs["freeze_schema"]
         self.__optional_meta_data = kwargs["optional_meta_data"]
+        self.__table_id_to_name = kwargs["table_id_to_name"]
         # Post-Header
-        self.table_id = self._read_table_id()
+        table_id = self._read_table_id()
 
         if self.table_id in table_map and self.__freeze_schema:
             self._processed = False
@@ -660,6 +667,12 @@ class TableMapEvent(BinLogEvent):
         self.packet.advance(1)
         self.table_length = struct.unpack("!B", self.packet.read(1))[0]
         self.table = self.packet.read(self.table_length).decode()
+        if self.__optional_meta_data:
+            self.table_id = table_id
+        else:
+            table_schema_name = f"{self.schema}.{self.table}"
+            self.__table_id_to_name[table_id] = table_schema_name
+            self.table_id = table_schema_name
 
         if self.__only_tables is not None and self.table not in self.__only_tables:
             self._processed = False
@@ -694,7 +707,10 @@ class TableMapEvent(BinLogEvent):
         ## Refer to definition of and call to row.event._is_null() to interpret bitmap corresponding to columns
         self.null_bitmask = self.packet.read((self.column_count + 7) / 8)
         self.table_obj = Table(self.table_id, self.schema, self.table, self.columns)
-        table_map[self.table_id] = self.table_obj
+        if self.optional_metadata:
+            table_map[self.table_id] = self.table_obj
+        else:
+            table_map[f"{self.schema}.{self.table}"] = self.table_obj
         self.optional_metadata = self._get_optional_meta_data()
         self._sync_column_info()
 
