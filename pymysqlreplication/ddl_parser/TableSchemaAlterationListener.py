@@ -4,7 +4,7 @@ from MySqlParserListener import MySqlParserListener
 from pymysqlreplication.table import Table
 from pymysqlreplication.column import Column
 
-class MyMySQLListener(MySqlParserListener):
+class TableSchemaAlterationListener(MySqlParserListener):
     def __init__(self, table_map, schema):
         self.__schema: str = schema
         self.__table: str = None

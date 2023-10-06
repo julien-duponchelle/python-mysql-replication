@@ -6,12 +6,12 @@ import zlib
 from typing import Union, Optional
 
 from pymysqlreplication.constants.STATUS_VAR_KEY import *
+from pymysqlreplication.ddl_parser.TableSchemaAlterationListener import TableSchemaAlterationListener
 from pymysqlreplication.exceptions import StatusVariableMismatch
 from pymysqlreplication.util.bytes import parse_decimal_from_bytes
 from antlr4 import InputStream, CommonTokenStream, ParseTreeWalker
 from pymysqlreplication.ddl_parser.MySqlLexer import MySqlLexer
 from pymysqlreplication.ddl_parser.MySqlParser import MySqlParser
-from pymysqlreplication.ddl_parser.MySqlParserListener import MySqlParserListener
 
 
 class BinLogEvent(object):
@@ -484,20 +484,9 @@ class QueryEvent(BinLogEvent):
         token_stream = CommonTokenStream(lexer)
         parser = MySqlParser(token_stream)
         tree = parser.root()
-
-        class MyMySQLListener(MySqlParserListener):
-            def enterAlterByAddColumnContext(self, ctx):
-                table = ctx.tableName().getText()
-                columm = ctx.columnDeclaration().getText()
-
-
         walker = ParseTreeWalker()
-        my_listener = MyMySQLListener()
-
+        my_listener = TableSchemaAlterationListener()
         walker.walk(my_listener, tree)
-
-
-
 
     def _dump(self):
         super()._dump()
