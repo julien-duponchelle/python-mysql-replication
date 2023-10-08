@@ -101,8 +101,7 @@ class SimpleBinLogFileReader(object):
         mod = cls.__module__
         name = cls.__name__
         only = [type(x).__name__ for x in self._only_events]
-        fmt = "<{mod}.{name}(file_path={fpath}, only_events={only})>"
-        return fmt.format(mod=mod, name=name, fpath=self._file_path, only=only)
+        return f"<{mod}.{name}(file_path={self._file_path}, only_events={only})>"
 
 
 # pylint: disable=too-many-instance-attributes
@@ -134,14 +133,7 @@ class SimpleBinLogEvent(object):
         cls = self.__class__
         mod = cls.__module__
         name = cls.__name__
-        fmt = "<{mod}.{name}(timestamp={ts}, event_type={et}, log_pos={pos})>"
-        return fmt.format(
-            mod=mod,
-            name=name,
-            ts=int(self.timestamp),
-            et=self.event_type,
-            pos=self.log_pos,
-        )
+        return f"<{mod}.{name}(timestamp={int(self.timestamp)}, event_type={self.event_type}, log_pos={self.log_pos})>"
 
 
 class BadMagicBytesError(Exception):

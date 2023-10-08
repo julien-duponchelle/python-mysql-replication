@@ -30,7 +30,8 @@ def consume_events():
     for binlogevent in stream:
         i += 1.0
         if i % 1000 == 0:
-            print("%d event by seconds (%d total)" % (i / (time.clock() - start), i))
+            print(f"{i / (time.clock()- start)} event by seconds ({i} total)")
+
     stream.close()
 
 

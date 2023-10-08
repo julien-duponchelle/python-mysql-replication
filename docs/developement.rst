@@ -55,7 +55,7 @@ Running mysql in docker (main):
 Running mysql in docker (for ctl server):
 
 ::
-    
+
     docker run --name python-mysql-replication-tests-ctl --expose=3307 -e MYSQL_ALLOW_EMPTY_PASSWORD=true -p 3307:3307 --rm percona:latest --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave-updates -P 3307
 
 
@@ -73,4 +73,3 @@ build it using Sphinx:
     cd docs
     pip install sphinx
     make html
-
