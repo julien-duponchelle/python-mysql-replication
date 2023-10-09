@@ -11,7 +11,7 @@ import unittest
 def get_databases():
     databases = {}
     with open(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
     ) as f:
         databases = json.load(f)
     return databases
@@ -76,7 +76,7 @@ class PyMySQLReplicationTestCase(base):
     def isMariaDB(self):
         if self.__is_mariaDB is None:
             self.__is_mariaDB = (
-                    "MariaDB" in self.execute("SELECT VERSION()").fetchone()[0]
+                "MariaDB" in self.execute("SELECT VERSION()").fetchone()[0]
             )
         return self.__is_mariaDB
 

@@ -312,7 +312,7 @@ class BinLogStreamReader(object):
 
         if result is None:
             return False
-        var, value = result[:2]
+        _, value = result[:2]
         if value == "NONE":
             return False
         return True
@@ -587,7 +587,7 @@ class BinLogStreamReader(object):
                 else:
                     pkt = self._stream_connection._read_packet()
             except pymysql.OperationalError as error:
-                code, message = error.args
+                code, _ = error.args
                 if code in MYSQL_EXPECTED_ERROR_CODES:
                     self._stream_connection.close()
                     self.__connected_stream = False
