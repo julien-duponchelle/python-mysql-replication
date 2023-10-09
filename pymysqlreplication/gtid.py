@@ -61,10 +61,10 @@ class Gtid(object):
         """
         m = re.search("^([0-9]+)(?:-([0-9]+))?$", interval)
         if not m:
-            raise ValueError("GTID format is incorrect: %r" % (interval,))
+            raise ValueError(f"GTID format is incorrect: {interval!r}")
         a = int(m.group(1))
         b = int(m.group(2) or a)
-        return (a, b + 1)
+        return a, b + 1
 
     @staticmethod
     def parse(gtid):
@@ -79,14 +79,14 @@ class Gtid(object):
             gtid,
         )
         if not m:
-            raise ValueError("GTID format is incorrect: %r" % (gtid,))
+            raise ValueError(f"GTID format is incorrect: {gtid!r}")
 
         sid = m.group(1)
         intervals = m.group(2)
 
         intervals_parsed = [Gtid.parse_interval(x) for x in intervals.split(":")[1:]]
 
-        return (sid, intervals_parsed)
+        return sid, intervals_parsed
 
     def __add_interval(self, itvl):
         """
@@ -99,10 +99,10 @@ class Gtid(object):
         new = []
 
         if itvl[0] > itvl[1]:
-            raise Exception("Malformed interval %s" % (itvl,))
+            raise Exception(f"Malformed interval {itvl}")
 
         if any(overlap(x, itvl) for x in self.intervals):
-            raise Exception("Overlapping interval %s" % (itvl,))
+            raise Exception(f"Overlapping interval {itvl}")
 
         ## Merge: arrange interval to fit existing set
         for existing in sorted(self.intervals):
@@ -125,7 +125,7 @@ class Gtid(object):
         new = []
 
         if itvl[0] > itvl[1]:
-            raise Exception("Malformed interval %s" % (itvl,))
+            raise Exception(f"Malformed interval {itvl}")
 
         if not any(overlap(x, itvl) for x in self.intervals):
             # No raise
@@ -174,9 +174,7 @@ class Gtid(object):
         Raises:
            Exception: if the attempted merge has different SID"""
         if self.sid != other.sid:
-            raise Exception(
-                "Attempt to merge different SID" "%s != %s" % (self.sid, other.sid)
-            )
+            raise Exception(f"Attempt to merge different SID {self.sid} != {other.sid}")
 
         result = deepcopy(self)
 
@@ -200,16 +198,17 @@ class Gtid(object):
     def __str__(self):
         """We represent the human value here - a single number
         for one transaction, or a closed interval (decrementing b)"""
-        return "%s:%s" % (
-            self.sid,
-            ":".join(
-                ("%d-%d" % (x[0], x[1] - 1)) if x[0] + 1 != x[1] else str(x[0])
-                for x in self.intervals
-            ),
-        )
+
+        def format_interval(x):
+            if x[0] + 1 != x[1]:
+                return f"{x[0]}-{x[1] - 1}"
+            return str(x[0])
+
+        interval_string = ":".join(map(format_interval, self.intervals))
+        return f"{self.sid}:{interval_string}"
 
     def __repr__(self):
-        return '<Gtid "%s">' % self
+        return f'<Gtid "{self}">'
 
     @property
     def encoded_length(self):
@@ -285,18 +284,11 @@ class Gtid(object):
             start, end = struct.unpack("<QQ", payload.read(16))
             intervals.append((start, end - 1))
 
-        return cls(
-            "%s:%s"
-            % (
-                sid.decode("ascii"),
-                ":".join(
-                    [
-                        "%d-%d" % x if isinstance(x, tuple) else "%d" % x
-                        for x in intervals
-                    ]
-                ),
-            )
+        temp = ":".join(
+            ["%d-%d" % x if isinstance(x, tuple) else "%d" % x for x in intervals]
         )
+
+        return cls(f"{sid.decode('ascii')}:{temp}")
 
     def __eq__(self, other):
         if other.sid != self.sid:
