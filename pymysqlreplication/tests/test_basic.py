@@ -306,7 +306,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
 
-        self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V2)
+        self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V2)
         self.assertIsInstance(event, UpdateRowsEvent)
         if event.table_map[event.table_id].column_name_flag:
             self.assertEqual(event.rows[0]["before_values"]["id"], 1)
@@ -1462,7 +1462,7 @@ class TestLatin1(base.PyMySQLReplicationTestCase):
 
         event = self.stream.fetchone()
         assert event.query.startswith("CREATE TABLE test")
-        assert event.query == r"CREATE TABLE test_latin1_\xd6\xc6\xdb (a INT)"
+        assert event.query == "CREATE TABLE test_latin1_\xd6\xc6\xdb (a INT)"
 
 
 @pytest.mark.mariadb
