@@ -246,10 +246,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
+
+        self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
         self.assertIsInstance(event, WriteRowsEvent)
         self.assertEqual(event.schema, "pymysqlreplication_test")
         self.assertEqual(event.table, "test")
@@ -279,10 +277,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V1)
+
+        self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V2)
         self.assertIsInstance(event, DeleteRowsEvent)
         if event.table_map[event.table_id].column_name_flag:
             self.assertEqual(event.rows[0]["values"]["id"], 1)
@@ -309,10 +305,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
+
+        self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V2)
         self.assertIsInstance(event, UpdateRowsEvent)
         if event.table_map[event.table_id].column_name_flag:
             self.assertEqual(event.rows[0]["before_values"]["id"], 1)
@@ -339,10 +333,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
+
+        self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
         self.assertIsInstance(event, WriteRowsEvent)
         self.assertEqual(event.schema, "pymysqlreplication_test")
         self.assertEqual(event.table, "test")
@@ -373,10 +365,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V1)
+
+        self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V2)
         self.assertIsInstance(event, DeleteRowsEvent)
         if event.table_map[event.table_id].column_name_flag:
             self.assertEqual(event.rows[0]["values"]["id"], 1)
@@ -404,10 +394,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
+
+        self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V2)
         self.assertIsInstance(event, UpdateRowsEvent)
         if event.table_map[event.table_id].column_name_flag:
             self.assertEqual(event.rows[0]["before_values"]["id"], 1)
@@ -583,7 +571,7 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         # Assume a bit flip occurred while data was being transmitted    q(1001000) -> U(0110111)
         modified_byte = b"U"
         wrong_event_data = (
-            correct_event_data[:1] + modified_byte + correct_event_data[2:]
+                correct_event_data[:1] + modified_byte + correct_event_data[2:]
         )
 
         packet = MysqlPacket(correct_event_data, 0)
@@ -650,10 +638,8 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
+
+        self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
         self.assertIsInstance(event, WriteRowsEvent)
         self.assertEqual(len(event.rows), 2)
         if event.table_map[event.table_id].column_name_flag:
@@ -685,10 +671,8 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V1)
+
+        self.assertEqual(event.event_type, UPDATE_ROWS_EVENT_V2)
         self.assertIsInstance(event, UpdateRowsEvent)
         self.assertEqual(len(event.rows), 2)
         if event.table_map[event.table_id].column_name_flag:
@@ -725,10 +709,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V1)
+        self.assertEqual(event.event_type, DELETE_ROWS_EVENT_V2)
         self.assertIsInstance(event, DeleteRowsEvent)
         self.assertEqual(len(event.rows), 2)
         if event.table_map[event.table_id].column_name_flag:
@@ -851,10 +832,6 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
 class TestGtidBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def setUp(self):
         super().setUp()
-        if not self.supportsGTID:
-            raise unittest.SkipTest(
-                "database does not support GTID, skipping GTID tests"
-            )
 
     def test_read_query_event(self):
         query = "CREATE TABLE test (id INT NOT NULL, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
@@ -1395,7 +1372,7 @@ class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationTestCase):
 
         try:
             with open(
-                f"{encryption_key_file_path}/.mariadb/no_encryption_key.key", "r"
+                    f"{encryption_key_file_path}/.mariadb/no_encryption_key.key", "r"
             ) as key_file:
                 first_line = key_file.readline()
                 key_version_from_key_file = int(first_line.split(";")[0])

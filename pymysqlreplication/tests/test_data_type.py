@@ -51,10 +51,8 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
+
+        self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
         self.assertIsInstance(event, WriteRowsEvent)
         return event
 
@@ -287,55 +285,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
                 datetime.datetime(1984, 12, 3, 12, 33, 7),
             )
 
-    def test_timestamp_mysql56(self):
-        if not self.isMySQL56AndMore():
-            self.skipTest("Not supported in this version of MySQL")
-        self.set_sql_mode()
-        create_query = """CREATE TABLE test (test0 TIMESTAMP(0),
-            test1 TIMESTAMP(1),
-            test2 TIMESTAMP(2),
-            test3 TIMESTAMP(3),
-            test4 TIMESTAMP(4),
-            test5 TIMESTAMP(5),
-            test6 TIMESTAMP(6));"""
-        insert_query = """INSERT INTO test VALUES('1984-12-03 12:33:07',
-            '1984-12-03 12:33:07.1',
-            '1984-12-03 12:33:07.12',
-            '1984-12-03 12:33:07.123',
-            '1984-12-03 12:33:07.1234',
-            '1984-12-03 12:33:07.12345',
-            '1984-12-03 12:33:07.123456')"""
-        event = self.create_and_insert_value(create_query, insert_query)
-        if event.table_map[event.table_id].column_name_flag:
-            self.assertEqual(
-                event.rows[0]["values"]["test0"],
-                datetime.datetime(1984, 12, 3, 12, 33, 7),
-            )
-            self.assertEqual(
-                event.rows[0]["values"]["test1"],
-                datetime.datetime(1984, 12, 3, 12, 33, 7, 100000),
-            )
-            self.assertEqual(
-                event.rows[0]["values"]["test2"],
-                datetime.datetime(1984, 12, 3, 12, 33, 7, 120000),
-            )
-            self.assertEqual(
-                event.rows[0]["values"]["test3"],
-                datetime.datetime(1984, 12, 3, 12, 33, 7, 123000),
-            )
-            self.assertEqual(
-                event.rows[0]["values"]["test4"],
-                datetime.datetime(1984, 12, 3, 12, 33, 7, 123400),
-            )
-            self.assertEqual(
-                event.rows[0]["values"]["test5"],
-                datetime.datetime(1984, 12, 3, 12, 33, 7, 123450),
-            )
-            self.assertEqual(
-                event.rows[0]["values"]["test6"],
-                datetime.datetime(1984, 12, 3, 12, 33, 7, 123456),
-            )
-
     def test_longlong(self):
         create_query = "CREATE TABLE test (id BIGINT UNSIGNED NOT NULL, test BIGINT)"
         insert_query = (
@@ -375,32 +324,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[0]["values"]["test"], None)
             self.assertEqual(event.rows[0]["values"]["test2"], None)
 
-    def test_zero_month(self):
-        if not self.isMySQL57():
-            self.skipTest(
-                "Not supported in this version of MySQL 8"
-            )  # pymysql.err.OperationalError
-        self.set_sql_mode()
-        create_query = "CREATE TABLE test (id INTEGER, test DATE, test2 DATE);"
-        insert_query = "INSERT INTO test (id, test2) VALUES(1, '2015-00-21')"
-        event = self.create_and_insert_value(create_query, insert_query)
-        if event.table_map[event.table_id].column_name_flag:
-            self.assertEqual(event.rows[0]["values"]["test"], None)
-            self.assertEqual(event.rows[0]["values"]["test2"], None)
-
-    def test_zero_day(self):
-        if not self.isMySQL57():
-            self.skipTest(
-                "Not supported in this version of MySQL 8"
-            )  # pymysql.err.OperationalError
-        self.set_sql_mode()
-        create_query = "CREATE TABLE test (id INTEGER, test DATE, test2 DATE);"
-        insert_query = "INSERT INTO test (id, test2) VALUES(1, '2015-05-00')"
-        event = self.create_and_insert_value(create_query, insert_query)
-        if event.table_map[event.table_id].column_name_flag:
-            self.assertEqual(event.rows[0]["values"]["test"], None)
-            self.assertEqual(event.rows[0]["values"]["test2"], None)
-
     def test_time(self):
         create_query = "CREATE TABLE test (test1 TIME, test2 TIME);"
         insert_query = "INSERT INTO test VALUES('838:59:59', '-838:59:59')"
@@ -420,8 +343,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             )
 
     def test_time2(self):
-        if not self.isMySQL56AndMore():
-            self.skipTest("Not supported in this version of MySQL")
         create_query = "CREATE TABLE test (test1 TIME(6), test2 TIME(6));"
         insert_query = """
             INSERT INTO test VALUES('838:59:59.000000', '-838:59:59.000000');
@@ -460,38 +381,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
                 datetime.datetime(1984, 12, 3, 12, 33, 7),
             )
 
-    def test_zero_datetime(self):
-        if not self.isMySQL57():
-            self.skipTest(
-                "Not supported in this version of MySQL 8"
-            )  # pymysql.err.OperationalError Invalid default value for 'test'
-        self.set_sql_mode()
-        create_query = (
-            "CREATE TABLE test (id INTEGER, test DATETIME NOT NULL DEFAULT 0);"
-        )
-        insert_query = "INSERT INTO test (id) VALUES(1)"
-        event = self.create_and_insert_value(create_query, insert_query)
-        if event.table_map[event.table_id].column_name_flag:
-            self.assertEqual(event.rows[0]["values"]["test"], None)
-
-    def test_broken_datetime(self):
-        if not self.isMySQL57():
-            self.skipTest(
-                "Not supported in this version of MySQL 8"
-            )  # pymysql.err.OperationalError Incorrect datetime value: '2013-00-00 00:00:00' for column 'test'
-        self.set_sql_mode()
-        create_query = "CREATE TABLE test (test DATETIME NOT NULL);"
-        insert_query = "INSERT INTO test VALUES('2013-00-00 00:00:00')"
-        event = self.create_and_insert_value(create_query, insert_query)
-        if event.table_map[event.table_id].column_name_flag:
-            self.assertEqual(event.rows[0]["values"]["test"], None)
-
     def test_year(self):
-        if self.isMySQL57():
-            # https://dev.mysql.com/doc/refman/5.7/en/migrating-to-year4.html
-            self.skipTest(
-                "YEAR(2) is unsupported in mysql 5.7"
-            )  # pymysql.err.OperationalError: (1818, 'Supports only YEAR or YEAR(4) column.')
         create_query = "CREATE TABLE test (a YEAR(4), b YEAR)"
         insert_query = "INSERT INTO test VALUES(1984, 1984)"
         event = self.create_and_insert_value(create_query, insert_query)
@@ -612,7 +502,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         )  # Make it large enough to reach 2^16 length
         create_query = "CREATE TABLE test (id int, value json);"
         insert_query = (
-            """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
+                """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
         )
         event = self.create_and_insert_value(create_query, insert_query)
         if event.table_map[event.table_id].column_name_flag:
@@ -637,7 +527,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         )  # Make it large with literal
         create_query = "CREATE TABLE test (id int, value json);"
         insert_query = (
-            """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
+                """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
         )
         event = self.create_and_insert_value(create_query, insert_query)
         if event.table_map[event.table_id].column_name_flag:
@@ -662,7 +552,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             data = {"foo": t}
             create_query = "CREATE TABLE test (id int, value json);"
             insert_query = (
-                """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
+                    """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
             )
             event = self.create_and_insert_value(create_query, insert_query)
             if event.table_map[event.table_id].column_name_flag:
@@ -688,7 +578,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         for data in types:
             create_query = "CREATE TABLE test (id int, value json);"
             insert_query = (
-                """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
+                    """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
             )
             event = self.create_and_insert_value(create_query, insert_query)
             if event.table_map[event.table_id].column_name_flag:
@@ -711,8 +601,8 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         # The string length needs to be larger than what can fit in a single byte.
         string_value = "super_long_string" * 100
         insert_query = (
-            'INSERT INTO test (id, value) VALUES (1, \'{"my_key": "%s"}\');'
-            % (string_value,)
+                'INSERT INTO test (id, value) VALUES (1, \'{"my_key": "%s"}\');'
+                % (string_value,)
         )
         event = self.create_and_insert_value(create_query, insert_query)
         if event.table_map[event.table_id].column_name_flag:
@@ -962,10 +852,9 @@ class TestDataTypeVersion8(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
         event = self.stream.fetchone()
-        if self.isMySQL56AndMore():
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
-        else:
-            self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V1)
+
+        self.assertEqual(event.event_type, WRITE_ROWS_EVENT_V2)
+
         self.assertIsInstance(event, WriteRowsEvent)
         return event
 

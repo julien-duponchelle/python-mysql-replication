@@ -11,7 +11,7 @@ import unittest
 def get_databases():
     databases = {}
     with open(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
     ) as f:
         databases = json.load(f)
     return databases
@@ -54,7 +54,6 @@ class PyMySQLReplicationTestCase(base):
         self.connect_conn_control(db)
         self.stream = None
         self.resetBinLog()
-        self.isMySQL56AndMore()
         self.__is_mariaDB = None
 
     def getMySQLVersion(self):
@@ -62,16 +61,6 @@ class PyMySQLReplicationTestCase(base):
         If version is 5.6.10-log the result is 5.6.10
         """
         return self.execute("SELECT VERSION()").fetchone()[0].split("-")[0]
-
-    def isMySQL56AndMore(self):
-        version = float(self.getMySQLVersion().rsplit(".", 1)[0])
-        if version >= 5.6:
-            return True
-        return False
-
-    def isMySQL57(self):
-        version = float(self.getMySQLVersion().rsplit(".", 1)[0])
-        return version == 5.7
 
     def isMySQL80AndMore(self):
         version = float(self.getMySQLVersion().rsplit(".", 1)[0])
@@ -87,15 +76,9 @@ class PyMySQLReplicationTestCase(base):
     def isMariaDB(self):
         if self.__is_mariaDB is None:
             self.__is_mariaDB = (
-                "MariaDB" in self.execute("SELECT VERSION()").fetchone()[0]
+                    "MariaDB" in self.execute("SELECT VERSION()").fetchone()[0]
             )
         return self.__is_mariaDB
-
-    @property
-    def supportsGTID(self):
-        if not self.isMySQL56AndMore():
-            return False
-        return self.execute("SELECT @@global.gtid_mode ").fetchone()[0] == "ON"
 
     def connect_conn_control(self, db):
         if self.conn_control is not None:
@@ -125,12 +108,6 @@ class PyMySQLReplicationTestCase(base):
         self.stream = BinLogStreamReader(
             self.database, server_id=1024, ignored_events=self.ignoredEvents()
         )
-
-    def set_sql_mode(self):
-        """set sql_mode to test with same sql_mode (mysql 5.7 sql_mode default is changed)"""
-        version = float(self.getMySQLVersion().rsplit(".", 1)[0])
-        if version == 5.7:
-            self.execute("SET @@sql_mode='NO_ENGINE_SUBSTITUTION'")
 
     def bin_log_format(self):
         query = "SELECT @@binlog_format"
