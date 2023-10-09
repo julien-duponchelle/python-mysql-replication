@@ -98,9 +98,8 @@ class GtidEvent(BinLogEvent):
         self.gno = struct.unpack("<Q", self.packet.read(8))[0]
         self.lt_type = self.packet.read(1)[0]
 
-        if self.mysql_version >= (5, 7):
-            self.last_committed = struct.unpack("<Q", self.packet.read(8))[0]
-            self.sequence_number = struct.unpack("<Q", self.packet.read(8))[0]
+        self.last_committed = struct.unpack("<Q", self.packet.read(8))[0]
+        self.sequence_number = struct.unpack("<Q", self.packet.read(8))[0]
 
     @property
     def gtid(self):
