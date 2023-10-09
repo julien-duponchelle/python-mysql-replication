@@ -2,7 +2,7 @@ import pytest
 
 
 def pytest_addoption(parser):
-    parser.addoption("--db", action="store", default="mysql-5")
+    parser.addoption("--db", action="store", default="mysql-8")
 
 
 @pytest.fixture
