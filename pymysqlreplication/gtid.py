@@ -284,11 +284,14 @@ class Gtid(object):
             start, end = struct.unpack("<QQ", payload.read(16))
             intervals.append((start, end - 1))
 
-        temp = ":".join(
-            ["%d-%d" % x if isinstance(x, tuple) else "%d" % x for x in intervals]
-        )
+        def format_interval(x):
+            if isinstance(x, tuple):
+                return f"{x[0]}-{x[1]}"
+            return f"{x}"
 
-        return cls(f"{sid.decode('ascii')}:{temp}")
+        intervals_string = ":".join([format_interval(x) for x in intervals])
+
+        return cls(f"{sid.decode('ascii')}:{intervals_string}")
 
     def __eq__(self, other):
         if other.sid != self.sid:
