@@ -1,5 +1,5 @@
 name: PyTest
-on: [push, pull_request]
+on: [ push, pull_request ]
 env:
   PYTEST_SKIP_OPTION: "not test_no_trailing_rotate_event and not test_end_log_pos and not test_query_event_latin1"
 jobs:
@@ -8,10 +8,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {name: 'CPython 3.7', python: '3.7'}
-          - {name: 'CPython 3.11', python: '3.11'}
-          - {name: 'Pypy 3.7', python: 'pypy-3.7'}
-          - {name: 'Pypy 3.9', python: 'pypy-3.9'}
+          - { name: 'CPython 3.7', python: '3.7' }
+          - { name: 'CPython 3.11', python: '3.11' }
+          - { name: 'Pypy 3.7', python: 'pypy-3.7' }
+          - { name: 'Pypy 3.9', python: 'pypy-3.9' }
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 3
@@ -45,14 +45,6 @@ jobs:
         run: |
           pip install .
           pip install pytest
-
-      - name: Run tests for mysql-5
-        working-directory: pymysqlreplication/tests
-        run: pytest -k "$PYTEST_SKIP_OPTION" --db=mysql-5
-
-      - name: Run tests for mysql-5-ctl
-        working-directory: pymysqlreplication/tests
-        run: pytest -k "$PYTEST_SKIP_OPTION" --db=mysql-5-ctl
 
       - name: Run tests for mysql-8
         working-directory: pymysqlreplication/tests
