@@ -72,8 +72,7 @@ class SimpleBinLogFileReader(object):
         event = SimpleBinLogEvent(header)
         event.set_pos(event_pos)
         if event.event_size < headerlength:
-            messagefmt = "Event size {0} is too small"
-            message = messagefmt.format(event.event_size)
+            message = f"Event size {event.event_size} is too small"
             raise EventSizeTooSmallError(message)
         else:
             body = self._file.read(event.event_size - headerlength)
@@ -89,8 +88,7 @@ class SimpleBinLogFileReader(object):
             if magic == self._expected_magic:
                 self._pos += len(magic)
             else:
-                messagefmt = "Magic bytes {0!r} did not match expected {1!r}"
-                message = messagefmt.format(magic, self._expected_magic)
+                message = f"Magic bytes {magic!r} did not match expected {self._expected_magic!r}"
                 raise BadMagicBytesError(message)
 
     def __iter__(self):
