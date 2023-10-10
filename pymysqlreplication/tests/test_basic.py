@@ -1459,10 +1459,12 @@ class TestLatin1(base.PyMySQLReplicationTestCase):
         self.execute("CREATE TABLE test_latin1_ÖÆÛ (a INT)")
         self.execute("COMMIT")
         assert "ÖÆÛ".encode("latin-1") == b"\xd6\xc6\xdb"
+        print("result", "ÖÆÛ".encode("latin-1"))
 
         event = self.stream.fetchone()
+        print("event type: ", event.event_type)
         assert event.query.startswith("CREATE TABLE test")
-        assert event.query == "CREATE TABLE test_latin1_\xd6\xc6\xdb (a INT)"
+        assert event.query == r"CREATE TABLE test_latin1_\xd6\xc6\xdb (a INT)"
 
 
 @pytest.mark.mariadb
