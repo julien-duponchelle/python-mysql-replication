@@ -229,6 +229,7 @@ class BinLogPacketWrapper(object):
         ignore_decode_errors,
         verify_checksum,
         optional_meta_data,
+        table_id_to_name,
     ):
         # -1 because we ignore the ok byte
         self.read_bytes = 0
@@ -282,6 +283,7 @@ class BinLogPacketWrapper(object):
             ignore_decode_errors=ignore_decode_errors,
             verify_checksum=verify_checksum,
             optional_meta_data=optional_meta_data,
+            table_id_to_name=table_id_to_name,
         )
         if not self.event._processed:
             self.event = None

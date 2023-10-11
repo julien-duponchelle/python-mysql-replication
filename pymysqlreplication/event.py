@@ -3,11 +3,15 @@ import struct
 import datetime
 import decimal
 import zlib
+from typing import Union, Optional
 
 from pymysqlreplication.constants.STATUS_VAR_KEY import *
+from pymysqlreplication.ddl_parser.TableSchemaAlterationListener import TableSchemaAlterationListener
 from pymysqlreplication.exceptions import StatusVariableMismatch
 from pymysqlreplication.util.bytes import parse_decimal_from_bytes
-from typing import Union, Optional
+from antlr4 import InputStream, CommonTokenStream, ParseTreeWalker
+from pymysqlreplication.ddl_parser.MySqlLexer import MySqlLexer
+from pymysqlreplication.ddl_parser.MySqlParser import MySqlParser
 
 
 class BinLogEvent(object):
@@ -26,6 +30,7 @@ class BinLogEvent(object):
         ignore_decode_errors=False,
         verify_checksum=False,
         optional_meta_data=False,
+        table_id_to_name=None,
     ):
         self.packet = from_packet
         self.table_map = table_map
@@ -462,7 +467,19 @@ class QueryEvent(BinLogEvent):
             event_size - 13 - self.status_vars_length - self.schema_length - 1
         )
         self.query = query.decode("utf-8", errors="backslashreplace")
+        if not self.optional_meta_data:
+            self.__sync_table_map_with_query()
         # string[EOF]    query
+
+    def __sync_table_map_with_query(self, table_map):
+        input_stream = InputStream(self.query)
+        lexer = MySqlLexer(input_stream)
+        token_stream = CommonTokenStream(lexer)
+        parser = MySqlParser(token_stream)
+        tree = parser.root()
+        walker = ParseTreeWalker()
+        my_listener = TableSchemaAlterationListener()
+        walker.walk(my_listener, tree)
 
     def _dump(self):
         super()._dump()
