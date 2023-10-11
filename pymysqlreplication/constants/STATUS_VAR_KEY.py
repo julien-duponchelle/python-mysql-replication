@@ -2,7 +2,7 @@
 
 # class StatusVarsKey(IntEnum):
 """List of Query_event_status_vars
-    
+
     A status variable in query events is a sequence of status KEY-VALUE pairs.
     The class variables enumerated below are KEYs.
     Each KEY determines the length of corresponding VALUE.

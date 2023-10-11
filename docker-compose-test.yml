@@ -80,7 +80,7 @@ services:
       - -ce
       - |
         echo "wait mysql server"
-        
+
         while :
         do
           if mysql -h percona-5.7 --user=root --execute "SELECT version();" 2>&1 >/dev/null && mysql -h percona-5.7-ctl --user=root --execute "SELECT version();" 2>&1 >/dev/null && mysql -h percona-8.0 --user=root --execute "SELECT version();" 2>&1 >/dev/null; then
@@ -88,7 +88,7 @@ services:
           fi
           sleep 1
         done
-        
+
         echo "run pytest"
         pytest -k "not test_no_trailing_rotate_event and not test_end_log_pos"
 

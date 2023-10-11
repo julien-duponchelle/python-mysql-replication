@@ -81,7 +81,7 @@ def parse_json(type: bytes, data: bytes):
     elif type == JSONB_TYPE_OPAQUE:
         v = parse_opaque(data)
     else:
-        raise ValueError("Json type %d is not handled" % t)
+        raise ValueError(f"Json type {type} is not handled")
     return v
 
 
@@ -354,9 +354,7 @@ class BinLogPacketWrapper(object):
         if hasattr(self.packet, key):
             return getattr(self.packet, key)
 
-        raise AttributeError(
-            "%s instance has no attribute '%s'" % (self.__class__, key)
-        )
+        raise AttributeError(f"{self.__class__} instance has no attribute '{key}'")
 
     def read_int_be_by_size(self, size):
         """Read a big endian integer values based on byte number"""

@@ -790,7 +790,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.stream.fetchone()  # insert with two values
             self.stream.fetchone()  # insert with one value
         except Exception as e:
-            self.fail("raised unexpected exception: {exception}".format(exception=e))
+            self.fail(f"raised unexpected exception: {e}")
         finally:
             self.resetBinLog()
 
@@ -843,7 +843,7 @@ class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
         try:
             self.stream.fetchone()
         except Exception as e:
-            self.fail("raised unexpected exception: {exception}".format(exception=e))
+            self.fail(f"raised unexpected exception: {e}")
         finally:
             self.resetBinLog()
 
@@ -1400,7 +1400,7 @@ class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationTestCase):
                 first_line = key_file.readline()
                 key_version_from_key_file = int(first_line.split(";")[0])
         except Exception as e:
-            self.fail("raised unexpected exception: {exception}".format(exception=e))
+            self.fail(f"raised unexpected exception: {e}")
         finally:
             self.resetBinLog()
 

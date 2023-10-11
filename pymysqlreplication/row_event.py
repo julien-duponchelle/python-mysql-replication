@@ -231,7 +231,7 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.JSON:
             return self.packet.read_binary_json(column.length_size)
         else:
-            raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
+            raise NotImplementedError(f"Unknown MySQL column type: {column.type}")
 
     def __add_fsp_to_time(self, time, column):
         """Read and add the fractional part of time
@@ -442,18 +442,18 @@ class RowsEvent(BinLogEvent):
 
         for i in range(0, uncomp_integral):
             value = struct.unpack(">i", self.packet.read(4))[0] ^ mask
-            res += "%09d" % value
+            res += f"{value:09d}"
 
         res += "."
 
         for i in range(0, uncomp_fractional):
             value = struct.unpack(">i", self.packet.read(4))[0] ^ mask
-            res += "%09d" % value
+            res += f"{value:09d}"
 
         size = compressed_bytes[comp_fractional]
         if size > 0:
             value = self.packet.read_int_be_by_size(size) ^ mask
-            res += "%0*d" % (comp_fractional, value)
+            res += f"{value:0{comp_fractional}d}"
 
         return decimal.Decimal(res)
 
@@ -471,12 +471,11 @@ class RowsEvent(BinLogEvent):
 
     def _dump(self):
         super()._dump()
-        print("Table: %s.%s" % (self.schema, self.table))
-        print("Affected columns: %d" % self.number_of_columns)
-        print("Changed rows: %d" % (len(self.rows)))
+        print(f"Table: {self.schema}.{self.table}")
+        print(f"Affected columns: {self.number_of_columns}")
+        print(f"Changed rows: {len(self.rows)}")
         print(
-            "Column Name Information Flag: %s"
-            % self.table_map[self.table_id].column_name_flag
+            f"Column Name Information Flag: {self.table_map[self.table_id].column_name_flag}"
         )
 
     def _fetch_rows(self):
@@ -520,7 +519,7 @@ class DeleteRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["values"]:
-                print("*", key, ":", row["values"][key])
+                print(f"* {key} : {row['values'][key]}")
 
 
 class WriteRowsEvent(RowsEvent):
@@ -548,7 +547,7 @@ class WriteRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["values"]:
-                print("*", key, ":", row["values"][key])
+                print(f"* {key} : {row['values'][key]}")
 
 
 class UpdateRowsEvent(RowsEvent):
@@ -588,10 +587,7 @@ class UpdateRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["before_values"]:
-                print(
-                    "*%s:%s=>%s"
-                    % (key, row["before_values"][key], row["after_values"][key])
-                )
+                print(f"*{key}:{row['before_values'][key]}=>{row['after_values'][key]}")
 
 
 class OptionalMetaData:
@@ -614,20 +610,20 @@ class OptionalMetaData:
         self.visibility_list = []
 
     def dump(self):
-        print("=== %s ===" % self.__class__.__name__)
-        print("unsigned_column_list: %s" % self.unsigned_column_list)
-        print("default_charset_collation: %s" % self.default_charset_collation)
-        print("charset_collation: %s" % self.charset_collation)
-        print("column_charset: %s" % self.column_charset)
-        print("column_name_list: %s" % self.column_name_list)
-        print("set_str_value_list : %s" % self.set_str_value_list)
-        print("set_enum_str_value_list : %s" % self.set_enum_str_value_list)
-        print("geometry_type_list : %s" % self.geometry_type_list)
-        print("simple_primary_key_list: %s" % self.simple_primary_key_list)
-        print("primary_keys_with_prefix: %s" % self.primary_keys_with_prefix)
-        print("visibility_list: %s" % self.visibility_list)
-        print("charset_collation_list: %s" % self.charset_collation_list)
-        print("enum_and_set_collation_list: %s" % self.enum_and_set_collation_list)
+        print(f"=== {self.__class__.__name__} ===")
+        print(f"unsigned_column_list: {self.unsigned_column_list}")
+        print(f"default_charset_collation: {self.default_charset_collation}")
+        print(f"charset_collation: {self.charset_collation}")
+        print(f"column_charset: {self.column_charset}")
+        print(f"column_name_list: {self.column_name_list}")
+        print(f"set_str_value_list : {self.set_str_value_list}")
+        print(f"set_enum_str_value_list : {self.set_enum_str_value_list}")
+        print(f"geometry_type_list : {self.geometry_type_list}")
+        print(f"simple_primary_key_list: {self.simple_primary_key_list}")
+        print(f"primary_keys_with_prefix: {self.primary_keys_with_prefix}")
+        print(f"visibility_list: {self.visibility_list}")
+        print(f"charset_collation_list: {self.charset_collation_list}")
+        print(f"enum_and_set_collation_list: {self.enum_and_set_collation_list}")
 
 
 class TableMapEvent(BinLogEvent):
@@ -703,10 +699,10 @@ class TableMapEvent(BinLogEvent):
 
     def _dump(self):
         super()._dump()
-        print("Table id: %d" % (self.table_id))
-        print("Schema: %s" % (self.schema))
-        print("Table: %s" % (self.table))
-        print("Columns: %s" % (self.column_count))
+        print(f"Table id: {self.table_id}")
+        print(f"Schema: {self.schema}")
+        print(f"Table: {self.table}")
+        print(f"Columns: {self.column_count}")
         if self.__optional_meta_data:
             self.optional_metadata.dump()
 
