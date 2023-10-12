@@ -25,13 +25,13 @@ services:
     <<: *mysql
     image: percona:8.0
     ports:
-      - "3309:3306"
+      - "3306:3306"
 
   mariadb-10.6:
     <<: *mariadb
     image: mariadb:10.6
     ports:
-      - "3308:3306"
+      - "3307:3306"
     volumes:
       - type: bind
         source: ./.mariadb
