@@ -798,7 +798,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             self.assertMultiLineEqual(event.rows[0]["values"]["test"], string)
 
     def test_partition_id(self):
-        if not self.isMySQL80AndMore():
+        if not self.isMySQL8016AndMore():
             self.skipTest("Not supported in this version of MySQL")
         create_query = "CREATE TABLE test (id INTEGER) \
             PARTITION BY RANGE (id) ( \
@@ -963,7 +963,7 @@ class TestDataTypeVersion8(base.PyMySQLReplicationTestCase):
         return event
 
     def test_partition_id(self):
-        if not self.isMySQL80AndMore():
+        if not self.isMySQL8016AndMore():
             self.skipTest("Not supported in this version of MySQL")
         create_query = "CREATE TABLE test (id INTEGER) \
             PARTITION BY RANGE (id) ( \
