@@ -1,5 +1,4 @@
 import copy
-import platform
 import json
 from pymysqlreplication import BinLogStreamReader
 import unittest
@@ -776,10 +775,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         db["charset"] = "latin1"
         self.connect_conn_control(db)
 
-        if platform.python_version_tuple()[0] == "2":
-            string = unichr(233)
-        else:
-            string = "\u00e9"
+        string = "\u00e9"
 
         create_query = (
             "CREATE TABLE test (test CHAR(12)) CHARACTER SET latin1 COLLATE latin1_bin;"
@@ -790,10 +786,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[0]["values"]["test"], string)
 
     def test_encoding_utf8(self):
-        if platform.python_version_tuple()[0] == "2":
-            string = unichr(0x20AC)
-        else:
-            string = "\u20ac"
+        string = "\u20ac"
 
         create_query = (
             "CREATE TABLE test (test CHAR(12)) CHARACTER SET utf8 COLLATE utf8_bin;"
