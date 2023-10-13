@@ -25,12 +25,12 @@ def consume_events():
         only_events=[UpdateRowsEvent],
         only_tables=["test"],
     )
-    start = time.clock()
+    start = time.perf_counter()
     i = 0.0
     for binlogevent in stream:
         i += 1.0
         if i % 1000 == 0:
-            print(f"{i / (time.clock()- start)} event by seconds ({i} total)")
+            print(f"{i / (time.perf_counter()- start)} event by seconds ({i} total)")
 
     stream.close()
 

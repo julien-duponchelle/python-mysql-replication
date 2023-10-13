@@ -1,3 +1,4 @@
+# fmt: off
 bitCountInByte = [
     0,
     1,
@@ -256,6 +257,7 @@ bitCountInByte = [
     7,
     8,
 ]
+# fmt: on
 
 
 # Calculate total bit counts in a bitmap
