@@ -119,7 +119,13 @@ class RowsEvent(BinLogEvent):
             column = self.columns[i]
             name = self.table_map[self.table_id].columns[i].name
             unsigned = self.table_map[self.table_id].columns[i].unsigned
-
+            if not name:
+                # If you are using mysql 5.7 or mysql 8, but binlog_row_metadata = "MINIMAL",
+                # we do not know the column information.
+                # If you know column information,
+                # mysql 5.7 version Users Use Under 1.0 version
+                # mysql 8.0 version Users Set binlog_row_metadata = "FULL"
+                name = "UNKNOWN_COL" + str(i)
             values[name] = self.__read_values_name(
                 column,
                 null_bitmap,
