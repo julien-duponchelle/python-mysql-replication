@@ -1755,7 +1755,7 @@ class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
         super(TestOptionalMetaData, self).tearDown()
 
 
-class TestColumnValueNoneSources(base.PyMySQLReplicationVersion8TestCase):
+class TestColumnValueNoneSources(base.PyMySQLReplicationTestCase):
     def setUp(self):
         super(TestColumnValueNoneSources, self).setUp()
         self.stream.close()
