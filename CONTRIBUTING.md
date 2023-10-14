@@ -48,4 +48,4 @@ However, please note that skipping hooks might lead to CI failures if we use the
 
 ---
 
-That's it! With these steps, you should be well on your way to contributing to `python-mysql-replication`. We look forward to your contributions! 
+That's it! With these steps, you should be well on your way to contributing to `python-mysql-replication`. We look forward to your contributions!

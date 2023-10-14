@@ -1,8 +1,5 @@
-import copy
 import io
-import os
 import time
-import pymysql
 import unittest
 
 from pymysqlreplication.tests import base
@@ -13,6 +10,7 @@ from pymysqlreplication.constants.BINLOG import *
 from pymysqlreplication.row_event import *
 from pymysqlreplication.packet import BinLogPacketWrapper
 from pymysql.protocol import MysqlPacket
+import pytest
 
 __all__ = [
     "TestBasicBinLogStreamReader",
@@ -597,6 +595,33 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertEqual(binlog_event.event._is_event_valid, True)
         self.assertNotEqual(wrong_event.event._is_event_valid, True)
 
+    def test_json_update(self):
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database, server_id=1024, only_events=[UpdateRowsEvent]
+        )
+        create_query = (
+            "CREATE TABLE setting_table( id SERIAL AUTO_INCREMENT, setting JSON);"
+        )
+        insert_query = """INSERT INTO setting_table (setting) VALUES ('{"btn": true, "model": false}');"""
+
+        update_query = """  UPDATE setting_table
+                            SET setting = JSON_REMOVE(setting, '$.model')
+                            WHERE id=1;
+                        """
+        self.execute(create_query)
+        self.execute(insert_query)
+        self.execute(update_query)
+        self.execute("COMMIT;")
+        event = self.stream.fetchone()
+
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(
+                event.rows[0]["before_values"]["setting"],
+                {b"btn": True, b"model": False},
+            ),
+            self.assertEqual(event.rows[0]["after_values"]["setting"], {b"btn": True}),
+
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def setUp(self):
@@ -766,7 +791,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.stream.fetchone()  # insert with two values
             self.stream.fetchone()  # insert with one value
         except Exception as e:
-            self.fail("raised unexpected exception: {exception}".format(exception=e))
+            self.fail(f"raised unexpected exception: {e}")
         finally:
             self.resetBinLog()
 
@@ -800,46 +825,26 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
 
 
 class TestCTLConnectionSettings(base.PyMySQLReplicationTestCase):
-    def setUp(self):
+    def setUp(self, charset="utf8"):
         super().setUp()
-        self.stream.close()
-        ctl_db = copy.copy(self.database)
-        ctl_db["db"] = None
-        ctl_db["port"] = int(os.environ.get("MYSQL_5_7_CTL_PORT") or 3307)
-        ctl_db["host"] = os.environ.get("MYSQL_5_7_CTL") or "localhost"
-        self.ctl_conn_control = pymysql.connect(**ctl_db)
-        self.ctl_conn_control.cursor().execute(
-            "DROP DATABASE IF EXISTS pymysqlreplication_test"
-        )
-        self.ctl_conn_control.cursor().execute(
-            "CREATE DATABASE pymysqlreplication_test"
-        )
-        self.ctl_conn_control.close()
-        ctl_db["db"] = "pymysqlreplication_test"
-        self.ctl_conn_control = pymysql.connect(**ctl_db)
         self.stream = BinLogStreamReader(
             self.database,
-            ctl_connection_settings=ctl_db,
             server_id=1024,
             only_events=(WriteRowsEvent,),
         )
-
-    def tearDown(self):
-        super().tearDown()
-        self.ctl_conn_control.close()
 
     def test_separate_ctl_settings_no_error(self):
         self.execute("CREATE TABLE test (id INTEGER(11))")
         self.execute("INSERT INTO test VALUES (1)")
         self.execute("DROP TABLE test")
         self.execute("COMMIT")
-        self.ctl_conn_control.cursor().execute("CREATE TABLE test (id INTEGER(11))")
-        self.ctl_conn_control.cursor().execute("INSERT INTO test VALUES (1)")
-        self.ctl_conn_control.cursor().execute("COMMIT")
+        self.conn_control.cursor().execute("CREATE TABLE test (id INTEGER(11))")
+        self.conn_control.cursor().execute("INSERT INTO test VALUES (1)")
+        self.conn_control.cursor().execute("COMMIT")
         try:
             self.stream.fetchone()
         except Exception as e:
-            self.fail("raised unexpected exception: {exception}".format(exception=e))
+            self.fail(f"raised unexpected exception: {e}")
         finally:
             self.resetBinLog()
 
@@ -1296,7 +1301,13 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
         super(TestStatementConnectionSetting, self).tearDown()
 
 
-class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
+@pytest.mark.mariadb
+class TestMariadbBinlogStreamReader(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super().setUp()
+        if not self.isMariaDB():
+            self.skipTest("Skipping the entire class for MariaDB")
+
     def test_binlog_checkpoint_event(self):
         self.stream.close()
         self.stream = BinLogStreamReader(
@@ -1327,7 +1338,13 @@ class TestMariadbBinlogStreamReader(base.PyMySQLReplicationMariaDbTestCase):
         self.assertEqual(event.filename, self.bin_log_basename() + ".000001")
 
 
-class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationMariaDbTestCase):
+@pytest.mark.mariadb
+class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super().setUp()
+        if not self.isMariaDB():
+            self.skipTest("Skipping the entire class for MariaDB")
+
     def test_annotate_rows_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
@@ -1384,7 +1401,7 @@ class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationMariaDbTestCase):
                 first_line = key_file.readline()
                 key_version_from_key_file = int(first_line.split(";")[0])
         except Exception as e:
-            self.fail("raised unexpected exception: {exception}".format(exception=e))
+            self.fail(f"raised unexpected exception: {e}")
         finally:
             self.resetBinLog()
 
@@ -1472,7 +1489,8 @@ class TestLatin1(base.PyMySQLReplicationTestCase):
         assert event.query == r"CREATE TABLE test_latin1_\xd6\xc6\xdb (a INT)"
 
 
-class TestOptionalMetaData(base.PyMySQLReplicationVersion8TestCase):
+@pytest.mark.mariadb
+class TestOptionalMetaData(base.PyMySQLReplicationTestCase):
     def setUp(self):
         super(TestOptionalMetaData, self).setUp()
         self.stream.close()
@@ -1697,7 +1715,7 @@ class TestOptionalMetaData(base.PyMySQLReplicationVersion8TestCase):
 
         event = self.stream.fetchone()
         self.assertIsInstance(event, TableMapEvent)
-        self.assertEqual(event.table_obj.data["columns"][0].name, None)
+        self.assertEqual(event.table_obj.data["columns"][0].name, "name")
         self.assertEqual(len(column_schemas), 0)
 
     def test_sync_column_drop_event_table_schema(self):
@@ -1728,9 +1746,9 @@ class TestOptionalMetaData(base.PyMySQLReplicationVersion8TestCase):
         self.assertEqual(len(event.table_obj.data["columns"]), 3)
         self.assertEqual(column_schemas[0][0], "drop_column1")
         self.assertEqual(column_schemas[1][0], "drop_column3")
-        self.assertEqual(event.table_obj.data["columns"][0].name, None)
-        self.assertEqual(event.table_obj.data["columns"][1].name, None)
-        self.assertEqual(event.table_obj.data["columns"][2].name, None)
+        self.assertEqual(event.table_obj.data["columns"][0].name, "drop_column1")
+        self.assertEqual(event.table_obj.data["columns"][1].name, "drop_column2")
+        self.assertEqual(event.table_obj.data["columns"][2].name, "drop_column3")
 
     def tearDown(self):
         self.execute("SET GLOBAL binlog_row_metadata='MINIMAL';")

@@ -588,8 +588,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             )
 
     def test_json(self):
-        if not self.isMySQL57():
-            self.skipTest("Json is only supported in mysql 5.7")
         create_query = "CREATE TABLE test (id int, value json);"
         insert_query = """INSERT INTO test (id, value) VALUES (1, '{"my_key": "my_val", "my_key2": "my_val2"}');"""
         event = self.create_and_insert_value(create_query, insert_query)
@@ -600,8 +598,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             )
 
     def test_json_array(self):
-        if not self.isMySQL57():
-            self.skipTest("Json is only supported in mysql 5.7")
         create_query = "CREATE TABLE test (id int, value json);"
         insert_query = (
             """INSERT INTO test (id, value) VALUES (1, '["my_val", "my_val2"]');"""
@@ -611,8 +607,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[0]["values"]["value"], [b"my_val", b"my_val2"])
 
     def test_json_large(self):
-        if not self.isMySQL57():
-            self.skipTest("Json is only supported in mysql 5.7")
         data = dict(
             [("foooo%i" % i, "baaaaar%i" % i) for i in range(2560)]
         )  # Make it large enough to reach 2^16 length
@@ -626,8 +620,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
 
     def test_json_large_array(self):
         "Test json array larger than 64k bytes"
-        if not self.isMySQL57():
-            self.skipTest("Json is only supported in mysql 5.7")
         create_query = "CREATE TABLE test (id int, value json);"
         large_array = dict(my_key=[i for i in range(100000)])
         insert_query = "INSERT INTO test (id, value) VALUES (1, '%s');" % (
@@ -640,8 +632,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             )
 
     def test_json_large_with_literal(self):
-        if not self.isMySQL57():
-            self.skipTest("Json is only supported in mysql 5.7")
         data = dict(
             [("foooo%i" % i, "baaaaar%i" % i) for i in range(2560)], literal=True
         )  # Make it large with literal
@@ -654,9 +644,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict(data))
 
     def test_json_types(self):
-        if not self.isMySQL57():
-            self.skipTest("Json is only supported in mysql 5.7")
-
         types = [
             True,
             False,
@@ -685,9 +672,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             self.setUp()
 
     def test_json_basic(self):
-        if not self.isMySQL57():
-            self.skipTest("Json is only supported in mysql 5.7")
-
         types = [
             True,
             False,
@@ -714,8 +698,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             self.setUp()
 
     def test_json_unicode(self):
-        if not self.isMySQL57():
-            self.skipTest("Json is only supported in mysql 5.7")
         create_query = "CREATE TABLE test (id int, value json);"
         insert_query = """INSERT INTO test (id, value) VALUES (1, '{"miam": "🍔"}');"""
         event = self.create_and_insert_value(create_query, insert_query)
@@ -725,8 +707,6 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             )
 
     def test_json_long_string(self):
-        if not self.isMySQL57():
-            self.skipTest("Json is only supported in mysql 5.7")
         create_query = "CREATE TABLE test (id int, value json);"
         # The string length needs to be larger than what can fit in a single byte.
         string_value = "super_long_string" * 100
@@ -739,6 +719,24 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             self.assertEqual(
                 event.rows[0]["values"]["value"],
                 to_binary_dict({"my_key": string_value}),
+            )
+
+    def test_json_deciaml_time_datetime(self):
+        create_query = """CREATE TABLE json_deciaml_time_datetime_test (
+                            id INT PRIMARY KEY AUTO_INCREMENT,
+                            json_data JSON
+                        );"""
+        insert_query = """
+                INSERT INTO json_deciaml_time_datetime_test (json_data) VALUES (JSON_OBJECT('time_key', CAST('18:54:12' AS TIME), 'datetime_key', CAST('2023-09-24 18:54:12' AS DATETIME) ,'decimal', CAST('99.99' AS DECIMAL(10, 2))));"""
+        event = self.create_and_insert_value(create_query, insert_query)
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(
+                event.rows[0]["values"]["json_data"],
+                {
+                    b"decimal": Decimal("99.99"),
+                    b"time_key": datetime.time(18, 54, 12),
+                    b"datetime_key": datetime.datetime(2023, 9, 24, 18, 54, 12),
+                },
             )
 
     def test_null(self):
@@ -944,7 +942,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[0]["values"]["b"], b"\xff\x01\x00\x00")
 
 
-class TestDataTypeVersion8(base.PyMySQLReplicationVersion8TestCase):
+class TestDataTypeVersion8(base.PyMySQLReplicationTestCase):
     def ignoredEvents(self):
         return [GtidEvent, PreviousGtidsEvent]
 

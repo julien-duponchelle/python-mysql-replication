@@ -84,7 +84,7 @@
 * PyMYSQL 0.7
 * Add more contributors
 
-0.10 30/11/2016 
+0.10 30/11/2016
 * row-events: TIME is now encoded as python.timedelta
 * Allow users to define ctl_connection_settings and the option to fail when table information is unavailable (#176)
 * Decode gtid from network packet
@@ -128,7 +128,7 @@
 
 0.19 29/04/2019
 * Fix Insert NULL in a boolean column returns no rows #288
-* Added empty string support for enum 
+* Added empty string support for enum
 * Fix column order
 * Fix float problem about time fieldtype
 
@@ -168,7 +168,7 @@
 * Add support for MariaDB GTID
 
 0.29 08/04/2022
-* Skip db name parsing if mts_accessed_dbs == 254 
+* Skip db name parsing if mts_accessed_dbs == 254
 
 0.30 28/04/2022
 * Fix decoding large json arrays
@@ -211,3 +211,23 @@
 * Fix Bug table map event read null_bitmask packet
 * Fix Timestamp conversion to return UTC instead of local timezone
 * Optimize Handler_read_rnd by removing ORDER BY clause
+
+0.45.0 02/10/2023
+* Fix Json object, Array parse Error
+
+1.0.0 02/10/2023
+* remove column schema
+* Mysql 8.0.14 version support Table map Event optional metaData extraction
+* Sync Column from optional metaData
+* Fix parsing of incorrect bytes in 'extradata' for 'rows event'
+* Fix remove duplicate Affected columns output
+* Enhance Code Quality with Ruff, Black, and Pre-commit
+* Enhance Testing with MySQL8 & Update GitHub Actions
+* Add Logging when fake rotate event occured
+* update logo
+
+1.0.1 05/10/2023
+* add util module
+
+1.0.2 05/10/2023
+* Delete charset_list.csv and add directly in CHARSET.py
