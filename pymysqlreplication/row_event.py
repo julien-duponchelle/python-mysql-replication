@@ -289,7 +289,10 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.GEOMETRY:
             return self.packet.read_length_coded_pascal_string(column.length_size)
         elif column.type == FIELD_TYPE.JSON:
-            return self.packet.read_binary_json(column.length_size, is_partial)
+            value = self.packet.read_binary_json(column.length_size, is_partial)
+            if not value and is_partial:
+                self.__none_sources[column.name] = NONE_SOURCE.JSON_PARTIAL_UPDATE
+            return value
         else:
             raise NotImplementedError(f"Unknown MySQL column type: {column.type}")
 
@@ -1172,22 +1175,17 @@ class PartialUpdateRowsEvent(UpdateRowsEvent):
         row["before_values"] = self._read_column_data(
             self.columns_present_bitmap, row_image_type
         )
+        row["before_none_sources"] = self._get_none_sources(row["before_values"])
         row_image_type = EnumRowImageType.UpdateAI
         row["after_values"] = self._read_column_data(
             self.columns_present_bitmap2, row_image_type
         )
+        row["after_none_sources"] = self._get_none_sources(row["after_values"])
 
         return row
 
     def _dump(self):
-        print("Values:")
-        for row in self.rows:
-            print("--")
-            for key in row["before_values"]:
-                print(
-                    "*%s:%s=>%s"
-                    % (key, row["before_values"][key], row["after_values"][key])
-                )
+        super()._dump()
 
 
 def find_charset(charset_id, dbms="mysql"):
