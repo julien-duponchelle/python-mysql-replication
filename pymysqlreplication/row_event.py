@@ -143,7 +143,7 @@ class RowsEvent(BinLogEvent):
                 if BitGet(partial_bitmap, partial_bitmap_index) > 0:
                     is_partial = True
                 partial_bitmap_index += 1
-     
+
             if not name:
                 # If you are using mysql 5.7 or mysql 8, but binlog_row_metadata = "MINIMAL",
                 # we do not know the column information.
