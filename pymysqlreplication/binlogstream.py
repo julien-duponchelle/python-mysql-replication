@@ -32,7 +32,13 @@ from .event import (
 from .exceptions import BinLogNotEnabled
 from .gtid import GtidSet
 from .packet import BinLogPacketWrapper
-from .row_event import UpdateRowsEvent, WriteRowsEvent, DeleteRowsEvent, TableMapEvent
+from .row_event import (
+    UpdateRowsEvent,
+    WriteRowsEvent,
+    DeleteRowsEvent,
+    TableMapEvent,
+    PartialUpdateRowsEvent,
+)
 
 try:
     from pymysql.constants.COMMAND import COM_BINLOG_DUMP_GTID
@@ -720,6 +726,7 @@ class BinLogStreamReader(object):
                     MariadbBinLogCheckPointEvent,
                     UserVarEvent,
                     PreviousGtidsEvent,
+                    PartialUpdateRowsEvent,
                 )
             )
         if ignored_events is not None:

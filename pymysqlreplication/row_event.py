@@ -59,18 +59,17 @@ class RowsEvent(BinLogEvent):
             return
 
         # Event V2
-
         if (
             self.event_type == BINLOG.WRITE_ROWS_EVENT_V2
             or self.event_type == BINLOG.DELETE_ROWS_EVENT_V2
             or self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2
+            or self.event_type == BINLOG.PARTIAL_UPDATE_ROWS_EVENT
         ):
             self.flags, self.extra_data_length = struct.unpack(
                 "<HH", self.packet.read(4)
             )
             if self.extra_data_length > 2:
                 self.extra_data_type = struct.unpack("<B", self.packet.read(1))[0]
-
                 # ndb information
                 if self.extra_data_type == 0:
                     self.nbd_info_length, self.nbd_info_format = struct.unpack(
@@ -79,7 +78,10 @@ class RowsEvent(BinLogEvent):
                     self.nbd_info = self.packet.read(self.nbd_info_length - 2)
                 # partition information
                 elif self.extra_data_type == 1:
-                    if self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2:
+                    if (
+                        self.event_type == BINLOG.UPDATE_ROWS_EVENT_V2
+                        or self.event_type == BINLOG.PARTIAL_UPDATE_ROWS_EVENT
+                    ):
                         self.partition_id, self.source_partition_id = struct.unpack(
                             "<HH", self.packet.read(4)
                         )
@@ -103,10 +105,22 @@ class RowsEvent(BinLogEvent):
             bit = ord(bit)
         return bit & (1 << (position % 8))
 
-    def _read_column_data(self, cols_bitmap):
+    def _read_column_data(self, cols_bitmap, row_image_type=None):
         """Use for WRITE, UPDATE and DELETE events.
         Return an array of column data
         """
+        self.is_partial_json_update = False
+        partial_bitmap = None
+        if (
+            self.event_type == BINLOG.PARTIAL_UPDATE_ROWS_EVENT
+            and row_image_type == EnumRowImageType.UpdateAI
+        ):
+            binlog_row_value_option = self.packet.read_length_coded_binary()
+            self.is_partial_json_update = binlog_row_value_option & 0b10000001 != 0
+            if self.is_partial_json_update:
+                partial_bitmap = self.packet.read((self._json_column_count() + 7) / 8)
+        partial_bitmap_index = 0
+
         values = {}
 
         # null bitmap length = (bits set in 'columns-present-bitmap'+7)/8
@@ -116,14 +130,24 @@ class RowsEvent(BinLogEvent):
         null_bitmap_index = 0
         nb_columns = len(self.columns)
         for i in range(0, nb_columns):
+            is_partial = False
             column = self.columns[i]
             name = self.table_map[self.table_id].columns[i].name
             unsigned = self.table_map[self.table_id].columns[i].unsigned
 
+            if (
+                self.is_partial_json_update
+                and row_image_type == EnumRowImageType.UpdateAI
+                and column.type == FIELD_TYPE.JSON
+            ):
+                if BitGet(partial_bitmap, partial_bitmap_index) > 0:
+                    is_partial = True
+                partial_bitmap_index += 1
             values[name] = self.__read_values_name(
                 column,
                 null_bitmap,
                 null_bitmap_index,
+                is_partial,
                 cols_bitmap,
                 unsigned,
                 i,
@@ -135,7 +159,14 @@ class RowsEvent(BinLogEvent):
         return values
 
     def __read_values_name(
-        self, column, null_bitmap, null_bitmap_index, cols_bitmap, unsigned, i
+        self,
+        column,
+        null_bitmap,
+        null_bitmap_index,
+        is_partial,
+        cols_bitmap,
+        unsigned,
+        i,
     ):
         if BitGet(cols_bitmap, i) == 0:
             return None
@@ -229,7 +260,7 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.GEOMETRY:
             return self.packet.read_length_coded_pascal_string(column.length_size)
         elif column.type == FIELD_TYPE.JSON:
-            return self.packet.read_binary_json(column.length_size)
+            return self.packet.read_binary_json(column.length_size, is_partial)
         else:
             raise NotImplementedError("Unknown MySQL column type: %d" % (column.type))
 
@@ -469,6 +500,13 @@ class RowsEvent(BinLogEvent):
         mask = (1 << size) - 1
         return binary & mask
 
+    def _json_column_count(self):
+        count = 0
+        for column in self.columns:
+            if column.type == FIELD_TYPE.JSON:
+                count += 1
+        return count
+
     def _dump(self):
         super()._dump()
         print("Table: %s.%s" % (self.schema, self.table))
@@ -587,6 +625,7 @@ class UpdateRowsEvent(RowsEvent):
         print("Values:")
         for row in self.rows:
             print("--")
+            print(row["before_values"], row["after_values"])
             for key in row["before_values"]:
                 print(
                     "*%s:%s=>%s"
@@ -1056,6 +1095,34 @@ class TableMapEvent(BinLogEvent):
         return False
 
 
+class PartialUpdateRowsEvent(UpdateRowsEvent):
+    def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
+        super().__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
+
+    def _fetch_one_row(self):
+        row = {}
+        row_image_type = EnumRowImageType.UpdateBI
+        row["before_values"] = self._read_column_data(
+            self.columns_present_bitmap, row_image_type
+        )
+        row_image_type = EnumRowImageType.UpdateAI
+        row["after_values"] = self._read_column_data(
+            self.columns_present_bitmap2, row_image_type
+        )
+
+        return row
+
+    def _dump(self):
+        print("Values:")
+        for row in self.rows:
+            print("--")
+            for key in row["before_values"]:
+                print(
+                    "*%s:%s=>%s"
+                    % (key, row["before_values"][key], row["after_values"][key])
+                )
+
+
 def find_charset(charset_id, dbms="mysql"):
     encode = None
     collation_name = None
@@ -1089,3 +1156,14 @@ class MetadataFieldType(Enum):
     @staticmethod
     def by_index(index):
         return MetadataFieldType(index)
+
+
+class EnumRowImageType(Enum):
+    WriteAI = 0
+    UpdateBI = 1
+    UpdateAI = 2
+    DeleteBI = 3
+
+    @staticmethod
+    def by_index(index):
+        return EnumRowImageType(index)
