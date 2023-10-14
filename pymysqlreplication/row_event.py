@@ -624,7 +624,6 @@ class UpdateRowsEvent(RowsEvent):
         print("Values:")
         for row in self.rows:
             print("--")
-            print(row["before_values"], row["after_values"])
             for key in row["before_values"]:
                 print(f"*{key}:{row['before_values'][key]}=>{row['after_values'][key]}")
 
