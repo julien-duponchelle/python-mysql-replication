@@ -95,21 +95,21 @@ def parse_decimal_from_bytes(
 
     for _ in range(uncomp_integral):
         value = struct.unpack(">i", raw_decimal[pointer : pointer + 4])[0] ^ mask
-        res += "%09d" % value
+        res += f"{value:09}"
         pointer += 4
 
     res += "."
 
     for _ in range(uncomp_fractional):
         value = struct.unpack(">i", raw_decimal[pointer : pointer + 4])[0] ^ mask
-        res += "%09d" % value
+        res += f"{value:09}"
         pointer += 4
 
     size, value = decode_decimal_decompress_value(
         comp_fractional, raw_decimal[pointer:], mask
     )
     if size > 0:
-        res += "%0*d" % (comp_fractional, value)
+        res += f"{value:0{comp_fractional}d}"
     return decimal.Decimal(res)
 
 
