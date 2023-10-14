@@ -10,6 +10,7 @@ from .event import BinLogEvent
 from .constants import FIELD_TYPE
 from .constants import BINLOG
 from .constants import CHARSET
+from .constants import NONE_SOURCE
 from .column import Column
 from .table import Table
 from .bitmap import BitCount, BitGet
@@ -23,6 +24,7 @@ class RowsEvent(BinLogEvent):
         self.__ignored_tables = kwargs["ignored_tables"]
         self.__only_schemas = kwargs["only_schemas"]
         self.__ignored_schemas = kwargs["ignored_schemas"]
+        self.__none_sources = {}
 
         # Header
         self.table_id = self._read_table_id()
@@ -176,10 +178,15 @@ class RowsEvent(BinLogEvent):
         unsigned,
         i,
     ):
+        name = self.table_map[self.table_id].columns[i].name
         if BitGet(cols_bitmap, i) == 0:
+            # This block is only executed when binlog_row_image = MINIMAL.
+            # When binlog_row_image = FULL, this block does not execute.
+            self.__none_sources[name] = NONE_SOURCE.COLS_BITMAP
             return None
 
         if self._is_null(null_bitmap, null_bitmap_index):
+            self.__none_sources[name] = NONE_SOURCE.NULL
             return None
 
         if column.type == FIELD_TYPE.TINY:
@@ -223,17 +230,26 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.BLOB:
             return self.__read_string(column.length_size, column)
         elif column.type == FIELD_TYPE.DATETIME:
-            return self.__read_datetime()
+            ret = self.__read_datetime()
+            if ret is None:
+                self.__none_sources[name] = NONE_SOURCE.OUT_OF_DATETIME_RANGE
+            return ret
         elif column.type == FIELD_TYPE.TIME:
             return self.__read_time()
         elif column.type == FIELD_TYPE.DATE:
-            return self.__read_date()
+            ret = self.__read_date()
+            if ret is None:
+                self.__none_sources[name] = NONE_SOURCE.OUT_OF_DATE_RANGE
+            return ret
         elif column.type == FIELD_TYPE.TIMESTAMP:
             return datetime.datetime.utcfromtimestamp(self.packet.read_uint32())
 
         # For new date format:
         elif column.type == FIELD_TYPE.DATETIME2:
-            return self.__read_datetime2(column)
+            ret = self.__read_datetime2(column)
+            if ret is None:
+                self.__none_sources[name] = NONE_SOURCE.OUT_OF_DATETIME2_RANGE
+            return ret
         elif column.type == FIELD_TYPE.TIME2:
             return self.__read_time2(column)
         elif column.type == FIELD_TYPE.TIMESTAMP2:
@@ -257,11 +273,16 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.SET:
             bit_mask = self.packet.read_uint_by_size(column.size)
             if column.set_values:
-                return {
+                ret = {
                     val
                     for idx, val in enumerate(column.set_values)
                     if bit_mask & (1 << idx)
-                } or None
+                }
+                if not ret:
+                    self.__none_sources[column.name] = NONE_SOURCE.EMPTY_SET
+                    return None
+                return ret
+            self.__none_sources[column.name] = NONE_SOURCE.EMPTY_SET
             return None
         elif column.type == FIELD_TYPE.BIT:
             return self.__read_bit(column)
@@ -515,6 +536,16 @@ class RowsEvent(BinLogEvent):
                 count += 1
         return count
 
+    def _get_none_sources(self, column_data):
+        result = {}
+        for column_name, value in column_data.items():
+            if (column_name is None) or (value is not None):
+                continue
+
+            source = self.__none_sources.get(column_name, "null")
+            result[column_name] = source
+        return result
+
     def _dump(self):
         super()._dump()
         print(f"Table: {self.schema}.{self.table}")
@@ -557,6 +588,8 @@ class DeleteRowsEvent(RowsEvent):
         row = {}
 
         row["values"] = self._read_column_data(self.columns_present_bitmap)
+        row["none_sources"] = self._get_none_sources(row["values"])
+
         return row
 
     def _dump(self):
@@ -565,7 +598,13 @@ class DeleteRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["values"]:
-                print(f"* {key} : {row['values'][key]}")
+                none_source = (
+                    row["none_sources"][key] if key in row["none_sources"] else ""
+                )
+                if none_source:
+                    print(f"* {key} : {row['values'][key]} ({none_source})")
+                else:
+                    print(f"* {key} : {row['values'][key]}")
 
 
 class WriteRowsEvent(RowsEvent):
@@ -585,6 +624,8 @@ class WriteRowsEvent(RowsEvent):
         row = {}
 
         row["values"] = self._read_column_data(self.columns_present_bitmap)
+        row["none_sources"] = self._get_none_sources(row["values"])
+
         return row
 
     def _dump(self):
@@ -593,7 +634,13 @@ class WriteRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["values"]:
-                print(f"* {key} : {row['values'][key]}")
+                none_source = (
+                    row["none_sources"][key] if key in row["none_sources"] else ""
+                )
+                if none_source:
+                    print(f"* {key} : row['values'][key] ({none_source})")
+                else:
+                    print(f"* {key} : {row['values'][key]}")
 
 
 class UpdateRowsEvent(RowsEvent):
@@ -623,8 +670,9 @@ class UpdateRowsEvent(RowsEvent):
         row = {}
 
         row["before_values"] = self._read_column_data(self.columns_present_bitmap)
-
+        row["before_none_sources"] = self._get_none_sources(row["before_values"])
         row["after_values"] = self._read_column_data(self.columns_present_bitmap2)
+        row["after_none_sources"] = self._get_none_sources(row["after_values"])
         return row
 
     def _dump(self):
@@ -633,7 +681,23 @@ class UpdateRowsEvent(RowsEvent):
         for row in self.rows:
             print("--")
             for key in row["before_values"]:
-                print(f"*{key}:{row['before_values'][key]}=>{row['after_values'][key]}")
+                if key in row["before_none_sources"]:
+                    before_value_info = "%s(%s)" % (
+                        row["before_values"][key],
+                        row["before_none_sources"][key],
+                    )
+                else:
+                    before_value_info = row["before_values"][key]
+
+                if key in row["after_none_sources"]:
+                    after_value_info = "%s(%s)" % (
+                        row["after_values"][key],
+                        row["after_none_sources"][key],
+                    )
+                else:
+                    after_value_info = row["after_values"][key]
+
+                print(f"*{key}:{before_value_info}=>{after_value_info}")
 
 
 class OptionalMetaData:
