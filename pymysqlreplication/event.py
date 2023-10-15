@@ -156,7 +156,7 @@ class PreviousGtidsEvent(BinLogEvent):
                 for _ in range(n_intervals)
             ]
             nibbles = binascii.hexlify(sid).decode("ascii")
-            gtid = "%s-%s-%s-%s-%s:%s" % (
+            gtid = (
                 f"{nibbles[:8]}-"
                 f"{nibbles[8:12]}-"
                 f"{nibbles[12:16]}-"
