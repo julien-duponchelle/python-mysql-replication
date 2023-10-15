@@ -1,4 +1,3 @@
-
 name: Python Coverage
 
 on: [push, pull_request]
@@ -27,7 +26,7 @@ jobs:
         coverage run -m unittest discover
         coverage html
 
-    - run: smokeshow upload cli/htmlcov
+    - run: smokeshow upload htmlcov
       env:
         SMOKESHOW_GITHUB_STATUS_DESCRIPTION: CLI Coverage {coverage-percentage}
         SMOKESHOW_GITHUB_COVERAGE_THRESHOLD: 50
