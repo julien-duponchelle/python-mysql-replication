@@ -109,13 +109,13 @@ class GtidEvent(BinLogEvent):
         Eg: 3E11FA47-71CA-11E1-9E33-C80AA9429562:23
         See: http://dev.mysql.com/doc/refman/5.6/en/replication-gtids-concepts.html"""
         nibbles = binascii.hexlify(self.sid).decode("ascii")
-        gtid = "%s-%s-%s-%s-%s:%d" % (
-            nibbles[:8],
-            nibbles[8:12],
-            nibbles[12:16],
-            nibbles[16:20],
-            nibbles[20:],
-            self.gno,
+        gtid = (
+            f"{nibbles[:8]}-"
+            f"{nibbles[8:12]}-"
+            f"{nibbles[12:16]}-"
+            f"{nibbles[16:20]}-"
+            f"{nibbles[20:]}:"
+            f"{self.gno}"
         )
         return gtid
 
@@ -156,13 +156,13 @@ class PreviousGtidsEvent(BinLogEvent):
                 for _ in range(n_intervals)
             ]
             nibbles = binascii.hexlify(sid).decode("ascii")
-            gtid = "%s-%s-%s-%s-%s:%s" % (
-                nibbles[:8],
-                nibbles[8:12],
-                nibbles[12:16],
-                nibbles[16:20],
-                nibbles[20:],
-                ":".join(intervals),
+            gtid = (
+                f"{nibbles[:8]}-"
+                f"{nibbles[8:12]}-"
+                f"{nibbles[12:16]}-"
+                f"{nibbles[16:20]}-"
+                f"{nibbles[20:]}-"
+                f":{intervals}"
             )
             self._gtids.append(gtid)
 
