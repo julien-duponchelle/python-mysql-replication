@@ -1,0 +1,35 @@
+
+name: Python Coverage
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run coverage
+      run: |
+        coverage run -m unittest discover
+        coverage html
+
+    - run: smokeshow upload cli/htmlcov
+      env:
+        SMOKESHOW_GITHUB_STATUS_DESCRIPTION: CLI Coverage {coverage-percentage}
+        SMOKESHOW_GITHUB_COVERAGE_THRESHOLD: 50
+        SMOKESHOW_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SMOKESHOW_GITHUB_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
