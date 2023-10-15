@@ -642,17 +642,17 @@ class UpdateRowsEvent(RowsEvent):
             print("--")
             for key in row["before_values"]:
                 if key in row["before_none_sources"]:
-                    before_value_info = "%s(%s)" % (
-                        row["before_values"][key],
-                        row["before_none_sources"][key],
+                    before_value_info = (
+                        f'{row["before_values"][key]} ',
+                        f'{row["before_none_sources"][key]} ',
                     )
                 else:
                     before_value_info = row["before_values"][key]
 
                 if key in row["after_none_sources"]:
-                    after_value_info = "%s(%s)" % (
-                        row["after_values"][key],
-                        row["after_none_sources"][key],
+                    after_value_info = (
+                        f'{row["after_values"][key]} ',
+                        f'{row["after_none_sources"][key]} ',
                     )
                 else:
                     after_value_info = row["after_values"][key]
