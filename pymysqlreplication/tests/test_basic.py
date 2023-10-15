@@ -7,10 +7,12 @@ from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.gtid import GtidSet, Gtid
 from pymysqlreplication.event import *
 from pymysqlreplication.constants.BINLOG import *
+from pymysqlreplication.constants.NONE_SOURCE import *
 from pymysqlreplication.row_event import *
 from pymysqlreplication.packet import BinLogPacketWrapper
 from pymysql.protocol import MysqlPacket
 import pytest
+
 
 __all__ = [
     "TestBasicBinLogStreamReader",
@@ -1790,7 +1792,7 @@ class TestColumnValueNoneSources(base.PyMySQLReplicationTestCase):
 
         none_sources = write_rows_event.rows[0].get("none_sources")
         if none_sources:
-            self.assertEqual(none_sources["col1"], "null")
+            self.assertEqual(none_sources["col1"], NULL)
 
     def test_get_none_invalid(self):
         self.execute("SET SESSION SQL_MODE='ALLOW_INVALID_DATES'")
@@ -1824,18 +1826,18 @@ class TestColumnValueNoneSources(base.PyMySQLReplicationTestCase):
         after_none_sources = event.rows[0].get("after_none_sources")
 
         if before_none_sources:
-            self.assertEqual(before_none_sources["col0"], "null")
-            self.assertEqual(before_none_sources["col1"], "null")
-            self.assertEqual(before_none_sources["col2"], "out of datetime2 range")
-            self.assertEqual(before_none_sources["col3"], "null")
-            self.assertEqual(before_none_sources["col4"], "null")
+            self.assertEqual(before_none_sources["col0"], NULL)
+            self.assertEqual(before_none_sources["col1"], NULL)
+            self.assertEqual(before_none_sources["col2"], OUT_OF_DATETIME2_RANGE)
+            self.assertEqual(before_none_sources["col3"], NULL)
+            self.assertEqual(before_none_sources["col4"], NULL)
 
         if after_none_sources:
-            self.assertEqual(after_none_sources["col0"], "null")
-            self.assertEqual(after_none_sources["col1"], "null")
-            self.assertEqual(after_none_sources["col2"], "null")
-            self.assertEqual(after_none_sources["col3"], "out of date range")
-            self.assertEqual(after_none_sources["col4"], "empty set")
+            self.assertEqual(after_none_sources["col0"], NULL)
+            self.assertEqual(after_none_sources["col1"], NULL)
+            self.assertEqual(after_none_sources["col2"], NULL)
+            self.assertEqual(after_none_sources["col3"], OUT_OF_DATE_RANGE)
+            self.assertEqual(after_none_sources["col4"], EMPTY_SET)
 
 
 if __name__ == "__main__":
