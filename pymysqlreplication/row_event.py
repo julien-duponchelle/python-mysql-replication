@@ -90,7 +90,7 @@ class RowsEvent(BinLogEvent):
 
                 # etc
                 else:
-                    self.extra_data = self.packet.read(self.extra_info_length - 3)
+                    self.extra_data = self.packet.read(self.extra_data_length - 3)
         else:
             self.flags = struct.unpack("<H", self.packet.read(2))[0]
 
