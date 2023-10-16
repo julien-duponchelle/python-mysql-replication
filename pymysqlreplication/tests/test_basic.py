@@ -2,6 +2,7 @@ import io
 import time
 import unittest
 
+from pymysqlreplication.json_binary import JsonDiff, JsonDiffOperation
 from pymysqlreplication.tests import base
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.gtid import GtidSet, Gtid
@@ -22,6 +23,7 @@ __all__ = [
     "TestRowsQueryLogEvents",
     "TestOptionalMetaData",
     "TestColumnValueNoneSources",
+    "TestJsonPartialUpdate",
 ]
 
 
@@ -1836,6 +1838,175 @@ class TestColumnValueNoneSources(base.PyMySQLReplicationTestCase):
             self.assertEqual(after_none_sources["col2"], "null")
             self.assertEqual(after_none_sources["col3"], "out of date range")
             self.assertEqual(after_none_sources["col4"], "empty set")
+
+
+class TestJsonPartialUpdate(base.PyMySQLReplicationTestCase):
+    def setUp(self):
+        super(TestJsonPartialUpdate, self).setUp()
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=(PartialUpdateRowsEvent,),
+        )
+        if not self.isMySQL8014AndMore():
+            self.skipTest("Mysql version is under 8.0.14 - pass TestJsonPartialUpdate")
+        self.execute("SET SESSION binlog_row_image = 'FULL';")
+        self.execute("SET SESSION binlog_row_value_options = 'PARTIAL_JSON';")
+
+    def test_json_partial_update(self):
+        create_query = "CREATE TABLE test_json_v2 (id INT, c JSON,PRIMARY KEY (id)) ;"
+        column_add_query = "ALTER TABLE test_json_v2 ADD COLUMN d JSON DEFAULT NULL, ADD COLUMN e JSON DEFAULT NULL;"
+        insert_query = """INSERT INTO test_json_v2 VALUES (101,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}', '{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}','{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}');"""
+        update_query = """UPDATE test_json_v2 SET c = JSON_SET(c, '$.ab', '["ab_updatedccc"]') WHERE id = 101;"""
+
+        self.execute(create_query)
+        self.execute(column_add_query)
+        self.execute(insert_query)
+        self.execute(update_query)
+
+        self.execute("COMMIT;")
+        event = self.stream.fetchone()
+
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(
+                event.rows[0]["before_values"]["c"],
+                {
+                    b"a": b"aaaaaaaaaaaaa",
+                    b"c": b"ccccccccccccccc",
+                    b"ab": [b"abababababababa", b"babababababab"],
+                },
+            ),
+            after_value_c: JsonDiff = event.rows[0]["after_values"]["c"]
+            self.assertEqual(after_value_c.op, JsonDiffOperation.Replace)
+            self.assertEqual(after_value_c.path, b"$.ab")
+            self.assertEqual(after_value_c.value, b'["ab_updatedccc"]')
+
+            after_none_sources = event.rows[0].get("after_none_sources")
+            self.assertEqual(after_none_sources["d"], NONE_SOURCE.JSON_PARTIAL_UPDATE)
+            self.assertEqual(after_none_sources["e"], NONE_SOURCE.JSON_PARTIAL_UPDATE)
+
+    def test_json_partial_update_column_value_none(self):
+        drop_table_if_exists_query = "DROP TABLE IF EXISTS test_json_v2;"
+        create_query = "CREATE TABLE test_json_v2 (id INT, c JSON,PRIMARY KEY (id)) ;"
+        column_add_query = "ALTER TABLE test_json_v2 ADD COLUMN d JSON DEFAULT NULL, ADD COLUMN e JSON DEFAULT NULL;"
+        insert_query = """INSERT INTO test_json_v2 VALUES (101,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}',
+                                                                '{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}',
+                                                                '{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}');"""
+        update_query = """UPDATE test_json_v2 SET e = JSON_SET(e, '$.ab', '["ab_updatedeee"]'), c=NULL WHERE id = 101;"""
+
+        self.execute(drop_table_if_exists_query)
+        self.execute(create_query)
+        self.execute(column_add_query)
+        self.execute(insert_query)
+        self.execute(update_query)
+
+        self.execute("COMMIT;")
+        event = self.stream.fetchone()
+
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(
+                event.rows[0]["before_values"]["e"],
+                {
+                    b"a": b"aaaaaaaaaaaaa",
+                    b"c": b"ccccccccccccccc",
+                    b"ab": [b"abababababababa", b"babababababab"],
+                },
+            ),
+            after_value_e: JsonDiff = event.rows[0]["after_values"]["e"]
+            self.assertEqual(after_value_e.op, JsonDiffOperation.Replace)
+            self.assertEqual(after_value_e.path, b"$.ab")
+            self.assertEqual(after_value_e.value, b'["ab_updatedeee"]')
+
+            after_none_sources = event.rows[0].get("after_none_sources")
+            self.assertEqual(after_none_sources["c"], NONE_SOURCE.NULL)
+            self.assertEqual(after_none_sources["d"], NONE_SOURCE.JSON_PARTIAL_UPDATE)
+
+    def test_json_partial_update_json_remove(self):
+        drop_table_if_exists_query = "DROP TABLE IF EXISTS test_json_v2;"
+        create_query = "CREATE TABLE test_json_v2 (id INT, c JSON,PRIMARY KEY (id)) ;"
+        column_add_query = "ALTER TABLE test_json_v2 ADD COLUMN d JSON DEFAULT NULL, ADD COLUMN e JSON DEFAULT NULL;"
+        insert_query = """INSERT INTO test_json_v2 VALUES (101,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}',
+                                                                '{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}',
+                                                                '{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}');"""
+        update_query = (
+            """UPDATE test_json_v2 SET e = JSON_REMOVE(e, '$.ab') WHERE id = 101;"""
+        )
+
+        self.execute(drop_table_if_exists_query)
+        self.execute(create_query)
+        self.execute(column_add_query)
+        self.execute(insert_query)
+        self.execute(update_query)
+
+        self.execute("COMMIT;")
+        event = self.stream.fetchone()
+
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(
+                event.rows[0]["before_values"]["e"],
+                {
+                    b"a": b"aaaaaaaaaaaaa",
+                    b"c": b"ccccccccccccccc",
+                    b"ab": [b"abababababababa", b"babababababab"],
+                },
+            ),
+            after_value_e: JsonDiff = event.rows[0]["after_values"]["e"]
+            self.assertEqual(after_value_e.op, JsonDiffOperation.Remove)
+            self.assertEqual(after_value_e.path, b"$.ab")
+            self.assertEqual(after_value_e.value, None)
+
+            after_none_sources = event.rows[0].get("after_none_sources")
+            self.assertEqual(after_none_sources["c"], NONE_SOURCE.JSON_PARTIAL_UPDATE)
+            self.assertEqual(after_none_sources["d"], NONE_SOURCE.JSON_PARTIAL_UPDATE)
+
+    def test_json_partial_update_two_column(self):
+        drop_table_if_exists_query = "DROP TABLE IF EXISTS test_json_v2;"
+        create_query = "CREATE TABLE test_json_v2 (id INT, c JSON,PRIMARY KEY (id)) ;"
+        column_add_query = "ALTER TABLE test_json_v2 ADD COLUMN d JSON DEFAULT NULL, ADD COLUMN e JSON DEFAULT NULL;"
+        insert_query = """INSERT INTO test_json_v2 VALUES (101,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}',
+                                                                '{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}',
+                                                                '{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}');"""
+        update_query = """UPDATE test_json_v2 SET d = JSON_SET(d, '$.ab', '["ab_ddd"]'), e = JSON_REMOVE(e, '$.ab') WHERE id = 101;"""
+
+        self.execute(drop_table_if_exists_query)
+        self.execute(create_query)
+        self.execute(column_add_query)
+        self.execute(insert_query)
+        self.execute(update_query)
+
+        self.execute("COMMIT;")
+        event = self.stream.fetchone()
+
+        if event.table_map[event.table_id].column_name_flag:
+            self.assertEqual(
+                event.rows[0]["before_values"]["d"],
+                {
+                    b"a": b"aaaaaaaaaaaaa",
+                    b"c": b"ccccccccccccccc",
+                    b"ab": [b"abababababababa", b"babababababab"],
+                },
+            ),
+            self.assertEqual(
+                event.rows[0]["before_values"]["e"],
+                {
+                    b"a": b"aaaaaaaaaaaaa",
+                    b"c": b"ccccccccccccccc",
+                    b"ab": [b"abababababababa", b"babababababab"],
+                },
+            ),
+            after_value_d: JsonDiff = event.rows[0]["after_values"]["d"]
+            self.assertEqual(after_value_d.op, JsonDiffOperation.Replace)
+            self.assertEqual(after_value_d.path, b"$.ab")
+            self.assertEqual(after_value_d.value, b'["ab_ddd"]')
+
+            after_value_e: JsonDiff = event.rows[0]["after_values"]["e"]
+            self.assertEqual(after_value_e.op, JsonDiffOperation.Remove)
+            self.assertEqual(after_value_e.path, b"$.ab")
+            self.assertEqual(after_value_e.value, None)
+
+            after_none_sources = event.rows[0].get("after_none_sources")
+            self.assertEqual(after_none_sources["c"], NONE_SOURCE.JSON_PARTIAL_UPDATE)
 
 
 if __name__ == "__main__":

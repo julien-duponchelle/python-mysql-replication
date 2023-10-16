@@ -356,7 +356,7 @@ class BinLogPacketWrapper(object):
             data = data[path_length:]
 
             value_length, _, n = length_encoded_int(data)
-            if operation_number == JsonDiffOperation.Remove:
+            if json_operation == JsonDiffOperation.Remove:
                 return JsonDiff(json_operation, path)
 
             data = data[n:]

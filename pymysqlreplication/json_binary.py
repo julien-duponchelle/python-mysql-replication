@@ -68,7 +68,7 @@ def parse_json(type: bytes, data: bytes):
     elif type == JSONB_TYPE_OPAQUE:
         v = parse_opaque(data)
     else:
-        raise ValueError("Json type %d is not handled" % t)
+        raise ValueError(f"Json type {type} is not handled")
     return v
 
 
