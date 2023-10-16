@@ -315,7 +315,7 @@ https://python-mysql-replication.readthedocs.org/en/latest/developement.html
 
 Changelog
 ==========
-https://github.com/noplay/python-mysql-replication/blob/master/CHANGELOG
+https://github.com/noplay/python-mysql-replication/tree/main/examples
 
 Similar projects
 ==================
