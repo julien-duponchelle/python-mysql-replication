@@ -152,139 +152,158 @@ DELETE FROM test4 WHERE id = 1;
 Output will be:
 
     === RotateEvent ===
-    Date: 1970-01-01T01:00:00
-    Event size: 24
-    Read bytes: 0
+    Position: 4
+    Next binlog file: DESKTOP-5RGJE5B-bin.000008
 
     === FormatDescriptionEvent ===
-    Date: 2012-10-07T15:03:06
-    Event size: 84
-    Read bytes: 0
+    Date: 2023-10-16T11:25:10
+    Log position: 126
+    Event size: 99
+    Read bytes: 52
+    Binlog version: 4
+    MySQL version: 8.0.34
+
+    === PreviousGtidsEvent ===
+    Date: 2023-10-16T11:25:11
+    Log position: 157
+    Event size: 8
+    Read bytes: 8
+    previous_gtids: 
 
     === QueryEvent ===
-    Date: 2012-10-07T15:03:16
-    Event size: 64
-    Read bytes: 64
-    Schema: test
+    Date: 2023-10-16T11:27:22
+    Log position: 342
+    Event size: 85
+    Read bytes: 85
+    Schema: b'test'
     Execution time: 0
     Query: CREATE DATABASE test
-
+    
     === QueryEvent ===
-    Date: 2012-10-07T15:03:16
-    Event size: 151
-    Read bytes: 151
-    Schema: test
+    Date: 2023-10-16T11:27:22
+    Log position: 616
+    Event size: 172
+    Read bytes: 172
+    Schema: b'test'
     Execution time: 0
     Query: CREATE TABLE test4 (id int NOT NULL AUTO_INCREMENT, data VARCHAR(255), data2 VARCHAR(255), PRIMARY KEY(id))
-
+    
     === QueryEvent ===
-    Date: 2012-10-07T15:03:16
-    Event size: 49
-    Read bytes: 49
-    Schema: test
+    Date: 2023-10-16T11:27:22
+    Log position: 770
+    Event size: 52
+    Read bytes: 52
+    Schema: b'test'
     Execution time: 0
     Query: BEGIN
-
+    
     === TableMapEvent ===
-    Date: 2012-10-07T15:03:16
-    Event size: 31
-    Read bytes: 30
-    Table id: 781
+    Date: 2023-10-16T11:27:22
+    Log position: 832
+    Event size: 39
+    Read bytes: 39
+    Table id: 88
     Schema: test
     Table: test4
     Columns: 3
-
+    
     === WriteRowsEvent ===
-    Date: 2012-10-07T15:03:16
-    Event size: 27
-    Read bytes: 10
+    Date: 2023-10-16T11:27:22
+    Log position: 886
+    Event size: 31
+    Read bytes: 12
     Table: test.test4
     Affected columns: 3
     Changed rows: 1
+    Column Name Information Flag: False
     Values:
     --
-    * data : Hello
-    * id : 1
-    * data2 : World
-
+    * None : World
+    
     === XidEvent ===
-    Date: 2012-10-07T15:03:16
+    Date: 2023-10-16T11:27:22
+    Log position: 917
     Event size: 8
     Read bytes: 8
-    Transaction ID: 14097
-
+    Transaction ID: 18
+    
     === QueryEvent ===
-    Date: 2012-10-07T15:03:17
-    Event size: 49
-    Read bytes: 49
-    Schema: test
+    Date: 2023-10-16T11:27:22
+    Log position: 1080
+    Event size: 61
+    Read bytes: 61
+    Schema: b'test'
     Execution time: 0
     Query: BEGIN
-
+    
     === TableMapEvent ===
-    Date: 2012-10-07T15:03:17
-    Event size: 31
-    Read bytes: 30
-    Table id: 781
+    Date: 2023-10-16T11:27:22
+    Log position: 1142
+    Event size: 39
+    Read bytes: 39
+    Table id: 88
     Schema: test
     Table: test4
     Columns: 3
-
+    
     === UpdateRowsEvent ===
-    Date: 2012-10-07T15:03:17
-    Event size: 45
-    Read bytes: 11
+    Date: 2023-10-16T11:27:22
+    Log position: 1216
+    Event size: 51
+    Read bytes: 13
     Table: test.test4
     Affected columns: 3
     Changed rows: 1
-    Affected columns: 3
+    Column Name Information Flag: False
     Values:
     --
-    * data : Hello => World
-    * id : 1 => 1
-    * data2 : World => Hello
-
+    *None:World=>Hello
+    
     === XidEvent ===
-    Date: 2012-10-07T15:03:17
+    Date: 2023-10-16T11:27:22
+    Log position: 1247
     Event size: 8
     Read bytes: 8
-    Transaction ID: 14098
-
+    Transaction ID: 19
+    
     === QueryEvent ===
-    Date: 2012-10-07T15:03:17
-    Event size: 49
-    Read bytes: 49
-    Schema: test
-    Execution time: 1
+    Date: 2023-10-16T11:27:25
+    Log position: 1401
+    Event size: 52
+    Read bytes: 52
+    Schema: b'test'
+    Execution time: 0
     Query: BEGIN
-
+    
     === TableMapEvent ===
-    Date: 2012-10-07T15:03:17
-    Event size: 31
-    Read bytes: 30
-    Table id: 781
+    Date: 2023-10-16T11:27:25
+    Log position: 1463
+    Event size: 39
+    Read bytes: 39
+    Table id: 88
     Schema: test
     Table: test4
     Columns: 3
-
+    
     === DeleteRowsEvent ===
-    Date: 2012-10-07T15:03:17
-    Event size: 27
-    Read bytes: 10
+    Date: 2023-10-16T11:27:25
+    Log position: 1517
+    Event size: 31
+    Read bytes: 12
     Table: test.test4
     Affected columns: 3
     Changed rows: 1
+    Column Name Information Flag: False
     Values:
     --
-    * data : World
-    * id : 1
-    * data2 : Hello
-
+    * None : Hello
+    
     === XidEvent ===
-    Date: 2012-10-07T15:03:17
+    Date: 2023-10-16T11:27:25
+    Log position: 1548
     Event size: 8
     Read bytes: 8
-    Transaction ID: 14099
+    Transaction ID: 20
 
 
 Tests
