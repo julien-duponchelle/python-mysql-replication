@@ -115,14 +115,12 @@ class RowsEvent(BinLogEvent):
         partial_bitmap = None
         if (
             self.event_type == BINLOG.PARTIAL_UPDATE_ROWS_EVENT
-            and row_image_type == EnumRowImageType.UpdateAI
+            and row_image_type == RowImageType.UpdateAI
         ):
             binlog_row_value_option = self.packet.read_length_coded_binary()
             self.is_partial_json_update = binlog_row_value_option & 0b10000001 != 0
             if self.is_partial_json_update:
                 partial_bitmap = self.packet.read((self._json_column_count() + 7) / 8)
-        partial_bitmap_index = 0
-
         values = {}
 
         # null bitmap length = (bits set in 'columns-present-bitmap'+7)/8
@@ -130,6 +128,7 @@ class RowsEvent(BinLogEvent):
         null_bitmap = self.packet.read((BitCount(cols_bitmap) + 7) / 8)
 
         null_bitmap_index = 0
+        partial_bitmap_index = 0
         nb_columns = len(self.columns)
         for i in range(0, nb_columns):
             is_partial = False
@@ -139,7 +138,7 @@ class RowsEvent(BinLogEvent):
 
             if (
                 self.is_partial_json_update
-                and row_image_type == EnumRowImageType.UpdateAI
+                and row_image_type == RowImageType.UpdateAI
                 and column.type == FIELD_TYPE.JSON
             ):
                 if BitGet(partial_bitmap, partial_bitmap_index) > 0:
@@ -1171,12 +1170,12 @@ class PartialUpdateRowsEvent(UpdateRowsEvent):
 
     def _fetch_one_row(self):
         row = {}
-        row_image_type = EnumRowImageType.UpdateBI
+        row_image_type = RowImageType.UpdateBI
         row["before_values"] = self._read_column_data(
             self.columns_present_bitmap, row_image_type
         )
         row["before_none_sources"] = self._get_none_sources(row["before_values"])
-        row_image_type = EnumRowImageType.UpdateAI
+        row_image_type = RowImageType.UpdateAI
         row["after_values"] = self._read_column_data(
             self.columns_present_bitmap2, row_image_type
         )
@@ -1223,7 +1222,8 @@ class MetadataFieldType(Enum):
         return MetadataFieldType(index)
 
 
-class EnumRowImageType(Enum):
+class RowImageType(Enum):
+    # https://github.com/mysql/mysql-server/blob/1bfe02bdad6604d54913c62614bde57a055c8332/sql/rpl_record.h#L39
     WriteAI = 0
     UpdateBI = 1
     UpdateAI = 2
@@ -1231,4 +1231,4 @@ class EnumRowImageType(Enum):
 
     @staticmethod
     def by_index(index):
-        return EnumRowImageType(index)
+        return RowImageType(index)

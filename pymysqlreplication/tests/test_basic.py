@@ -1857,7 +1857,11 @@ class TestJsonPartialUpdate(base.PyMySQLReplicationTestCase):
     def test_json_partial_update(self):
         create_query = "CREATE TABLE test_json_v2 (id INT, c JSON,PRIMARY KEY (id)) ;"
         column_add_query = "ALTER TABLE test_json_v2 ADD COLUMN d JSON DEFAULT NULL, ADD COLUMN e JSON DEFAULT NULL;"
-        insert_query = """INSERT INTO test_json_v2 VALUES (101,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}', '{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}','{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}');"""
+        insert_query = """INSERT INTO test_json_v2 VALUES 
+                            (101
+                            ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
+                            ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
+                            ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}');"""
         update_query = """UPDATE test_json_v2 SET c = JSON_SET(c, '$.ab', '["ab_updatedccc"]') WHERE id = 101;"""
 
         self.execute(create_query)
@@ -1890,9 +1894,11 @@ class TestJsonPartialUpdate(base.PyMySQLReplicationTestCase):
         drop_table_if_exists_query = "DROP TABLE IF EXISTS test_json_v2;"
         create_query = "CREATE TABLE test_json_v2 (id INT, c JSON,PRIMARY KEY (id)) ;"
         column_add_query = "ALTER TABLE test_json_v2 ADD COLUMN d JSON DEFAULT NULL, ADD COLUMN e JSON DEFAULT NULL;"
-        insert_query = """INSERT INTO test_json_v2 VALUES (101,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}',
-                                                                '{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}',
-                                                                '{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}');"""
+        insert_query = """INSERT INTO test_json_v2 VALUES 
+                            (101
+                            ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
+                            ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
+                            ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}');"""
         update_query = """UPDATE test_json_v2 SET e = JSON_SET(e, '$.ab', '["ab_updatedeee"]'), c=NULL WHERE id = 101;"""
 
         self.execute(drop_table_if_exists_query)
@@ -1926,9 +1932,11 @@ class TestJsonPartialUpdate(base.PyMySQLReplicationTestCase):
         drop_table_if_exists_query = "DROP TABLE IF EXISTS test_json_v2;"
         create_query = "CREATE TABLE test_json_v2 (id INT, c JSON,PRIMARY KEY (id)) ;"
         column_add_query = "ALTER TABLE test_json_v2 ADD COLUMN d JSON DEFAULT NULL, ADD COLUMN e JSON DEFAULT NULL;"
-        insert_query = """INSERT INTO test_json_v2 VALUES (101,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}',
-                                                                '{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}',
-                                                                '{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}');"""
+        insert_query = """INSERT INTO test_json_v2 VALUES 
+                            (101
+                            ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
+                            ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
+                            ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}');"""
         update_query = (
             """UPDATE test_json_v2 SET e = JSON_REMOVE(e, '$.ab') WHERE id = 101;"""
         )
@@ -1964,9 +1972,11 @@ class TestJsonPartialUpdate(base.PyMySQLReplicationTestCase):
         drop_table_if_exists_query = "DROP TABLE IF EXISTS test_json_v2;"
         create_query = "CREATE TABLE test_json_v2 (id INT, c JSON,PRIMARY KEY (id)) ;"
         column_add_query = "ALTER TABLE test_json_v2 ADD COLUMN d JSON DEFAULT NULL, ADD COLUMN e JSON DEFAULT NULL;"
-        insert_query = """INSERT INTO test_json_v2 VALUES (101,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}',
-                                                                '{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}',
-                                                                '{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}');"""
+        insert_query = """INSERT INTO test_json_v2 VALUES 
+                            (101
+                            ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
+                            ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
+                            ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}');"""
         update_query = """UPDATE test_json_v2 SET d = JSON_SET(d, '$.ab', '["ab_ddd"]'), e = JSON_REMOVE(e, '$.ab') WHERE id = 101;"""
 
         self.execute(drop_table_if_exists_query)
