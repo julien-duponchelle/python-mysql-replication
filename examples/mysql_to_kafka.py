@@ -59,8 +59,6 @@ def main():
 
             producer.send(topic, key=None, value=message_body)
 
-
-
     consumer = KafkaConsumer(
         'deleted',
         'updated',
