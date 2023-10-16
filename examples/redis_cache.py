@@ -27,7 +27,10 @@ def main():
     )
 
     for binlogevent in stream:
-        prefix = "%s:%s:" % (binlogevent.schema, binlogevent.table)
+        prefix = (
+            f"{binlogevent.schema}:"
+            f"{binlogevent.table}:"
+        )
 
         for row in binlogevent.rows:
             if isinstance(binlogevent, DeleteRowsEvent):
