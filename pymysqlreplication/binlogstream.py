@@ -507,7 +507,7 @@ class BinLogStreamReader(object):
         # https://mariadb.com/kb/en/5-slave-registration/
         cur = self._stream_connection.cursor()
         if self.auto_position is not None:
-            cur.execute(f'SET @slave_connect_state= f"{self.auto_position}"')
+            cur.execute(f'SET @slave_connect_state= "{self.auto_position}"')
         cur.execute("SET @slave_gtid_strict_mode=1")
         cur.execute("SET @slave_gtid_ignore_duplicates=0")
         cur.close()
