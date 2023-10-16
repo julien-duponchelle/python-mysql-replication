@@ -404,7 +404,7 @@ class GtidSet(object):
         return ",".join(str(x) for x in self.gtids)
 
     def __repr__(self):
-        return "<GtidSet %r>" % self.gtids
+        return f"<GtidSet {self.gtids}>"
 
     @property
     def encoded_length(self):
