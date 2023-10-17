@@ -113,7 +113,7 @@ In your MySQL server configuration file you need to enable replication:
 Examples
 =========
 
-All examples are available in the [examples directory](https://github.com/noplay/python-mysql-replication/tree/master/examples)
+All examples are available in the [examples directory](https://github.com/noplay/python-mysql-replication/tree/main/examples)
 
 
 This example will dump all replication events to the console:
@@ -280,6 +280,7 @@ Output will be:
     Transaction ID: 14099
 
 
+
 Tests
 ========
 When it's possible we have a unit test.
@@ -289,7 +290,7 @@ https://python-mysql-replication.readthedocs.org/en/latest/developement.html
 
 Changelog
 ==========
-https://github.com/noplay/python-mysql-replication/blob/master/CHANGELOG
+https://github.com/noplay/python-mysql-replication/blob/main/CHANGELOG
 
 Similar projects
 ==================
