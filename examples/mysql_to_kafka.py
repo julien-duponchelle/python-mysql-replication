@@ -23,7 +23,7 @@ def create_kafka_topic(topic_name, num_partitions=1, replication_factor=1):
     topic = NewTopic(
         name=topic_name,
         num_partitions=num_partitions,
-        replication_factor=replication_factor
+        replication_factor=replication_factor,
     )
 
     admin_client.create_topics(new_topics=[topic])
@@ -32,18 +32,17 @@ def create_kafka_topic(topic_name, num_partitions=1, replication_factor=1):
 def main():
     global message_body
     producer = KafkaProducer(
-        bootstrap_servers='127.0.0.1:9092',
-        value_serializer=lambda v: str(v).encode('utf-8')
+        bootstrap_servers="127.0.0.1:9092",
+        value_serializer=lambda v: str(v).encode("utf-8"),
     )
 
     stream = BinLogStreamReader(
         connection_settings=MYSQL_SETTINGS,
         server_id=3,
-        only_events=[DeleteRowsEvent,UpdateRowsEvent,WriteRowsEvent]
+        only_events=[DeleteRowsEvent, UpdateRowsEvent, WriteRowsEvent],
     )
 
     for binlogevent in stream:
-
         for row in binlogevent.rows:
             if isinstance(binlogevent, DeleteRowsEvent):
                 topic = "deleted"
@@ -57,20 +56,20 @@ def main():
                 topic = "created"
                 message_body = row["values"].items()
 
-            producer.send(topic, key=None, value=message_body)
+            producer.send(topic, key=None, value=dict(message_body))
 
     consumer = KafkaConsumer(
-        'deleted',
-        'updated',
-        'created',
-        bootstrap_servers='127.0.0.1:9092',
-        value_deserializer=lambda x: x.decode('utf-8'),
-        auto_offset_reset='earliest',
-        group_id = '1'
+        "deleted",
+        "updated",
+        "created",
+        bootstrap_servers="127.0.0.1:9092",
+        value_deserializer=lambda x: x.decode("utf-8"),
+        auto_offset_reset="earliest",
+        group_id="1",
     )
 
     for message in consumer:
-        print(f"Topic: {message.topic}, Value: {message.value}")
+        print(f'Topic: "{message.topic}", Value: "{message.value}"')
 
     stream.close()
     producer.close()
