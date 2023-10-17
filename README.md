@@ -112,7 +112,7 @@ In your MySQL server configuration file you need to enable replication:
 Examples
 =========
 
-All examples are available in the [examples directory](https://github.com/noplay/python-mysql-replication/tree/master/examples)
+All examples are available in the [examples directory](https://github.com/noplay/python-mysql-replication/tree/main/examples)
 
 
 This example will dump all replication events to the console:
@@ -120,22 +120,14 @@ This example will dump all replication events to the console:
 ```python
 from pymysqlreplication import BinLogStreamReader
 
-MYSQL_SETTINGS = {"host": "127.0.0.1", "port": 3306, "user": "root", "passwd": ""}
+mysql_settings = {'host': '127.0.0.1', 'port': 3306, 'user': 'root', 'passwd': ''}
 
+stream = BinLogStreamReader(connection_settings = mysql_settings, server_id=100)
 
-def main():
-    stream = BinLogStreamReader(
-    connection_settings=MYSQL_SETTINGS, server_id=3, blocking=True
-    )
+for binlogevent in stream:
+    binlogevent.dump()
 
-    for binlogevent in stream:
-        binlogevent.dump()
-
-    stream.close()
-
-
-if __name__ == "__main__":
-    main()
+stream.close()
 ```
 
 For this SQL sessions:
@@ -152,158 +144,140 @@ DELETE FROM test4 WHERE id = 1;
 Output will be:
 
     === RotateEvent ===
-    Position: 4
-    Next binlog file: DESKTOP-5RGJE5B-bin.000008
+    Date: 1970-01-01T01:00:00
+    Event size: 24
+    Read bytes: 0
 
     === FormatDescriptionEvent ===
-    Date: 2023-10-16T11:25:10
-    Log position: 126
-    Event size: 99
-    Read bytes: 52
-    Binlog version: 4
-    MySQL version: 8.0.34
-
-    === PreviousGtidsEvent ===
-    Date: 2023-10-16T11:25:11
-    Log position: 157
-    Event size: 8
-    Read bytes: 8
-    previous_gtids: 
+    Date: 2012-10-07T15:03:06
+    Event size: 84
+    Read bytes: 0
 
     === QueryEvent ===
-    Date: 2023-10-16T11:27:22
-    Log position: 342
-    Event size: 85
-    Read bytes: 85
-    Schema: b'test'
+    Date: 2012-10-07T15:03:16
+    Event size: 64
+    Read bytes: 64
+    Schema: test
     Execution time: 0
     Query: CREATE DATABASE test
-    
+
     === QueryEvent ===
-    Date: 2023-10-16T11:27:22
-    Log position: 616
-    Event size: 172
-    Read bytes: 172
-    Schema: b'test'
+    Date: 2012-10-07T15:03:16
+    Event size: 151
+    Read bytes: 151
+    Schema: test
     Execution time: 0
     Query: CREATE TABLE test4 (id int NOT NULL AUTO_INCREMENT, data VARCHAR(255), data2 VARCHAR(255), PRIMARY KEY(id))
-    
+
     === QueryEvent ===
-    Date: 2023-10-16T11:27:22
-    Log position: 770
-    Event size: 52
-    Read bytes: 52
-    Schema: b'test'
+    Date: 2012-10-07T15:03:16
+    Event size: 49
+    Read bytes: 49
+    Schema: test
     Execution time: 0
     Query: BEGIN
-    
+
     === TableMapEvent ===
-    Date: 2023-10-16T11:27:22
-    Log position: 832
-    Event size: 39
-    Read bytes: 39
-    Table id: 88
+    Date: 2012-10-07T15:03:16
+    Event size: 31
+    Read bytes: 30
+    Table id: 781
     Schema: test
     Table: test4
     Columns: 3
-    
+
     === WriteRowsEvent ===
-    Date: 2023-10-16T11:27:22
-    Log position: 886
-    Event size: 31
-    Read bytes: 12
+    Date: 2012-10-07T15:03:16
+    Event size: 27
+    Read bytes: 10
     Table: test.test4
     Affected columns: 3
     Changed rows: 1
-    Column Name Information Flag: False
     Values:
     --
-    * None : World
-    
+    * data : Hello
+    * id : 1
+    * data2 : World
+
     === XidEvent ===
-    Date: 2023-10-16T11:27:22
-    Log position: 917
+    Date: 2012-10-07T15:03:16
     Event size: 8
     Read bytes: 8
-    Transaction ID: 18
-    
+    Transaction ID: 14097
+
     === QueryEvent ===
-    Date: 2023-10-16T11:27:22
-    Log position: 1080
-    Event size: 61
-    Read bytes: 61
-    Schema: b'test'
+    Date: 2012-10-07T15:03:17
+    Event size: 49
+    Read bytes: 49
+    Schema: test
     Execution time: 0
     Query: BEGIN
-    
+
     === TableMapEvent ===
-    Date: 2023-10-16T11:27:22
-    Log position: 1142
-    Event size: 39
-    Read bytes: 39
-    Table id: 88
+    Date: 2012-10-07T15:03:17
+    Event size: 31
+    Read bytes: 30
+    Table id: 781
     Schema: test
     Table: test4
     Columns: 3
-    
+
     === UpdateRowsEvent ===
-    Date: 2023-10-16T11:27:22
-    Log position: 1216
-    Event size: 51
-    Read bytes: 13
+    Date: 2012-10-07T15:03:17
+    Event size: 45
+    Read bytes: 11
     Table: test.test4
     Affected columns: 3
     Changed rows: 1
-    Column Name Information Flag: False
+    Affected columns: 3
     Values:
     --
-    *None:World=>Hello
-    
+    * data : Hello => World
+    * id : 1 => 1
+    * data2 : World => Hello
+
     === XidEvent ===
-    Date: 2023-10-16T11:27:22
-    Log position: 1247
+    Date: 2012-10-07T15:03:17
     Event size: 8
     Read bytes: 8
-    Transaction ID: 19
-    
+    Transaction ID: 14098
+
     === QueryEvent ===
-    Date: 2023-10-16T11:27:25
-    Log position: 1401
-    Event size: 52
-    Read bytes: 52
-    Schema: b'test'
-    Execution time: 0
+    Date: 2012-10-07T15:03:17
+    Event size: 49
+    Read bytes: 49
+    Schema: test
+    Execution time: 1
     Query: BEGIN
-    
+
     === TableMapEvent ===
-    Date: 2023-10-16T11:27:25
-    Log position: 1463
-    Event size: 39
-    Read bytes: 39
-    Table id: 88
+    Date: 2012-10-07T15:03:17
+    Event size: 31
+    Read bytes: 30
+    Table id: 781
     Schema: test
     Table: test4
     Columns: 3
-    
+
     === DeleteRowsEvent ===
-    Date: 2023-10-16T11:27:25
-    Log position: 1517
-    Event size: 31
-    Read bytes: 12
+    Date: 2012-10-07T15:03:17
+    Event size: 27
+    Read bytes: 10
     Table: test.test4
     Affected columns: 3
     Changed rows: 1
-    Column Name Information Flag: False
     Values:
     --
-    * None : Hello
-    
+    * data : World
+    * id : 1
+    * data2 : Hello
+
     === XidEvent ===
-    Date: 2023-10-16T11:27:25
-    Log position: 1548
+    Date: 2012-10-07T15:03:17
     Event size: 8
     Read bytes: 8
-    Transaction ID: 20
+    Transaction ID: 14099
+
 
 
 Tests
