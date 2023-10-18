@@ -4,7 +4,7 @@ on:
   pull_request:
   workflow_dispatch:
 env:
-  PYTEST_SKIP_OPTION: "not test_no_trailing_rotate_event and not test_end_log_pos and not test_query_event_latin1"
+  PYTEST_SKIP_OPTION: "not test_no_trailing_rotate_event and not test_end_log_pos"
 jobs:
   test:
     strategy:
