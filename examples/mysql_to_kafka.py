@@ -4,6 +4,8 @@
 # Output Kafka events to the console from MySQL replication stream
 #
 
+import time
+
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.row_event import (
     DeleteRowsEvent,
@@ -12,6 +14,7 @@ from pymysqlreplication.row_event import (
 )
 
 from kafka.admin import KafkaAdminClient, NewTopic
+from kafka.errors import TopicAlreadyExistsError
 from kafka import KafkaConsumer, KafkaProducer
 
 MYSQL_SETTINGS = {"host": "127.0.0.1", "port": 3306, "user": "root", "passwd": ""}
@@ -25,12 +28,11 @@ def create_kafka_topic(topic_name, num_partitions=1, replication_factor=1):
         num_partitions=num_partitions,
         replication_factor=replication_factor,
     )
-
     admin_client.create_topics(new_topics=[topic])
 
 
 def main():
-    global message_body
+    global message_body, topic
     producer = KafkaProducer(
         bootstrap_servers="127.0.0.1:9092",
         value_serializer=lambda v: str(v).encode("utf-8"),
@@ -42,22 +44,6 @@ def main():
         only_events=[DeleteRowsEvent, UpdateRowsEvent, WriteRowsEvent],
     )
 
-    for binlogevent in stream:
-        for row in binlogevent.rows:
-            if isinstance(binlogevent, DeleteRowsEvent):
-                topic = "deleted"
-                message_body = row["values"].items()
-
-            elif isinstance(binlogevent, UpdateRowsEvent):
-                topic = "updated"
-                message_body = row["after_values"].items()
-
-            elif isinstance(binlogevent, WriteRowsEvent):
-                topic = "created"
-                message_body = row["values"].items()
-
-            producer.send(topic, key=None, value=dict(message_body))
-
     consumer = KafkaConsumer(
         "deleted",
         "updated",
@@ -68,12 +54,31 @@ def main():
         group_id="1",
     )
 
-    for message in consumer:
-        print(f'Topic: "{message.topic}", Value: "{message.value}"')
+    try:
+        for binlogevent in stream:
+            for row in binlogevent.rows:
+                if isinstance(binlogevent, DeleteRowsEvent):
+                    topic = "deleted"
+                    message_body = row["values"].items()
 
-    stream.close()
-    producer.close()
-    consumer.close()
+                elif isinstance(binlogevent, UpdateRowsEvent):
+                    topic = "updated"
+                    message_body = row["after_values"].items()
+
+                elif isinstance(binlogevent, WriteRowsEvent):
+                    topic = "created"
+                    message_body = row["values"].items()
+
+                producer.send(topic, key=None, value=dict(message_body))
+
+        for message in consumer:
+            print(f'Topic: "{message.topic}", Value: "{message.value}"')
+
+    except KeyboardInterrupt:
+        stream.close()
+        producer.close()
+        time.sleep(1)
+        consumer.close()
 
 
 if __name__ == "__main__":
