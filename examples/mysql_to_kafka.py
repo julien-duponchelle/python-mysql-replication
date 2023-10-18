@@ -23,12 +23,20 @@ MYSQL_SETTINGS = {"host": "127.0.0.1", "port": 3306, "user": "root", "passwd": "
 def create_kafka_topic(topic_name, num_partitions=1, replication_factor=1):
     admin_client = KafkaAdminClient(bootstrap_servers="127.0.0.1:9092")
 
-    topic = NewTopic(
-        name=topic_name,
-        num_partitions=num_partitions,
-        replication_factor=replication_factor,
-    )
-    admin_client.create_topics(new_topics=[topic])
+    topic_exists = False
+    try:
+        topic_listings = admin_client.list_topics()
+        topic_exists = topic_name in topic_listings
+    except TopicAlreadyExistsError:
+        topic_exists = True
+
+    if not topic_exists:
+        topic = NewTopic(
+            name=topic_name,
+            num_partitions=num_partitions,
+            replication_factor=replication_factor,
+        )
+        admin_client.create_topics(new_topics=[topic])
 
 
 def main():
