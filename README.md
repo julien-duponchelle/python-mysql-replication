@@ -46,8 +46,8 @@ Project status
 The project is test with:
 * MySQL 5.5, 5.6 and 5.7 (v0.1 ~ v0.45)
 * MySQL 8.0.14 (v1.0 ~)
-* Python 3.3, 3.4, 3.5 and 3.6 (3.2 is not supported)
-* PyPy (really faster than the standard Python interpreter)
+* Python 3.7, 3.11
+* PyPy 3.7, 3.9 (really faster than the standard Python interpreter)
 
 MySQL version 8.0.14 and later Set global variable binlog_row_metadata='FULL' and binlog_row_image='FULL'
 
