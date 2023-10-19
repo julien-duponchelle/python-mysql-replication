@@ -51,6 +51,7 @@ class PyMySQLReplicationTestCase(base):
         self.execute("DROP DATABASE IF EXISTS pymysqlreplication_test")
         self.execute("CREATE DATABASE pymysqlreplication_test")
         db = copy.copy(self.database)
+        db["charset"] = charset
         self.connect_conn_control(db)
         self.stream = None
         self.resetBinLog()
