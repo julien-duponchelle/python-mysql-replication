@@ -44,7 +44,7 @@ Project status
 
 The project is test with:
 * MySQL 5.5, 5.6 and 5.7
-* Python 3.7, 3.11 (3.7 is unsupported)
+* Python 3.7, 3.11
 * PyPy 3.7, 3.9 (really faster than the standard Python interpreter)
 
 The project is used in production for critical stuff in some
