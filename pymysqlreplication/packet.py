@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
-
 import struct
 
 from pymysqlreplication import constants, event, row_event
+from pymysqlreplication.constants import FIELD_TYPE
+from pymysqlreplication.util.bytes import *
 
 # Constants from PyMYSQL source code
 NULL_COLUMN = 251
@@ -14,7 +14,6 @@ UNSIGNED_CHAR_LENGTH = 1
 UNSIGNED_SHORT_LENGTH = 2
 UNSIGNED_INT24_LENGTH = 3
 UNSIGNED_INT64_LENGTH = 8
-
 
 JSONB_TYPE_SMALL_OBJECT = 0x0
 JSONB_TYPE_LARGE_OBJECT = 0x1
@@ -35,19 +34,141 @@ JSONB_LITERAL_NULL = 0x0
 JSONB_LITERAL_TRUE = 0x1
 JSONB_LITERAL_FALSE = 0x2
 
+JSONB_SMALL_OFFSET_SIZE = 2
+JSONB_LARGE_OFFSET_SIZE = 4
+JSONB_KEY_ENTRY_SIZE_SMALL = 2 + JSONB_SMALL_OFFSET_SIZE
+JSONB_KEY_ENTRY_SIZE_LARGE = 2 + JSONB_LARGE_OFFSET_SIZE
+JSONB_VALUE_ENTRY_SIZE_SMALL = 1 + JSONB_SMALL_OFFSET_SIZE
+JSONB_VALUE_ENTRY_SIZE_LARGE = 1 + JSONB_LARGE_OFFSET_SIZE
 
-def read_offset_or_inline(packet, large):
-    t = packet.read_uint8()
 
-    if t in (JSONB_TYPE_LITERAL,
-             JSONB_TYPE_INT16, JSONB_TYPE_UINT16):
-        return (t, None, packet.read_binary_json_type_inlined(t, large))
-    if large and t in (JSONB_TYPE_INT32, JSONB_TYPE_UINT32):
-        return (t, None, packet.read_binary_json_type_inlined(t, large))
+def is_json_inline_value(type: bytes, is_small: bool) -> bool:
+    if type in [JSONB_TYPE_UINT16, JSONB_TYPE_INT16, JSONB_TYPE_LITERAL]:
+        return True
+    elif type in [JSONB_TYPE_INT32, JSONB_TYPE_UINT32]:
+        return not is_small
+    return False
 
-    if large:
-        return (t, packet.read_uint32(), None)
-    return (t, packet.read_uint16(), None)
+
+def parse_json(type: bytes, data: bytes):
+    if type == JSONB_TYPE_SMALL_OBJECT:
+        v = parse_json_object_or_array(data, True, True)
+    elif type == JSONB_TYPE_LARGE_OBJECT:
+        v = parse_json_object_or_array(data, False, True)
+    elif type == JSONB_TYPE_SMALL_ARRAY:
+        v = parse_json_object_or_array(data, True, False)
+    elif type == JSONB_TYPE_LARGE_ARRAY:
+        v = parse_json_object_or_array(data, False, False)
+    elif type == JSONB_TYPE_LITERAL:
+        v = parse_literal(data)
+    elif type == JSONB_TYPE_INT16:
+        v = parse_int16(data)
+    elif type == JSONB_TYPE_UINT16:
+        v = parse_uint16(data)
+    elif type == JSONB_TYPE_INT32:
+        v = parse_int32(data)
+    elif type == JSONB_TYPE_UINT32:
+        v = parse_uint32(data)
+    elif type == JSONB_TYPE_INT64:
+        v = parse_int64(data)
+    elif type == JSONB_TYPE_UINT64:
+        v = parse_uint64(data)
+    elif type == JSONB_TYPE_DOUBLE:
+        v = parse_double(data)
+    elif type == JSONB_TYPE_STRING:
+        length, n = decode_variable_length(data)
+        v = parse_string(n, length, data)
+    elif type == JSONB_TYPE_OPAQUE:
+        v = parse_opaque(data)
+    else:
+        raise ValueError(f"Json type {type} is not handled")
+    return v
+
+
+def parse_json_object_or_array(bytes, is_small, is_object):
+    offset_size = JSONB_SMALL_OFFSET_SIZE if is_small else JSONB_LARGE_OFFSET_SIZE
+    count = decode_count(bytes, is_small)
+    size = decode_count(bytes[offset_size:], is_small)
+    if is_small:
+        key_entry_size = JSONB_KEY_ENTRY_SIZE_SMALL
+        value_entry_size = JSONB_VALUE_ENTRY_SIZE_SMALL
+    else:
+        key_entry_size = JSONB_KEY_ENTRY_SIZE_LARGE
+        value_entry_size = JSONB_VALUE_ENTRY_SIZE_LARGE
+    if is_data_short(bytes, size):
+        raise ValueError(
+            "Before MySQL 5.7.22, json type generated column may have invalid value"
+        )
+
+    header_size = 2 * offset_size + count * value_entry_size
+
+    if is_object:
+        header_size += count * key_entry_size
+
+    if header_size > size:
+        raise ValueError("header size > size")
+
+    keys = []
+    if is_object:
+        keys = []
+        for i in range(count):
+            entry_offset = 2 * offset_size + key_entry_size * i
+            key_offset = decode_count(bytes[entry_offset:], is_small)
+            key_length = decode_uint(bytes[entry_offset + offset_size :])
+            keys.append(bytes[key_offset : key_offset + key_length])
+
+    values = {}
+    for i in range(count):
+        entry_offset = 2 * offset_size + value_entry_size * i
+        if is_object:
+            entry_offset += key_entry_size * count
+        json_type = bytes[entry_offset]
+        if is_json_inline_value(json_type, is_small):
+            values[i] = parse_json(
+                json_type, bytes[entry_offset + 1 : entry_offset + value_entry_size]
+            )
+            continue
+        value_offset = decode_count(bytes[entry_offset + 1 :], is_small)
+        if is_data_short(bytes, value_offset):
+            return None
+        values[i] = parse_json(json_type, bytes[value_offset:])
+    if not is_object:
+        return list(values.values())
+    out = {}
+    for i in range(count):
+        out[keys[i]] = values[i]
+    return out
+
+
+def parse_literal(data: bytes):
+    json_type = data[0]
+    if json_type == JSONB_LITERAL_NULL:
+        return None
+    elif json_type == JSONB_LITERAL_TRUE:
+        return True
+    elif json_type == JSONB_LITERAL_FALSE:
+        return False
+
+    raise ValueError("NOT LITERAL TYPE")
+
+
+def parse_opaque(data: bytes):
+    if is_data_short(data, 1):
+        return None
+    type_ = data[0]
+    data = data[1:]
+
+    length, n = decode_variable_length(data)
+    data = data[n : n + length]
+
+    if type_ in [FIELD_TYPE.NEWDECIMAL, FIELD_TYPE.DECIMAL]:
+        return decode_decimal(data)
+    elif type_ in [FIELD_TYPE.TIME, FIELD_TYPE.TIME2]:
+        return decode_time(data)
+    elif type_ in [FIELD_TYPE.DATE, FIELD_TYPE.DATETIME, FIELD_TYPE.DATETIME2]:
+        return decode_datetime(data)
+    else:
+        return data.decode(errors="ignore")
 
 
 class BinLogPacketWrapper(object):
@@ -65,6 +186,7 @@ class BinLogPacketWrapper(object):
         constants.XID_EVENT: event.XidEvent,
         constants.INTVAR_EVENT: event.IntvarEvent,
         constants.GTID_LOG_EVENT: event.GtidEvent,
+        constants.PREVIOUS_GTIDS_LOG_EVENT: event.PreviousGtidsEvent,
         constants.STOP_EVENT: event.StopEvent,
         constants.BEGIN_LOAD_QUERY_EVENT: event.BeginLoadQueryEvent,
         constants.EXECUTE_LOAD_QUERY_EVENT: event.ExecuteLoadQueryEvent,
@@ -72,6 +194,7 @@ class BinLogPacketWrapper(object):
         constants.XA_PREPARE_EVENT: event.XAPrepareEvent,
         constants.ROWS_QUERY_LOG_EVENT: event.RowsQueryLogEvent,
         constants.RAND_EVENT: event.RandEvent,
+        constants.USER_VAR_EVENT: event.UserVarEvent,
         # row_event
         constants.UPDATE_ROWS_EVENT_V1: row_event.UpdateRowsEvent,
         constants.WRITE_ROWS_EVENT_V1: row_event.WriteRowsEvent,
@@ -80,35 +203,37 @@ class BinLogPacketWrapper(object):
         constants.WRITE_ROWS_EVENT_V2: row_event.WriteRowsEvent,
         constants.DELETE_ROWS_EVENT_V2: row_event.DeleteRowsEvent,
         constants.TABLE_MAP_EVENT: row_event.TableMapEvent,
-
-        #5.6 GTID enabled replication events
+        # 5.6 GTID enabled replication events
         constants.ANONYMOUS_GTID_LOG_EVENT: event.NotImplementedEvent,
-        constants.ANONYMOUS_GTID_LOG_EVENT: event.NotImplementedEvent,
-        constants.PREVIOUS_GTIDS_LOG_EVENT: event.NotImplementedEvent,
         # MariaDB GTID
         constants.MARIADB_ANNOTATE_ROWS_EVENT: event.MariadbAnnotateRowsEvent,
-        constants.MARIADB_BINLOG_CHECKPOINT_EVENT: event.NotImplementedEvent,
+        constants.MARIADB_BINLOG_CHECKPOINT_EVENT: event.MariadbBinLogCheckPointEvent,
         constants.MARIADB_GTID_EVENT: event.MariadbGtidEvent,
-        constants.MARIADB_GTID_GTID_LIST_EVENT: event.NotImplementedEvent,
-        constants.MARIADB_START_ENCRYPTION_EVENT: event.MariadbStartEncryptionEvent
+        constants.MARIADB_GTID_GTID_LIST_EVENT: event.MariadbGtidListEvent,
+        constants.MARIADB_START_ENCRYPTION_EVENT: event.MariadbStartEncryptionEvent,
     }
 
-    def __init__(self, from_packet, table_map,
-                 ctl_connection,
-                 mysql_version,
-                 use_checksum,
-                 allowed_events,
-                 only_tables,
-                 ignored_tables,
-                 only_schemas,
-                 ignored_schemas,
-                 freeze_schema,
-                 fail_on_table_metadata_unavailable,
-                 ignore_decode_errors):
+    def __init__(
+        self,
+        from_packet,
+        table_map,
+        ctl_connection,
+        mysql_version,
+        use_checksum,
+        allowed_events,
+        only_tables,
+        ignored_tables,
+        only_schemas,
+        ignored_schemas,
+        freeze_schema,
+        ignore_decode_errors,
+        verify_checksum,
+        optional_meta_data,
+    ):
         # -1 because we ignore the ok byte
         self.read_bytes = 0
         # Used when we want to override a value in the data buffer
-        self.__data_buffer = b''
+        self.__data_buffer = b""
 
         self.packet = from_packet
         self.charset = ctl_connection.charset
@@ -119,7 +244,7 @@ class BinLogPacketWrapper(object):
         # server_id
         # log_pos
         # flags
-        unpack = struct.unpack('<cIBIIIH', self.packet.read(20))
+        unpack = struct.unpack("<cIBIIIH", self.packet.read(20))
 
         # Header
         self.timestamp = unpack[1]
@@ -134,6 +259,7 @@ class BinLogPacketWrapper(object):
         if use_checksum:
             event_size_without_header = self.event_size - 23
         else:
+            verify_checksum = False
             event_size_without_header = self.event_size - 19
 
         self.event = None
@@ -141,17 +267,23 @@ class BinLogPacketWrapper(object):
 
         if event_class not in allowed_events:
             return
-        self.event = event_class(self, event_size_without_header, table_map,
-                                 ctl_connection,
-                                 mysql_version=mysql_version,
-                                 only_tables=only_tables,
-                                 ignored_tables=ignored_tables,
-                                 only_schemas=only_schemas,
-                                 ignored_schemas=ignored_schemas,
-                                 freeze_schema=freeze_schema,
-                                 fail_on_table_metadata_unavailable=fail_on_table_metadata_unavailable,
-                                 ignore_decode_errors=ignore_decode_errors)
-        if self.event._processed == False:
+
+        self.event = event_class(
+            self,
+            event_size_without_header,
+            table_map,
+            ctl_connection,
+            mysql_version=mysql_version,
+            only_tables=only_tables,
+            ignored_tables=ignored_tables,
+            only_schemas=only_schemas,
+            ignored_schemas=ignored_schemas,
+            freeze_schema=freeze_schema,
+            ignore_decode_errors=ignore_decode_errors,
+            verify_checksum=verify_checksum,
+            optional_meta_data=optional_meta_data,
+        )
+        if not self.event._processed:
             self.event = None
 
     def read(self, size):
@@ -167,9 +299,9 @@ class BinLogPacketWrapper(object):
         return self.packet.read(size)
 
     def unread(self, data):
-        '''Push again data in data buffer. It's use when you want
+        """Push again data in data buffer. It's use when you want
         to extract a bit from a value a let the rest of the code normally
-        read the datas'''
+        read the datas"""
         self.read_bytes -= len(data)
         self.__data_buffer += data
 
@@ -222,26 +354,25 @@ class BinLogPacketWrapper(object):
         if hasattr(self.packet, key):
             return getattr(self.packet, key)
 
-        raise AttributeError("%s instance has no attribute '%s'" %
-                             (self.__class__, key))
+        raise AttributeError(f"{self.__class__} instance has no attribute '{key}'")
 
     def read_int_be_by_size(self, size):
-        '''Read a big endian integer values based on byte number'''
+        """Read a big endian integer values based on byte number"""
         if size == 1:
-            return struct.unpack('>b', self.read(size))[0]
+            return struct.unpack(">b", self.read(size))[0]
         elif size == 2:
-            return struct.unpack('>h', self.read(size))[0]
+            return struct.unpack(">h", self.read(size))[0]
         elif size == 3:
             return self.read_int24_be()
         elif size == 4:
-            return struct.unpack('>i', self.read(size))[0]
+            return struct.unpack(">i", self.read(size))[0]
         elif size == 5:
             return self.read_int40_be()
         elif size == 8:
-            return struct.unpack('>l', self.read(size))[0]
+            return struct.unpack(">l", self.read(size))[0]
 
     def read_uint_by_size(self, size):
-        '''Read a little endian integer values based on byte number'''
+        """Read a little endian integer values based on byte number"""
         if size == 1:
             return self.read_uint8()
         elif size == 2:
@@ -278,7 +409,7 @@ class BinLogPacketWrapper(object):
         bits_read = 0
         while byte & 0x80 != 0:
             byte = struct.unpack("!B", self.read(1))[0]
-            length = length | ((byte & 0x7f) << bits_read)
+            length = length | ((byte & 0x7F) << bits_read)
             bits_read = bits_read + 7
         return self.read(length)
 
@@ -290,30 +421,30 @@ class BinLogPacketWrapper(object):
         return res
 
     def read_int24_be(self):
-        a, b, c = struct.unpack('BBB', self.read(3))
+        a, b, c = struct.unpack("BBB", self.read(3))
         res = (a << 16) | (b << 8) | c
         if res >= 0x800000:
             res -= 0x1000000
         return res
 
     def read_uint8(self):
-        return struct.unpack('<B', self.read(1))[0]
+        return struct.unpack("<B", self.read(1))[0]
 
     def read_int16(self):
-        return struct.unpack('<h', self.read(2))[0]
+        return struct.unpack("<h", self.read(2))[0]
 
     def read_uint16(self):
-        return struct.unpack('<H', self.read(2))[0]
+        return struct.unpack("<H", self.read(2))[0]
 
     def read_uint24(self):
         a, b, c = struct.unpack("<BBB", self.read(3))
         return a + (b << 8) + (c << 16)
 
     def read_uint32(self):
-        return struct.unpack('<I', self.read(4))[0]
+        return struct.unpack("<I", self.read(4))[0]
 
     def read_int32(self):
-        return struct.unpack('<i', self.read(4))[0]
+        return struct.unpack("<i", self.read(4))[0]
 
     def read_uint40(self):
         a, b = struct.unpack("<BI", self.read(5))
@@ -332,28 +463,32 @@ class BinLogPacketWrapper(object):
         return a + (b << 8) + (c << 24)
 
     def read_uint64(self):
-        return struct.unpack('<Q', self.read(8))[0]
+        return struct.unpack("<Q", self.read(8))[0]
 
     def read_int64(self):
-        return struct.unpack('<q', self.read(8))[0]
+        return struct.unpack("<q", self.read(8))[0]
 
     def unpack_uint16(self, n):
-        return struct.unpack('<H', n[0:2])[0]
+        return struct.unpack("<H", n[0:2])[0]
 
     def unpack_int24(self, n):
         try:
-            return struct.unpack('B', n[0])[0] \
-                + (struct.unpack('B', n[1])[0] << 8) \
-                + (struct.unpack('B', n[2])[0] << 16)
+            return (
+                struct.unpack("B", n[0])[0]
+                + (struct.unpack("B", n[1])[0] << 8)
+                + (struct.unpack("B", n[2])[0] << 16)
+            )
         except TypeError:
             return n[0] + (n[1] << 8) + (n[2] << 16)
 
     def unpack_int32(self, n):
         try:
-            return struct.unpack('B', n[0])[0] \
-                + (struct.unpack('B', n[1])[0] << 8) \
-                + (struct.unpack('B', n[2])[0] << 16) \
-                + (struct.unpack('B', n[3])[0] << 24)
+            return (
+                struct.unpack("B", n[0])[0]
+                + (struct.unpack("B", n[1])[0] << 8)
+                + (struct.unpack("B", n[2])[0] << 16)
+                + (struct.unpack("B", n[3])[0] << 24)
+            )
         except TypeError:
             return n[0] + (n[1] << 8) + (n[2] << 16) + (n[3] << 24)
 
@@ -362,124 +497,8 @@ class BinLogPacketWrapper(object):
         if length == 0:
             # handle NULL value
             return None
-        payload = self.read(length)
-        self.unread(payload)
-        t = self.read_uint8()
-
-        return self.read_binary_json_type(t, length)
-
-    def read_binary_json_type(self, t, length):
-        large = (t in (JSONB_TYPE_LARGE_OBJECT, JSONB_TYPE_LARGE_ARRAY))
-        if t in (JSONB_TYPE_SMALL_OBJECT, JSONB_TYPE_LARGE_OBJECT):
-            return self.read_binary_json_object(length - 1, large)
-        elif t in (JSONB_TYPE_SMALL_ARRAY, JSONB_TYPE_LARGE_ARRAY):
-            return self.read_binary_json_array(length - 1, large)
-        elif t in (JSONB_TYPE_STRING,):
-            return self.read_variable_length_string()
-        elif t in (JSONB_TYPE_LITERAL,):
-            value = self.read_uint8()
-            if value == JSONB_LITERAL_NULL:
-                return None
-            elif value == JSONB_LITERAL_TRUE:
-                return True
-            elif value == JSONB_LITERAL_FALSE:
-                return False
-        elif t == JSONB_TYPE_INT16:
-            return self.read_int16()
-        elif t == JSONB_TYPE_UINT16:
-            return self.read_uint16()
-        elif t in (JSONB_TYPE_DOUBLE,):
-            return struct.unpack('<d', self.read(8))[0]
-        elif t == JSONB_TYPE_INT32:
-            return self.read_int32()
-        elif t == JSONB_TYPE_UINT32:
-            return self.read_uint32()
-        elif t == JSONB_TYPE_INT64:
-            return self.read_int64()
-        elif t == JSONB_TYPE_UINT64:
-            return self.read_uint64()
-
-        raise ValueError('Json type %d is not handled' % t)
-
-    def read_binary_json_type_inlined(self, t, large):
-        if t == JSONB_TYPE_LITERAL:
-            value = self.read_uint32() if large else self.read_uint16()
-            if value == JSONB_LITERAL_NULL:
-                return None
-            elif value == JSONB_LITERAL_TRUE:
-                return True
-            elif value == JSONB_LITERAL_FALSE:
-                return False
-        elif t == JSONB_TYPE_INT16:
-            return self.read_int32() if large else self.read_int16()
-        elif t == JSONB_TYPE_UINT16:
-            return self.read_uint32() if large else self.read_uint16()
-        elif t == JSONB_TYPE_INT32:
-            return self.read_int32()
-        elif t == JSONB_TYPE_UINT32:
-            return self.read_uint32()
-
-        raise ValueError('Json type %d is not handled' % t)
-
-    def read_binary_json_object(self, length, large):
-        if large:
-            elements = self.read_uint32()
-            size = self.read_uint32()
-        else:
-            elements = self.read_uint16()
-            size = self.read_uint16()
-
-        if size > length:
-            raise ValueError('Json length is larger than packet length')
-
-        if large:
-            key_offset_lengths = [(
-                self.read_uint32(),  # offset (we don't actually need that)
-                self.read_uint16()   # size of the key
-                ) for _ in range(elements)]
-        else:
-            key_offset_lengths = [(
-                self.read_uint16(),  # offset (we don't actually need that)
-                self.read_uint16()   # size of key
-                ) for _ in range(elements)]
-
-        value_type_inlined_lengths = [read_offset_or_inline(self, large)
-                                      for _ in range(elements)]
-
-        keys = [self.read(x[1]) for x in key_offset_lengths]
-
-        out = {}
-        for i in range(elements):
-            if value_type_inlined_lengths[i][1] is None:
-                data = value_type_inlined_lengths[i][2]
-            else:
-                t = value_type_inlined_lengths[i][0]
-                data = self.read_binary_json_type(t, length)
-            out[keys[i]] = data
-
-        return out
-
-    def read_binary_json_array(self, length, large):
-        if large:
-            elements = self.read_uint32()
-            size = self.read_uint32()
-        else:
-            elements = self.read_uint16()
-            size = self.read_uint16()
-
-        if size > length:
-            raise ValueError('Json length is larger than packet length')
-
-        values_type_offset_inline = [
-            read_offset_or_inline(self, large)
-            for _ in range(elements)]
-
-        def _read(x):
-            if x[1] is None:
-                return x[2]
-            return self.read_binary_json_type(x[0], length)
-
-        return [_read(x) for x in values_type_offset_inline]
+        data = self.read(length)
+        return parse_json(data[0], data[1:])
 
     def read_string(self):
         """Read a 'Length Coded String' from the data buffer.
@@ -489,11 +508,14 @@ class BinLogPacketWrapper(object):
         Returns:
             Binary string parsed from __data_buffer
         """
-        string = b''
+        string = b""
         while True:
             char = self.read(1)
-            if char == b'\0':
+            if char == b"\0":
                 break
             string += char
 
         return string
+
+    def bytes_to_read(self):
+        return len(self.packet._data) - self.packet._position

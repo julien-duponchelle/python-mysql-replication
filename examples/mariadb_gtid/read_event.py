@@ -1,8 +1,17 @@
 import pymysql
 
-from pymysqlreplication import BinLogStreamReader, gtid
-from pymysqlreplication.event import GtidEvent, RotateEvent, MariadbGtidEvent, QueryEvent,MariadbAnnotateRowsEvent
-from pymysqlreplication.row_event import WriteRowsEvent, UpdateRowsEvent, DeleteRowsEvent
+from pymysqlreplication import BinLogStreamReader
+from pymysqlreplication.event import (
+    RotateEvent,
+    MariadbGtidEvent,
+    MariadbAnnotateRowsEvent,
+    MariadbBinLogCheckPointEvent,
+)
+from pymysqlreplication.row_event import (
+    WriteRowsEvent,
+    UpdateRowsEvent,
+    DeleteRowsEvent,
+)
 
 MARIADB_SETTINGS = {
     "host": "127.0.0.1",
@@ -41,7 +50,9 @@ class MariaDbGTID:
         return None
 
     def query_gtid_current_pos(self, server_id: str):
-        return self.extract_gtid(self.query_single_value("SELECT @@gtid_current_pos"), server_id)
+        return self.extract_gtid(
+            self.query_single_value("SELECT @@gtid_current_pos"), server_id
+        )
 
     def query_server_id(self):
         return int(self.query_single_value("SELECT @@server_id"))
@@ -51,10 +62,10 @@ if __name__ == "__main__":
     db = MariaDbGTID(MARIADB_SETTINGS)
 
     server_id = db.query_server_id()
-    print('Server ID: ', server_id)
+    print("Server ID: ", server_id)
 
     # gtid = db.query_gtid_current_pos(server_id)
-    gtid = '0-1-1'  # initial pos
+    gtid = "0-1-1"  # initial pos
 
     stream = BinLogStreamReader(
         connection_settings=MARIADB_SETTINGS,
@@ -62,24 +73,25 @@ if __name__ == "__main__":
         blocking=False,
         only_events=[
             MariadbGtidEvent,
+            MariadbBinLogCheckPointEvent,
             RotateEvent,
             WriteRowsEvent,
             UpdateRowsEvent,
             DeleteRowsEvent,
-            MariadbAnnotateRowsEvent
+            MariadbAnnotateRowsEvent,
         ],
         auto_position=gtid,
         is_mariadb=True,
-        annotate_rows_event=True
+        annotate_rows_event=True,
     )
 
-    print('Starting reading events from GTID ', gtid)
+    print("Starting reading events from GTID ", gtid)
     for binlogevent in stream:
         binlogevent.dump()
 
         if isinstance(binlogevent, MariadbGtidEvent):
             gtid = binlogevent.gtid
 
-    print('Last encountered GTID: ', gtid)
+    print("Last encountered GTID: ", gtid)
 
     stream.close()

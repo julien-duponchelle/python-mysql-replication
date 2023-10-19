@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 #
 # Output logstash events to the console from MySQL replication stream
@@ -17,19 +16,15 @@ from pymysqlreplication.row_event import (
     WriteRowsEvent,
 )
 
-MYSQL_SETTINGS = {
-    "host": "127.0.0.1",
-    "port": 3306,
-    "user": "root",
-    "passwd": ""
-}
+MYSQL_SETTINGS = {"host": "127.0.0.1", "port": 3306, "user": "root", "passwd": ""}
 
 
 def main():
     stream = BinLogStreamReader(
         connection_settings=MYSQL_SETTINGS,
         server_id=3,
-        only_events=[DeleteRowsEvent, WriteRowsEvent, UpdateRowsEvent])
+        only_events=[DeleteRowsEvent, WriteRowsEvent, UpdateRowsEvent],
+    )
 
     for binlogevent in stream:
         for row in binlogevent.rows:
@@ -44,9 +39,8 @@ def main():
             elif isinstance(binlogevent, WriteRowsEvent):
                 event["action"] = "insert"
                 event = dict(event.items() + row["values"].items())
-            print json.dumps(event)
+            print(json.dumps(event))
             sys.stdout.flush()
-
 
     stream.close()
 

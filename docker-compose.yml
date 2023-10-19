@@ -1,37 +1,53 @@
-version: '3.2'
+version: '3.4'
+
+x-mysql: &mysql
+  environment:
+    MYSQL_ALLOW_EMPTY_PASSWORD: true
+  command: >
+    mysqld
+    --log-bin=mysql-bin.log
+    --server-id 1
+    --binlog-format=row
+    --gtid_mode=on
+    --enforce-gtid-consistency=on
+
+x-mariadb: &mariadb
+  environment:
+    MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 1
+  command: >
+    --log-bin=master-bin
+    --server-id=1
+    --default-authentication-plugin=mysql_native_password
+    --binlog-format=row
+
 services:
   percona-5.7:
+    <<: *mysql
     image: percona:5.7
-    environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: true
     ports:
-      - 3306:3306
-    command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave_updates
+      - "3306:3306"
 
   percona-5.7-ctl:
+    <<: *mysql
     image: percona:5.7
-    environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: true
     ports:
-      - 3307:3307
-    command: mysqld --log-bin=mysql-bin.log --server-id 1 --binlog-format=row --gtid_mode=on --enforce-gtid-consistency=on --log_slave_updates -P 3307
+      - "3307:3306"
+
+  percona-8.0:
+    <<: *mysql
+    image: percona:8.0
+    ports:
+      - "3309:3306"
 
   mariadb-10.6:
+    <<: *mariadb
     image: mariadb:10.6
-    environment:
-      MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 1
     ports:
       - "3308:3306"
-    command: |
-      --server-id=1
-      --default-authentication-plugin=mysql_native_password
-      --log-bin=master-bin
-      --binlog-format=row
-      --log-slave-updates=on
     volumes:
       - type: bind
         source: ./.mariadb
         target: /opt/key_file
       - type: bind
         source: ./.mariadb/my.cnf
-        target: /etc/mysql/my.cnf  
+        target: /etc/mysql/my.cnf

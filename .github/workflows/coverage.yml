@@ -1,0 +1,47 @@
+name: Python Coverage
+on: 
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Run database server in docker
+        run: |
+          docker compose create
+          docker compose start
+          echo "wait mysql server"
+
+          while :
+          do
+            if mysql -h 127.0.0.1 --user=root --execute "SELECT version();" 2>&1 >/dev/null && mysql -h 127.0.0.1 --port=3307 --user=root --execute "SELECT version();" 2>&1 >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+          pip install pytest coverage smokeshow
+
+      - name: Run coverage
+        run: |
+          coverage run -m pytest -k "not test_no_trailing_rotate_event and not test_end_log_pos and not test_query_event_latin1"
+          coverage html
+
+      - run: smokeshow upload htmlcov
+        env:
+          SMOKESHOW_GITHUB_COVERAGE_THRESHOLD: 60

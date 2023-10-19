@@ -1,6 +1,10 @@
 name: PyTest
-on: [push, pull_request]
-
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+env:
+  PYTEST_SKIP_OPTION: "not test_no_trailing_rotate_event and not test_end_log_pos"
 jobs:
   test:
     strategy:
@@ -13,14 +17,14 @@ jobs:
           - {name: 'Pypy 3.9', python: 'pypy-3.9'}
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 3
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
 
@@ -29,15 +33,15 @@ jobs:
           docker compose create
           docker compose start
           echo "wait mysql server"
-        
+
           while :
           do
-            if mysql -h 127.0.0.1 --user=root --execute "SELECT version();" 2>&1 >/dev/null && mysql -h 127.0.0.1 --port=3307  --user=root --execute "SELECT version();" 2>&1 >/dev/null; then
+            if mysql -h 127.0.0.1 --user=root --execute "SELECT version();" 2>&1 >/dev/null && mysql -h 127.0.0.1 --port=3307 --user=root --execute "SELECT version();" 2>&1 >/dev/null; then
               break
             fi
             sleep 1
           done
-          
+
           echo "run pytest"
 
       - name: Install dependencies
@@ -45,6 +49,18 @@ jobs:
           pip install .
           pip install pytest
 
-      - name: Run test suite
-        run: |
-          pytest -k "not test_no_trailing_rotate_event and not test_end_log_pos"
+      - name: Run tests for mysql-5
+        working-directory: pymysqlreplication/tests
+        run: pytest -k "$PYTEST_SKIP_OPTION" --db=mysql-5
+
+      - name: Run tests for mysql-5-ctl
+        working-directory: pymysqlreplication/tests
+        run: pytest -k "$PYTEST_SKIP_OPTION" --db=mysql-5-ctl
+
+      - name: Run tests for mysql-8
+        working-directory: pymysqlreplication/tests
+        run: pytest -k "$PYTEST_SKIP_OPTION" --db=mysql-8
+
+      - name: Run tests for mariadb-10
+        working-directory: pymysqlreplication/tests
+        run: pytest -k "$PYTEST_SKIP_OPTION" -m mariadb --db=mariadb-10

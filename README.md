@@ -4,6 +4,7 @@ python-mysql-replication
 <a href="https://travis-ci.org/noplay/python-mysql-replication"><img src="https://travis-ci.org/noplay/python-mysql-replication.svg?branch=master"></a>&nbsp;
 <a href="https://pypi.python.org/pypi/mysql-replication"><img src="http://img.shields.io/pypi/dm/mysql-replication.svg"></a>
 
+<img src ="https://github.com/julien-duponchelle/python-mysql-replication/blob/main/logo.svg">
 Pure Python Implementation of MySQL replication protocol build on top of PyMYSQL. This allows you to receive event like insert, update, delete with their datas and raw SQL queries.
 
 Use cases
@@ -43,9 +44,12 @@ Project status
 ================
 
 The project is test with:
-* MySQL 5.5, 5.6 and 5.7
+* MySQL 5.5, 5.6 and 5.7 (v0.1 ~ v0.45)
+* MySQL 8.0.14 (v1.0 ~)
 * Python 3.7, 3.11
 * PyPy 3.7, 3.9 (really faster than the standard Python interpreter)
+
+MySQL version 8.0.14 and later Set global variable binlog_row_metadata='FULL' and binlog_row_image='FULL'
 
 The project is used in production for critical stuff in some
 medium internet corporations. But all use case as not
@@ -56,10 +60,16 @@ Limitations
 
 https://python-mysql-replication.readthedocs.org/en/latest/limitations.html
 
-Featured Books
+Featured
 =============
 
 [Data Pipelines Pocket Reference](https://www.oreilly.com/library/view/data-pipelines-pocket/9781492087823/) (by James Densmore, O'Reilly): Introduced and exemplified in Chapter 4: Data Ingestion: Extracting Data.
+
+[Streaming Changes in a Database with Amazon Kinesis](https://aws.amazon.com/blogs/database/streaming-changes-in-a-database-with-amazon-kinesis/) (by Emmanuel Espina, Amazon Web Services)
+
+[Near Zero Downtime Migration from MySQL to DynamoDB](https://aws.amazon.com/ko/blogs/big-data/near-zero-downtime-migration-from-mysql-to-dynamodb/) (by YongSeong Lee, Amazon Web Services)
+
+[Enable change data capture on Amazon RDS for MySQL applications that are using XA transactions](https://aws.amazon.com/ko/blogs/database/enable-change-data-capture-on-amazon-rds-for-mysql-applications-that-are-using-xa-transactions/) (by Baruch Assif, Amazon Web Services)
 
 Projects using this library
 ===========================
@@ -84,6 +94,9 @@ Projects using this library
 * MySQL to Kafka (https://github.com/scottpersinger/mysql-to-kafka/)
 * Aventri MySQL Monitor (https://github.com/aventri/mysql-monitor)
 * BitSwanPump: A real-time stream processor  (https://github.com/LibertyAces/BitSwanPump)
+* clickhouse-mysql-data-reader: https://github.com/Altinity/clickhouse-mysql-data-reader
+* py-mysql-elasticsearch-sync: https://github.com/jaehyeonpy/py-mysql-elasticsearch-sync
+* synch: Sync data from other DB to ClickHouse (https://github.com/long2ice/synch)
 
 MySQL server settings
 =========================
@@ -100,7 +113,7 @@ In your MySQL server configuration file you need to enable replication:
 Examples
 =========
 
-All examples are available in the [examples directory](https://github.com/noplay/python-mysql-replication/tree/master/examples)
+All examples are available in the [examples directory](https://github.com/noplay/python-mysql-replication/tree/main/examples)
 
 
 This example will dump all replication events to the console:
@@ -267,6 +280,7 @@ Output will be:
     Transaction ID: 14099
 
 
+
 Tests
 ========
 When it's possible we have a unit test.
@@ -276,7 +290,7 @@ https://python-mysql-replication.readthedocs.org/en/latest/developement.html
 
 Changelog
 ==========
-https://github.com/noplay/python-mysql-replication/blob/master/CHANGELOG
+https://github.com/noplay/python-mysql-replication/blob/main/CHANGELOG
 
 Similar projects
 ==================
@@ -284,7 +298,7 @@ Similar projects
 * MySQL Hadoop Applier: C++ version http://dev.mysql.com/tech-resources/articles/mysql-hadoop-applier.html
 * Java: https://github.com/shyiko/mysql-binlog-connector-java
 * GO: https://github.com/siddontang/go-mysql
-* PHP: Based on this this project https://github.com/krowinski/php-mysql-replication and https://github.com/fengxiangyun/mysql-replication 
+* PHP: Based on this this project https://github.com/krowinski/php-mysql-replication and https://github.com/fengxiangyun/mysql-replication
 * .NET: https://github.com/SciSharp/dotnet-mysql-replication
 * .NET Core: https://github.com/rusuly/MySqlCdc
 
@@ -300,6 +314,11 @@ Major contributor:
 * Julien Duponchelle Original author https://github.com/noplay
 * bjoernhaeuser for his bugs fixing, improvements and community support https://github.com/bjoernhaeuser
 * Arthur Gautier gtid, slave report...  https://github.com/baloo
+
+Maintainer:
+* Julien Duponchelle Original author https://github.com/noplay
+* Sean-k1 https://github.com/sean-k1
+* dongwook-chan https://github.com/dongwook-chan
 
 Other contributors:
 * Dvir Volk for bug fix https://github.com/dvirsky
@@ -329,14 +348,14 @@ Other contributors:
 * Keegan Parker: secondary database for reference schema https://github.com/kdparker
 * Troy J. Farrell Clear table_map if RotateEvent has timestamp of 0 https://github.com/troyjfarrell
 * Zhanwei Wang Fail to get table informations https://github.com/wangzw
-* Alexander Ignatov Fix the JSON literal 
+* Alexander Ignatov Fix the JSON literal
 * Garen Chan Support PyMysql with a version greater than 0.9.3  https://github.com/garenchan
-* Mike Ascah: Add logic to handle inlined ints in large json documents ttps://github.com/mascah 
+* Mike Ascah: Add logic to handle inlined ints in large json documents ttps://github.com/mascah
 * Hiroaki Kawai: PyMySQL 1.0 support (https://github.com/hkwi)
 * Dongwook Chan: Support for ZEROFILL, Correct timedelta value for negative MySQL TIME datatype, Fix parsing of row events for MySQL8 partitioned table, Parse status variables in query event, Parse status variables in query event , Fix parse errors with MariaDB (https://github.com/dongwook-chan)
 * Paul Vickers: Add support for specifying an end log_pos (https://github.com/paulvic)
 * Samira El Aabidi: Add support for MariaDB GTID (https://github.com/Samira-El)
-* Oliver Seemann: Handle large json, github actions, 
+* Oliver Seemann: Handle large json, github actions,
 Zero-pad fixed-length binary fields (https://github.com/oseemann)
 * Mahadir Ahmad: Handle null json payload (https://github.com/mahadirz)
 * Axel Viala: Removal of Python 2.7 (https://github.com/darnuria)
@@ -359,5 +378,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
-

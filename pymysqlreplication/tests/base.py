@@ -1,15 +1,21 @@
-# -*- coding: utf-8 -*-
-
 import pymysql
 import copy
 from pymysqlreplication import BinLogStreamReader
 import os
-import sys
+import json
+import pytest
 
-if sys.version_info < (2, 7):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
+
+
+def get_databases():
+    databases = {}
+    with open(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+    ) as f:
+        databases = json.load(f)
+    return databases
+
 
 base = unittest.TestCase
 
@@ -18,18 +24,26 @@ class PyMySQLReplicationTestCase(base):
     def ignoredEvents(self):
         return []
 
-    def setUp(self):
-        # default
+    @pytest.fixture(autouse=True)
+    def setUpDatabase(self, get_db):
+        databases = get_databases()
+        # For local testing, set the get_dbms parameter to one of the following values: 'mysql-5', 'mysql-8', mariadb-10'.
+        # This value should correspond to the desired database configuration specified in the 'config.json' file.
+        self.database = databases[get_db]
+        """
         self.database = {
             "host": os.environ.get("MYSQL_5_7") or "localhost",
             "user": "root",
             "passwd": "",
             "port": 3306,
             "use_unicode": True,
-            "charset": "utf8",
-            "db": "pymysqlreplication_test"
+            "charset": charset,
+            "db": "pymysqlreplication_test",
         }
+        """
 
+    def setUp(self, charset="utf8"):
+        # default
         self.conn_control = None
         db = copy.copy(self.database)
         db["db"] = None
@@ -37,6 +51,7 @@ class PyMySQLReplicationTestCase(base):
         self.execute("DROP DATABASE IF EXISTS pymysqlreplication_test")
         self.execute("CREATE DATABASE pymysqlreplication_test")
         db = copy.copy(self.database)
+        db["charset"] = charset
         self.connect_conn_control(db)
         self.stream = None
         self.resetBinLog()
@@ -47,25 +62,34 @@ class PyMySQLReplicationTestCase(base):
         """Return the MySQL version of the server
         If version is 5.6.10-log the result is 5.6.10
         """
-        return self.execute("SELECT VERSION()").fetchone()[0].split('-')[0]
+        return self.execute("SELECT VERSION()").fetchone()[0].split("-")[0]
 
     def isMySQL56AndMore(self):
-        version = float(self.getMySQLVersion().rsplit('.', 1)[0])
+        version = float(self.getMySQLVersion().rsplit(".", 1)[0])
         if version >= 5.6:
             return True
         return False
 
     def isMySQL57(self):
-        version = float(self.getMySQLVersion().rsplit('.', 1)[0])
+        version = float(self.getMySQLVersion().rsplit(".", 1)[0])
         return version == 5.7
 
     def isMySQL80AndMore(self):
-        version = float(self.getMySQLVersion().rsplit('.', 1)[0])
+        version = float(self.getMySQLVersion().rsplit(".", 1)[0])
         return version >= 8.0
+
+    def isMySQL8014AndMore(self):
+        version = float(self.getMySQLVersion().rsplit(".", 1)[0])
+        version_detail = int(self.getMySQLVersion().rsplit(".", 1)[1])
+        if version > 8.0:
+            return True
+        return version == 8.0 and version_detail >= 14
 
     def isMariaDB(self):
         if self.__is_mariaDB is None:
-            self.__is_mariaDB = "MariaDB" in self.execute("SELECT VERSION()").fetchone()[0]
+            self.__is_mariaDB = (
+                "MariaDB" in self.execute("SELECT VERSION()").fetchone()[0]
+            )
         return self.__is_mariaDB
 
     @property
@@ -89,7 +113,7 @@ class PyMySQLReplicationTestCase(base):
         c = self.conn_control.cursor()
         c.execute(query)
         return c
-    
+
     def execute_with_args(self, query, args):
         c = self.conn_control.cursor()
         c.execute(query, args)
@@ -99,12 +123,13 @@ class PyMySQLReplicationTestCase(base):
         self.execute("RESET MASTER")
         if self.stream is not None:
             self.stream.close()
-        self.stream = BinLogStreamReader(self.database, server_id=1024,
-                                         ignored_events=self.ignoredEvents())
+        self.stream = BinLogStreamReader(
+            self.database, server_id=1024, ignored_events=self.ignoredEvents()
+        )
 
     def set_sql_mode(self):
         """set sql_mode to test with same sql_mode (mysql 5.7 sql_mode default is changed)"""
-        version = float(self.getMySQLVersion().rsplit('.', 1)[0])
+        version = float(self.getMySQLVersion().rsplit(".", 1)[0])
         if version == 5.7:
             self.execute("SET @@sql_mode='NO_ENGINE_SUBSTITUTION'")
 
@@ -115,33 +140,7 @@ class PyMySQLReplicationTestCase(base):
         return result[0]
 
     def bin_log_basename(self):
-        cursor = self.execute('SELECT @@log_bin_basename')
+        cursor = self.execute("SELECT @@log_bin_basename")
         bin_log_basename = cursor.fetchone()[0]
         bin_log_basename = bin_log_basename.split("/")[-1]
         return bin_log_basename
-
-
-class PyMySQLReplicationMariaDbTestCase(PyMySQLReplicationTestCase):
-    def setUp(self):
-        # default
-        self.database = {
-            "host": "localhost",
-            "user": "root",
-            "passwd": "",
-            "port": 3308,
-            "use_unicode": True,
-            "charset": "utf8",
-            "db": "pymysqlreplication_test"
-        }
-
-        self.conn_control = None
-        db = copy.copy(self.database)
-        db["db"] = None
-        self.connect_conn_control(db)
-        self.execute("DROP DATABASE IF EXISTS pymysqlreplication_test")
-        self.execute("CREATE DATABASE pymysqlreplication_test")
-        db = copy.copy(self.database)
-        self.connect_conn_control(db)
-        self.stream = None
-        self.resetBinLog()
-        

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 #
 # Update a redis server cache when an evenement is trigger
@@ -15,12 +14,7 @@ from pymysqlreplication.row_event import (
     WriteRowsEvent,
 )
 
-MYSQL_SETTINGS = {
-    "host": "127.0.0.1",
-    "port": 3306,
-    "user": "root",
-    "passwd": ""
-}
+MYSQL_SETTINGS = {"host": "127.0.0.1", "port": 3306, "user": "root", "passwd": ""}
 
 
 def main():
@@ -29,10 +23,14 @@ def main():
     stream = BinLogStreamReader(
         connection_settings=MYSQL_SETTINGS,
         server_id=3,  # server_id is your slave identifier, it should be unique
-        only_events=[DeleteRowsEvent, WriteRowsEvent, UpdateRowsEvent])
+        only_events=[DeleteRowsEvent, WriteRowsEvent, UpdateRowsEvent],
+    )
 
     for binlogevent in stream:
-        prefix = "%s:%s:" % (binlogevent.schema, binlogevent.table)
+        prefix = (
+            f"{binlogevent.schema}:"
+            f"{binlogevent.table}:"
+        )
 
         for row in binlogevent.rows:
             if isinstance(binlogevent, DeleteRowsEvent):

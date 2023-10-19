@@ -1,6 +1,6 @@
 class TableMetadataUnavailableError(Exception):
     def __init__(self, table):
-        Exception.__init__(self,"Unable to find metadata for table {0}".format(table))
+        Exception.__init__(self, f"Unable to find metadata for table {table}")
 
 
 class BinLogNotEnabled(Exception):
@@ -10,10 +10,15 @@ class BinLogNotEnabled(Exception):
 
 class StatusVariableMismatch(Exception):
     def __init__(self):
-        Exception.__init__(self, " ".join(
-            "Unknown status variable in query event."
-            , "Possible parse failure in preceding fields"
-            , "or outdated constants.STATUS_VAR_KEY"
-            , "Refer to MySQL documentation/source code"
-            , "or create an issue on GitHub"
-        ))
+        Exception.__init__(
+            self,
+            " ".join(
+                (
+                    "Unknown status variable in query event.",
+                    "Possible parse failure in preceding fields",
+                    "or outdated constants.STATUS_VAR_KEY",
+                    "Refer to MySQL documentation/source code",
+                    "or create an issue on GitHub",
+                )
+            ),
+        )

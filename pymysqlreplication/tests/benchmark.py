@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # This is a sample script in order to make benchmark
 # on library speed.
 #
@@ -7,11 +5,9 @@
 
 import pymysql
 import time
-import random
 import os
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.row_event import *
-import cProfile
 
 
 def execute(con, query):
@@ -19,19 +15,23 @@ def execute(con, query):
     c.execute(query)
     return c
 
+
 def consume_events():
-    stream = BinLogStreamReader(connection_settings=database,
-                                server_id=3,
-                                resume_stream=False,
-                                blocking=True,
-                                only_events = [UpdateRowsEvent],
-                                only_tables = ['test'] )
+    stream = BinLogStreamReader(
+        connection_settings=database,
+        server_id=3,
+        resume_stream=False,
+        blocking=True,
+        only_events=[UpdateRowsEvent],
+        only_tables=["test"],
+    )
     start = time.clock()
     i = 0.0
     for binlogevent in stream:
-            i += 1.0
-            if i % 1000 == 0:
-                print("%d event by seconds (%d total)" % (i / (time.clock() - start), i))
+        i += 1.0
+        if i % 1000 == 0:
+            print(f"{i / (time.clock()- start)} event by seconds ({i} total)")
+
     stream.close()
 
 
@@ -41,7 +41,7 @@ database = {
     "passwd": "",
     "use_unicode": True,
     "charset": "utf8",
-    "db": "pymysqlreplication_test"
+    "db": "pymysqlreplication_test",
 }
 
 conn = pymysql.connect(**database)
@@ -63,5 +63,4 @@ if os.fork() != 0:
         execute(conn, "UPDATE test2 SET i = i + 1;")
 else:
     consume_events()
-    #cProfile.run('consume_events()')
-
+    # cProfile.run('consume_events()')
