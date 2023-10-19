@@ -55,9 +55,12 @@ def main():
            
             properties = pika.BasicProperties(content_type='application/json', 
                                               delivery_mode=DeliveryMode.Transient)
-            
-            channel.basic_publish(exchange='direct', routing_key=routing_key, 
-                                  body=json.dumps(dict(message_body)), properties=properties)
+            channel.basic_publish(
+                exchange='direct',
+                routing_key=routing_key,
+                body=json.dumps(message_body, default=lambda x: str(x)),
+                properties=properties
+            )
             
     stream.close()
     conn.close()
