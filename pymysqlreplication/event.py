@@ -3,6 +3,7 @@ import struct
 import datetime
 import decimal
 import zlib
+import logging
 
 from pymysqlreplication.constants.STATUS_VAR_KEY import *
 from pymysqlreplication.exceptions import StatusVariableMismatch
@@ -58,6 +59,11 @@ class BinLogEvent(object):
         footer = self.packet.read(4)
         byte_data = zlib.crc32(data).to_bytes(4, byteorder="little")
         self._is_event_valid = True if byte_data == footer else False
+        if not self._is_event_valid:
+            logging.error(
+                f"An CRC32 has failed for the event type {self.event_type}, "
+                "indicating a potential integrity issue with the data."
+            )
         self.packet.read_bytes -= 19 + self.event_size + 4
         self.packet.rewind(20)
 
