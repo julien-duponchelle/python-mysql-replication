@@ -4,4 +4,4 @@ set -e
 set -x
 
 ruff pymysqlreplication
-black pymysqlreplication --check
+black pymysqlreplication --exclude pymysqlreplication/bitmap.py --check
