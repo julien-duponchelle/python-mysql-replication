@@ -13,7 +13,6 @@ from pymysqlreplication.packet import BinLogPacketWrapper
 from pymysql.protocol import MysqlPacket
 import pytest
 
-
 __all__ = [
     "TestBasicBinLogStreamReader",
     "TestMultipleRowBinLogStreamReader",
@@ -750,7 +749,7 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.stream.close()
         self.execute("CREATE TABLE test (data VARCHAR(50) CHARACTER SET utf8mb4)")
         self.execute_with_args(
-            "INSERT INTO test (data) VALUES (%s)", (problematic_unicode_string)
+            f"INSERT INTO test (data) VALUES ({problematic_unicode_string})"
         )
         self.execute("COMMIT")
 
