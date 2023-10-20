@@ -748,7 +748,9 @@ class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
         )
         self.stream.close()
         self.execute("CREATE TABLE test (data VARCHAR(50) CHARACTER SET utf8mb4)")
-        self.execute(f"INSERT INTO test (data) VALUES ('{problematic_unicode_string}')")
+        self.execute_with_args(
+            "INSERT INTO test (data) VALUES (%s)", (problematic_unicode_string)
+        )
         self.execute("COMMIT")
 
         # Initialize with ignore_decode_errors=False
