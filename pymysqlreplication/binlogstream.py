@@ -132,13 +132,13 @@ class ReportSlave(object):
             + bytes(bytearray([COM_REGISTER_SLAVE]))
             + struct.pack("<L", server_id)
             + struct.pack(
-                "<%dp" % min(MAX_STRING_LEN, lhostname + 1), self.hostname.encode()
+                f"<{min(MAX_STRING_LEN, lhostname + 1)}p", self.hostname.encode()
             )
             + struct.pack(
-                "<%dp" % min(MAX_STRING_LEN, lusername + 1), self.username.encode()
+                f"<{min(MAX_STRING_LEN, lusername + 1)}p", self.username.encode()
             )
             + struct.pack(
-                "<%dp" % min(MAX_STRING_LEN, lpassword + 1), self.password.encode()
+                f"<{min(MAX_STRING_LEN, lpassword + 1)}p", self.password.encode()
             )
             + struct.pack("<H", self.port)
             + struct.pack("<l", 0)
