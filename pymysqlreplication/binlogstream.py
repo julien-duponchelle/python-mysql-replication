@@ -367,7 +367,7 @@ class BinLogStreamReader(object):
             # master_heartbeat_period is nanoseconds
             heartbeat = int(heartbeat * 1000000000)
             cur = self._stream_connection.cursor()
-            cur.execute(f"SET @master_heartbeat_period= {heartbeat}")
+            cur.execute_with_args("SET @master_heartbeat_period= %d", (heartbeat,))
             cur.close()
 
         # When replicating from Mariadb 10.6.12 using binlog coordinates, a slave capability < 4 triggers a bug in
