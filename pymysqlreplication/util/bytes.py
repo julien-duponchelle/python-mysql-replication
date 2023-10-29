@@ -23,6 +23,29 @@ def decode_uint(data: bytes):
     return parse_uint16(data)
 
 
+def length_encoded_int(data: bytes):
+    if len(data) == 0:
+        return 0, True, 0
+
+    if data[0] == 251:
+        return None, True, 1
+
+    if data[0] == 252:
+        return parse_uint16(data[1:]), False, 3
+
+    if data[0] == 253:
+        return parse_uint24(data[1:]), False, 4
+
+    if data[0] == 254:
+        return (
+            parse_uint64(data[1:]),
+            False,
+            9,
+        )
+
+    return data[0], False, 1
+
+
 def decode_variable_length(data: bytes):
     max_count = 5
     if len(data) < max_count:
@@ -150,6 +173,17 @@ def parse_int16(data: bytes):
 
 def parse_uint16(data: bytes):
     return struct.unpack("<H", data[:2])[0]
+
+
+def parse_uint24(data: bytes):
+    try:
+        return (
+            struct.unpack("B", data[0])[0]
+            + (struct.unpack("B", data[1])[0] << 8)
+            + (struct.unpack("B", data[2])[0] << 16)
+        )
+    except TypeError:
+        return data[0] + (data[1] << 8) + (data[2] << 16)
 
 
 def parse_int32(data: bytes):
