@@ -1,8 +1,11 @@
 ### Version
 Please specify the versions you are using. Exact version numbers are preferred.
-- Pymyrepl(e.g. 1.0.2): 
-- Database(e.g. MySQL 8.2.0):
-- OS(e.g. Ubuntu 18.04):
+- Pymyrepl (e.g., 1.0.2):
+- OS (e.g., Ubuntu 18.04):
+- Database and version (Remove unnecessary options):
+  - MySQL: 
+  - MariaDB: 
+  - Percona:
 
 ### System Variables
 List relevant system variables using the query `SHOW VARIABLES LIKE '<variable_name_here>';`
