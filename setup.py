@@ -28,7 +28,7 @@ class TestCommand(Command):
         unittest.main(tests, argv=sys.argv[:1])
 
 
-version = "1.0.2"
+version = "1.0.3"
 
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()

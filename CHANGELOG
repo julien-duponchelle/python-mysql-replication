@@ -231,3 +231,9 @@
 
 1.0.2 05/10/2023
 * Delete charset_list.csv and add directly in CHARSET.py
+
+1.0.3 04/11/2023
+* Fix only last order column came when DML 5.7 user (#516)
+* Fix update unknown variable (#574)
+* Fix Test Add omitted charset setting in base.py (#565)
+* feature Partial Update row event (#521)
