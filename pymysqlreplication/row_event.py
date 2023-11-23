@@ -1,4 +1,3 @@
-import logging
 import struct
 import decimal
 import datetime
@@ -36,12 +35,6 @@ class RowsEvent(BinLogEvent):
             self.table = self.table_map[self.table_id].table
         except KeyError:  # If we have filter the corresponding TableMap Event
             self._processed = False
-            logging.log(
-                logging.WARN,
-                """
-                  A pymysql.OperationalError error occurred, causing a fake rotate event and initialization of the table_map
-                """,
-            )
             return
 
         if self.__only_tables is not None and self.table not in self.__only_tables:
