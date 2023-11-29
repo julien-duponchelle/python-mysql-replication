@@ -1,6 +1,7 @@
 import io
 import time
 import unittest
+from random import randbytes, shuffle
 
 from pymysqlreplication.json_binary import JsonDiff, JsonDiffOperation
 from pymysqlreplication.tests import base
@@ -419,6 +420,44 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[0]["before_values"]["data"], None)
             self.assertEqual(event.rows[0]["after_values"]["id"], None)
             self.assertEqual(event.rows[0]["after_values"]["data"], "World")
+
+    def test_charset_parsing(self):
+        char_columns = {
+            f"c_utf8_{i}": ("VARCHAR(255) NOT NULL", "Hello")
+            for i in range(3)
+        }
+        char_columns["c_binary"] = ("LONGBLOB NOT NULL", randbytes(1024))
+        int_columns = {f"i_{i}": ("INTEGER NOT NULL", i) for i in range(3)}
+        columns = list({**char_columns, **int_columns}.items())
+        shuffle(columns)
+        column_types = ", ".join(f"{name} {type}" for name, (type, _) in columns)
+        column_names = ", ".join(name for name, _ in columns)
+        column_value_placeholders = ", ".join("%s" for _ in range(len(columns)))
+        column_values = [value for _, (_, value) in columns]
+        query = f"CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, {column_types}, PRIMARY KEY (id)) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;"
+        self.execute(query)
+        query = f"INSERT INTO test ({column_names}) VALUES({column_value_placeholders})"
+        self.execute_with_args(query, column_values)
+        self.execute("COMMIT")
+
+        self.assertIsInstance(self.stream.fetchone(), RotateEvent)
+        self.assertIsInstance(self.stream.fetchone(), FormatDescriptionEvent)
+        # QueryEvent for the Create Table
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        # QueryEvent for the BEGIN
+        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, TableMapEvent)
+        if event.table_map[event.table_id].column_name_flag:
+            columns = {c.name: c for c in event.columns}
+            for name, column in columns.items():
+                if name.startswith("c_utf8_"):
+                    assert column.character_set_name == "utf8"
+                    assert column.collation_name == "utf8mb3_unicode_ci"
+            assert columns["c_binary"].character_set_name == "binary"
+            assert columns["c_binary"].collation_name == "binary"
+
 
     def test_log_pos(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
