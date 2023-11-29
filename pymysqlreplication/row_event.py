@@ -220,7 +220,7 @@ class RowsEvent(BinLogEvent):
         elif column.type == FIELD_TYPE.NEWDECIMAL:
             return self.__read_new_decimal(column)
         elif column.type == FIELD_TYPE.BLOB:
-            return self.__read_string(column.length_size, column)
+            return self.packet.read_length_coded_pascal_string(column.length_size)
         elif column.type == FIELD_TYPE.DATETIME:
             ret = self.__read_datetime()
             if ret is None:
