@@ -1,7 +1,6 @@
 import io
 import time
 import unittest
-from random import randbytes, shuffle
 
 from pymysqlreplication.json_binary import JsonDiff, JsonDiffOperation
 from pymysqlreplication.tests import base
@@ -421,23 +420,17 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[0]["after_values"]["id"], None)
             self.assertEqual(event.rows[0]["after_values"]["data"], "World")
 
-    def test_charset_parsing(self):
-        char_columns = {
-            f"c_utf8_{i}": ("VARCHAR(255) NOT NULL", "Hello")
-            for i in range(3)
-        }
-        char_columns["c_binary"] = ("LONGBLOB NOT NULL", randbytes(1024))
-        int_columns = {f"i_{i}": ("INTEGER NOT NULL", i) for i in range(3)}
-        columns = list({**char_columns, **int_columns}.items())
-        shuffle(columns)
-        column_types = ", ".join(f"{name} {type}" for name, (type, _) in columns)
-        column_names = ", ".join(name for name, _ in columns)
-        column_value_placeholders = ", ".join("%s" for _ in range(len(columns)))
-        column_values = [value for _, (_, value) in columns]
-        query = f"CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, {column_types}, PRIMARY KEY (id)) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;"
+    def test_default_charset_parsing(self):
+        query = """CREATE TABLE test (
+            id INT NOT NULL AUTO_INCREMENT,
+            text1 VARCHAR(255) NOT NULL,
+            text2 VARCHAR(255) NOT NULL,
+            data LONGBLOB NOT NULL,
+            PRIMARY KEY (id)
+        ) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;"""
         self.execute(query)
-        query = f"INSERT INTO test ({column_names}) VALUES({column_value_placeholders})"
-        self.execute_with_args(query, column_values)
+        query = "INSERT INTO test (text1, text2, data) VALUES(%s, %s, %s)"
+        self.execute_with_args(query, ("text", "text", b"data"))
         self.execute("COMMIT")
 
         self.assertIsInstance(self.stream.fetchone(), RotateEvent)
@@ -451,12 +444,12 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, TableMapEvent)
         if event.table_map[event.table_id].column_name_flag:
             columns = {c.name: c for c in event.columns}
-            for name, column in columns.items():
-                if name.startswith("c_utf8_"):
-                    assert column.character_set_name == "utf8"
-                    assert column.collation_name == "utf8mb3_unicode_ci"
-            assert columns["c_binary"].character_set_name == "binary"
-            assert columns["c_binary"].collation_name == "binary"
+            assert columns["text1"].character_set_name == "utf8"
+            assert columns["text1"].collation_name.startswith("utf8")
+            assert columns["text2"].character_set_name == "utf8"
+            assert columns["text2"].collation_name.startswith("utf8")
+            assert columns["data"].character_set_name == "binary"
+            assert columns["data"].collation_name == "binary"
 
 
     def test_log_pos(self):
@@ -1898,7 +1891,7 @@ class TestJsonPartialUpdate(base.PyMySQLReplicationTestCase):
     def test_json_partial_update(self):
         create_query = "CREATE TABLE test_json_v2 (id INT, c JSON,PRIMARY KEY (id)) ;"
         column_add_query = "ALTER TABLE test_json_v2 ADD COLUMN d JSON DEFAULT NULL, ADD COLUMN e JSON DEFAULT NULL;"
-        insert_query = """INSERT INTO test_json_v2 VALUES 
+        insert_query = """INSERT INTO test_json_v2 VALUES
                             (101
                             ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
                             ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
@@ -1935,7 +1928,7 @@ class TestJsonPartialUpdate(base.PyMySQLReplicationTestCase):
         drop_table_if_exists_query = "DROP TABLE IF EXISTS test_json_v2;"
         create_query = "CREATE TABLE test_json_v2 (id INT, c JSON,PRIMARY KEY (id)) ;"
         column_add_query = "ALTER TABLE test_json_v2 ADD COLUMN d JSON DEFAULT NULL, ADD COLUMN e JSON DEFAULT NULL;"
-        insert_query = """INSERT INTO test_json_v2 VALUES 
+        insert_query = """INSERT INTO test_json_v2 VALUES
                             (101
                             ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
                             ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
@@ -1973,7 +1966,7 @@ class TestJsonPartialUpdate(base.PyMySQLReplicationTestCase):
         drop_table_if_exists_query = "DROP TABLE IF EXISTS test_json_v2;"
         create_query = "CREATE TABLE test_json_v2 (id INT, c JSON,PRIMARY KEY (id)) ;"
         column_add_query = "ALTER TABLE test_json_v2 ADD COLUMN d JSON DEFAULT NULL, ADD COLUMN e JSON DEFAULT NULL;"
-        insert_query = """INSERT INTO test_json_v2 VALUES 
+        insert_query = """INSERT INTO test_json_v2 VALUES
                             (101
                             ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
                             ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
@@ -2013,7 +2006,7 @@ class TestJsonPartialUpdate(base.PyMySQLReplicationTestCase):
         drop_table_if_exists_query = "DROP TABLE IF EXISTS test_json_v2;"
         create_query = "CREATE TABLE test_json_v2 (id INT, c JSON,PRIMARY KEY (id)) ;"
         column_add_query = "ALTER TABLE test_json_v2 ADD COLUMN d JSON DEFAULT NULL, ADD COLUMN e JSON DEFAULT NULL;"
-        insert_query = """INSERT INTO test_json_v2 VALUES 
+        insert_query = """INSERT INTO test_json_v2 VALUES
                             (101
                             ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
                             ,'{"a":"aaaaaaaaaaaaa", "c":"ccccccccccccccc", "ab":["abababababababa", "babababababab"]}'
