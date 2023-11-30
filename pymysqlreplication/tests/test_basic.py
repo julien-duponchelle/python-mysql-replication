@@ -451,7 +451,6 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             assert columns["data"].character_set_name == "binary"
             assert columns["data"].collation_name == "binary"
 
-
     def test_log_pos(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
