@@ -421,6 +421,13 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[0]["after_values"]["data"], "World")
 
     def test_default_charset_parsing(self):
+        """
+        Here, we want the database to include the binary charset into
+        the DEFAULT_CHARSET optional metadata block.
+        Also, we are adding an int field and two text fields to force
+        a difference in the index of the blob column in the table
+        and in the list of columns that have charset.
+        """
         query = """CREATE TABLE test (
             id INT NOT NULL AUTO_INCREMENT,
             text1 VARCHAR(255) NOT NULL,
