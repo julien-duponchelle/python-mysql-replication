@@ -14,7 +14,6 @@ from pymysqlreplication.packet import BinLogPacketWrapper
 from pymysql.protocol import MysqlPacket
 import pytest
 
-
 __all__ = [
     "TestBasicBinLogStreamReader",
     "TestMultipleRowBinLogStreamReader",
@@ -1472,6 +1471,7 @@ class TestRowsQueryLogEvents(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         self.assertIsInstance(event, RowsQueryLogEvent)
 
+
 class TestGtidEvent(base.PyMySQLReplicationTestCase):
     def setUp(self):
         super(TestGtidEvent, self).setUp()
@@ -1503,6 +1503,7 @@ class TestGtidEvent(base.PyMySQLReplicationTestCase):
         self.assertEqual(gtid_event.sequence_number, 1)
         self.assertIsInstance(gtid_event.immediate_commit_timestamp, bytes)
         self.assertIsInstance(gtid_event.original_commit_timestamp, bytes)
+
 
 class TestLatin1(base.PyMySQLReplicationTestCase):
     def setUp(self):
