@@ -9,6 +9,7 @@ from pymysqlreplication.constants.STATUS_VAR_KEY import *
 from pymysqlreplication.exceptions import StatusVariableMismatch
 from pymysqlreplication.util.bytes import parse_decimal_from_bytes
 from typing import Union, Optional
+import json
 
 
 class BinLogEvent(object):
@@ -67,15 +68,27 @@ class BinLogEvent(object):
         self.packet.read_bytes -= 19 + self.event_size + 4
         self.packet.rewind(20)
 
+    @property
+    def formatted_timestamp(self) -> str:
+        return datetime.datetime.utcfromtimestamp(self.timestamp).isoformat()
+
     def dump(self):
         print(f"=== {self.__class__.__name__} ===")
-        print(f"Date: {datetime.datetime.utcfromtimestamp(self.timestamp).isoformat()}")
+        print(f"Date: {self.formatted_timestamp}")
         print(f"Log position: {self.packet.log_pos}")
         print(f"Event size: {self.event_size}")
         print(f"Read bytes: {self.packet.read_bytes}")
         self._dump()
         print()
 
+    def to_dict(self) -> dict:
+        return {
+            "timestamp": self.formatted_timestamp,
+            "log_pos": self.packet.log_pos,
+            "event_size": self.event_size,
+            "read_bytes": self.packet.read_bytes,
+        }
+    
     def _dump(self):
         """Core data dumped for the event"""
         pass
