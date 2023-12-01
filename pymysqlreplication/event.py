@@ -89,6 +89,9 @@ class BinLogEvent(object):
             "read_bytes": self.packet.read_bytes,
         }
     
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict())
+    
     def _dump(self):
         """Core data dumped for the event"""
         pass
