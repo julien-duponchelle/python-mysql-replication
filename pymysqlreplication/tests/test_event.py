@@ -1,8 +1,4 @@
-import pytest
-
-
 from pymysqlreplication.tests.base import PyMySQLReplicationTestCase
-from pymysqlreplication.event import QueryEvent
 from pymysqlreplication import BinLogStreamReader 
 import json
 class BinLogEventTestCase(PyMySQLReplicationTestCase):
