@@ -626,6 +626,29 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             ),
             self.assertEqual(event.rows[0]["after_values"]["setting"], {b"btn": True}),
 
+    def test_format_description_event(self):
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            blocking=False,
+            only_events=[FormatDescriptionEvent],
+        )
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, FormatDescriptionEvent)
+        self.assertIsInstance(event.binlog_version, tuple)
+        self.assertIsInstance(event.mysql_version_str, str)
+        self.assertTrue(
+            event.mysql_version_str.startswith("5.") or event.mysql_version_str.startswith("8."))  # Example check
+        self.assertIsInstance(event.common_header_len, int)
+        self.assertIsInstance(event.post_header_len, tuple)
+        self.assertIsInstance(event.mysql_version, tuple)
+        self.assertEqual(len(event.mysql_version), 3)
+        self.assertIsInstance(event.server_version_split, tuple)
+        self.assertEqual(len(event.server_version_split), 3)
+        self.assertIsInstance(event.number_of_event_types, int)
+
 
 class TestMultipleRowBinLogStreamReader(base.PyMySQLReplicationTestCase):
     def setUp(self):
@@ -1446,6 +1469,30 @@ class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         self.assertEqual(event.event_type, 163)
         self.assertEqual(event.gtid_list[0].gtid, "0-1-15")
+
+    def test_format_description_event(self):
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            blocking=False,
+            only_events=[FormatDescriptionEvent],
+            is_mariadb=True,
+        )
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, FormatDescriptionEvent)
+        self.assertIsInstance(event.binlog_version, tuple)
+        self.assertIsInstance(event.mysql_version_str, str)
+        self.assertTrue(
+            event.mysql_version_str.startswith("10."))
+        self.assertIsInstance(event.common_header_len, int)
+        self.assertIsInstance(event.post_header_len, tuple)
+        self.assertIsInstance(event.mysql_version, tuple)
+        self.assertEqual(len(event.mysql_version), 3)
+        self.assertIsInstance(event.server_version_split, tuple)
+        self.assertEqual(len(event.server_version_split), 3)
+        self.assertIsInstance(event.number_of_event_types, int)
 
 
 class TestRowsQueryLogEvents(base.PyMySQLReplicationTestCase):
