@@ -12,6 +12,7 @@ from pymysqlreplication.constants.NONE_SOURCE import *
 from pymysqlreplication.row_event import *
 from pymysqlreplication.packet import BinLogPacketWrapper
 from pymysql.protocol import MysqlPacket
+from unittest.mock import patch
 import pytest
 
 
@@ -1133,7 +1134,8 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
         self.assertEqual(type(expected_rand_event.seed1), int)
         self.assertEqual(type(expected_rand_event.seed2), int)
 
-    def test_user_var_string_event(self):
+    @patch("sys.stdout", new_callable=io.StringIO)
+    def test_user_var_string_event(self, mock_stdout):
         self.execute(
             "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR(50), PRIMARY KEY (id))"
         )
@@ -1153,6 +1155,11 @@ class TestStatementConnectionSetting(base.PyMySQLReplicationTestCase):
         self.assertEqual(expected_user_var_event.is_null, 0)
         self.assertEqual(expected_user_var_event.type, 0)
         self.assertEqual(expected_user_var_event.charset, 33)
+
+        # Test _dump method
+        expected_user_var_event._dump()
+        self.assertIn("User variable name: ", mock_stdout.getvalue())
+        self.assertIn("Value: ", mock_stdout.getvalue())
 
     def test_user_var_real_event(self):
         self.execute(
