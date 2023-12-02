@@ -370,7 +370,9 @@ class FormatDescriptionEvent(BinLogEvent):
         self.mysql_version = tuple(map(int, numbers.split(".")))
         self.created = struct.unpack("<I", self.packet.read(4))[0]
         self.common_header_len = struct.unpack("<B", self.packet.read(1))[0]
-        offset = 4 + 2 + 50 + 1 # created + binlog_version + mysql_version_str + common_header_len
+        offset = (
+            4 + 2 + 50 + 1
+        )  # created + binlog_version + mysql_version_str + common_header_len
         checksum_algorithm = 1
         checksum = 4
         n = event_size - offset - self.common_header_len - checksum_algorithm - checksum
@@ -386,7 +388,6 @@ class FormatDescriptionEvent(BinLogEvent):
         print(f"Post header length: {self.post_header_len}")
         print(f"Server version split: {self.server_version_split}")
         print(f"Number of event types: {self.number_of_event_types}")
-
 
 
 class StopEvent(BinLogEvent):

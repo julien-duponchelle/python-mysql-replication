@@ -640,7 +640,9 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event.binlog_version, tuple)
         self.assertIsInstance(event.mysql_version_str, str)
         self.assertTrue(
-            event.mysql_version_str.startswith("5.") or event.mysql_version_str.startswith("8."))  # Example check
+            event.mysql_version_str.startswith("5.")
+            or event.mysql_version_str.startswith("8.")
+        )  # Example check
         self.assertIsInstance(event.common_header_len, int)
         self.assertIsInstance(event.post_header_len, tuple)
         self.assertIsInstance(event.mysql_version, tuple)
@@ -1484,8 +1486,7 @@ class TestMariadbBinlogStreamReader2(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(event, FormatDescriptionEvent)
         self.assertIsInstance(event.binlog_version, tuple)
         self.assertIsInstance(event.mysql_version_str, str)
-        self.assertTrue(
-            event.mysql_version_str.startswith("10."))
+        self.assertTrue(event.mysql_version_str.startswith("10."))
         self.assertIsInstance(event.common_header_len, int)
         self.assertIsInstance(event.post_header_len, tuple)
         self.assertIsInstance(event.mysql_version, tuple)
