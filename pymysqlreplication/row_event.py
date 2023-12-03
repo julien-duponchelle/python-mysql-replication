@@ -1004,14 +1004,17 @@ class TableMapEvent(BinLogEvent):
         column_type_detect_function,
     ):
         column_charset = []
+        position = 0
         for i in range(self.column_count):
             column_type = self.columns[i].type
             if not column_type_detect_function(column_type, dbms=self.dbms):
                 continue
-            elif i not in column_charset_collation.keys():
-                column_charset.append(default_charset_collation)
             else:
-                column_charset.append(column_charset_collation[i])
+                if position not in column_charset_collation.keys():
+                    column_charset.append(default_charset_collation)
+                else:
+                    column_charset.append(column_charset_collation[position])
+                position += 1
 
         return column_charset
 
