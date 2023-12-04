@@ -237,3 +237,7 @@
 * Fix update unknown variable (#574)
 * Fix Test Add omitted charset setting in base.py (#565)
 * feature Partial Update row event (#521)
+
+1.0.4 04/12/2023
+* Fix an issue in parsing default column charset (#582)
+* fake rotate event check (#579)
