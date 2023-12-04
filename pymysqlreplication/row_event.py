@@ -782,6 +782,7 @@ class TableMapEvent(BinLogEvent):
         self.column_count = self.packet.read_length_coded_binary()
 
         self.columns = []
+        self.dbms = self._ctl_connection._get_dbms()
         # Read columns meta data
         column_types = bytearray(self.packet.read(self.column_count))
         self.packet.read_length_coded_binary()
