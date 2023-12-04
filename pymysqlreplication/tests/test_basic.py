@@ -1488,6 +1488,8 @@ class TestGtidEvent(base.PyMySQLReplicationTestCase):
             server_id=1024,
             only_events=[GtidEvent],
         )
+        if not self.isMySQL57AndMore():
+            self.skipTest("Mysql version is under 5.7")
         self.execute(
             "CREATE TABLE IF NOT EXISTS test (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))"
         )
