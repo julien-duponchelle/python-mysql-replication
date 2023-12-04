@@ -43,7 +43,7 @@ class BinLogEvent(object):
         self._processed = True
         self.complete = True
         self._verify_event()
-        self.dbms = None
+        self.dbms = self._ctl_connection._get_dbms()
 
     def _read_table_id(self):
         # Table ID is 6 byte
@@ -105,7 +105,7 @@ class GtidEvent(BinLogEvent):
         self.gno = struct.unpack("<Q", self.packet.read(8))[0]
         self.lt_type = self.packet.read(1)[0]
 
-        if self.dbms == "mysql" and self.mysql_version >= (5, 7):
+        if self.mysql_version >= (5, 7):
             self.last_committed = struct.unpack("<Q", self.packet.read(8))[0]
             self.sequence_number = struct.unpack("<Q", self.packet.read(8))[0]
 
@@ -368,10 +368,6 @@ class FormatDescriptionEvent(BinLogEvent):
         self.binlog_version = struct.unpack("<H", self.packet.read(2))
         self.mysql_version_str = self.packet.read(50).rstrip(b"\0").decode()
         numbers = self.mysql_version_str.split("-")[0]
-        if "MariaDB" in self.mysql_version_str:
-            self.dbms = "mariadb"
-        else:
-            self.dbms = "mysql"
         self.mysql_version = tuple(map(int, numbers.split(".")))
         self.created = struct.unpack("<I", self.packet.read(4))[0]
         self.common_header_len = struct.unpack("<B", self.packet.read(1))[0]
