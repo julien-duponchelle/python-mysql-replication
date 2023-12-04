@@ -43,6 +43,7 @@ class BinLogEvent(object):
         self._processed = True
         self.complete = True
         self._verify_event()
+        self.dbms = self._ctl_connection._get_dbms()
 
     def _read_table_id(self):
         # Table ID is 6 byte
@@ -368,10 +369,26 @@ class FormatDescriptionEvent(BinLogEvent):
         self.mysql_version_str = self.packet.read(50).rstrip(b"\0").decode()
         numbers = self.mysql_version_str.split("-")[0]
         self.mysql_version = tuple(map(int, numbers.split(".")))
+        self.created = struct.unpack("<I", self.packet.read(4))[0]
+        self.common_header_len = struct.unpack("<B", self.packet.read(1))[0]
+        offset = (
+            4 + 2 + 50 + 1
+        )  # created + binlog_version + mysql_version_str + common_header_len
+        checksum_algorithm = 1
+        checksum = 4
+        n = event_size - offset - self.common_header_len - checksum_algorithm - checksum
+        self.post_header_len = struct.unpack(f"<{n}B", self.packet.read(n))
+        self.server_version_split = struct.unpack("<3B", self.packet.read(3))
+        self.number_of_event_types = struct.unpack("<B", self.packet.read(1))[0]
 
     def _dump(self):
         print(f"Binlog version: {self.binlog_version}")
-        print(f"MySQL version: {self.mysql_version_str}")
+        print(f"mysql version: {self.mysql_version_str}")
+        print(f"Created: {self.created}")
+        print(f"Common header length: {self.common_header_len}")
+        print(f"Post header length: {self.post_header_len}")
+        print(f"Server version split: {self.server_version_split}")
+        print(f"Number of event types: {self.number_of_event_types}")
 
 
 class StopEvent(BinLogEvent):
