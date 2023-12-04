@@ -27,7 +27,6 @@ class BinLogEvent(object):
         ignore_decode_errors=False,
         verify_checksum=False,
         optional_meta_data=False,
-        dbms=None,
     ):
         self.packet = from_packet
         self.table_map = table_map
@@ -44,7 +43,7 @@ class BinLogEvent(object):
         self._processed = True
         self.complete = True
         self._verify_event()
-        self.dbms = dbms
+        self.dbms = None
 
     def _read_table_id(self):
         # Table ID is 6 byte

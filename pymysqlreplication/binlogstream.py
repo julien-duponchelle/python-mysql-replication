@@ -287,6 +287,7 @@ class BinLogStreamReader(object):
         else:
             self.pymysql_wrapper = pymysql.connect
         self.mysql_version = (0, 0, 0)
+        self.dbms = None
 
     def close(self):
         if self.__connected_stream:
@@ -748,14 +749,12 @@ class BinLogStreamReader(object):
     def __get_dbms(self):
         if not self.__connected_ctl:
             self.__connect_to_ctl()
-
-        cur = self._ctl_connection.cursor()
-        cur.execute("SELECT VERSION();")
-
-        version_info = cur.fetchone().get("VERSION()", "")
-
-        if "MariaDB" in version_info:
+        if self.dbms:
+            return self.dbms
+        if "MariaDB" in self._ctl_connection.get_server_info():
+            self.dbms = "mariadb"
             return "mariadb"
+        self.dbms = "mysql"
         return "mysql"
 
     def __log_valid_parameters(self):
