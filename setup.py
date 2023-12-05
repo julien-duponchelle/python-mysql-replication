@@ -53,5 +53,8 @@ setup(
         "pymysqlreplication.util",
     ],
     cmdclass={"test": TestCommand},
-    install_requires=["pymysql>=1.1.0"],
+    install_requires=[
+        "packaging",
+        "pymysql>=1.1.0",
+    ],
 )
