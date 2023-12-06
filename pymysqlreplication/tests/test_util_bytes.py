@@ -1,5 +1,49 @@
 import unittest
+from datetime import time
+
 from pymysqlreplication.util import *
+
+
+class TestIsDataShort(unittest.TestCase):
+    def test_data_is_shorter(self):
+        # Test with data shorter than expected.
+        data = bytearray([0x01])  # 1-byte data
+        expected_length = 2
+        self.assertTrue(is_data_short(data, expected_length))
+
+    def test_data_is_equal_length(self):
+        # Test with data equal to expected length.
+        data = bytearray([0x01, 0x00])  # 2-byte data
+        expected_length = 2
+        self.assertFalse(is_data_short(data, expected_length))
+
+    def test_data_is_longer(self):
+        # Test with data longer than expected.
+        data = bytearray([0x01, 0x00, 0x02])  # 3-byte data
+        expected_length = 2
+        self.assertFalse(is_data_short(data, expected_length))
+
+    def test_data_is_empty(self):
+        # Test with empty data.
+        data = bytearray([])
+        expected_length = 1
+        self.assertTrue(is_data_short(data, expected_length))
+
+
+class TestDecodeCount(unittest.TestCase):
+    def test_small_format(self):
+        # Test with 2-byte input and small format.
+        data = bytearray([0x01, 0x00])  # Represents the unsigned integer 1
+        is_small = True
+        result = decode_count(data, is_small)
+        self.assertEqual(result, 1)
+
+    def test_large_format(self):
+        # Test with 4-byte input and large format.
+        data = bytearray([0x01, 0x00, 0x00, 0x00])  # Represents the unsigned integer 1
+        is_small = False
+        result = decode_count(data, is_small)
+        self.assertEqual(result, 1)
 
 
 class TestDecodeUint(unittest.TestCase):
@@ -52,15 +96,36 @@ class TestLengthEncodedInt(unittest.TestCase):
 
 
 class TestDecodeTime(unittest.TestCase):
+    def test_midnight(self):
+        # Test decoding of midnight
+        data = bytearray([0x00] * 8)  # Represents 00:00:00
+        result = decode_time(data)
+        self.assertEqual(result, datetime.time(0, 0, 0))
+
     def test_valid_time(self):
-        # Assuming parse_int64 returns an integer representing time
-        # Here we use a mocked function for parse_int64
-        data = bytearray(8)  # Mocked data, replace with actual test data
-        with unittest.mock.patch(
-            "pymysqlreplication.util.parse_int64", return_value=12345678
-        ):
-            result = decode_time(data)
-            self.assertIsInstance(result, datetime.time)
+        data = bytearray(
+            [0x00, 0x00, 0x00, 0xC0, 0x18, 0x01, 0x00, 0x00]
+        )  # Represents 17:35:00
+        result = decode_time(data)
+        self.assertEqual(result, datetime.time(17, 35, 0))
+
+
+class TestDecodeDatetime(unittest.TestCase):
+    def test_zero_datetime(self):
+        # Test decoding of zero datetime
+        data = bytearray([0x00] * 8)  # Represents 0000-00-00 00:00:00
+        result = decode_datetime(data)
+        self.assertEqual(result, "0000-00-00 00:00:00")
+
+    def test_valid_datetime(self):
+        data = bytearray(
+            [0x00, 0x00, 0x00, 0xC0, 0x18, 0x9B, 0xB1, 0x19]
+        )  # Represents 2023-11-13 17:35:00
+        expected_datetime = datetime.datetime(
+            year=2023, month=11, day=13, hour=17, minute=35, second=0
+        )
+        result = decode_datetime(data)
+        self.assertEqual(result, expected_datetime)
 
 
 # Running the tests
