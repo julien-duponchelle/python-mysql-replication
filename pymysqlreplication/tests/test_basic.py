@@ -1493,8 +1493,9 @@ class TestGtidEvent(base.PyMySQLReplicationTestCase):
         self.execute(
             "CREATE TABLE IF NOT EXISTS test (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))"
         )
+        format_description_event = self.stream.fetchone()
         gtid_event = self.stream.fetchone()
-
+        self.assertIsInstance(format_description_event, FormatDescriptionEvent)
         self.assertIsInstance(gtid_event, GtidEvent)
         self.assertIsInstance(gtid_event.event_type, int)
         self.assertIsInstance(gtid_event.sid, bytes)
