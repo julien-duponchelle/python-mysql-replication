@@ -1,8 +1,8 @@
-import unittest
 from pymysqlreplication.util import *
+from pymysqlreplication.tests.base import PyMySQLReplicationTestCase
 
 
-class TestIsDataShort(unittest.TestCase):
+class TestIsDataShort(PyMySQLReplicationTestCase):
     def test_data_is_shorter(self):
         data = bytearray([0x01])
         expected_length = 2
@@ -24,7 +24,7 @@ class TestIsDataShort(unittest.TestCase):
         self.assertTrue(is_data_short(data, expected_length))
 
 
-class TestDecodeCount(unittest.TestCase):
+class TestDecodeCount(PyMySQLReplicationTestCase):
     def test_small_format(self):
         data = bytearray([0x01, 0x00])
         is_small = True
@@ -38,7 +38,7 @@ class TestDecodeCount(unittest.TestCase):
         self.assertEqual(result, 1)
 
 
-class TestDecodeUint(unittest.TestCase):
+class TestDecodeUint(PyMySQLReplicationTestCase):
     def test_valid_input(self):
         data = bytearray([0x01, 0x00])
         result = decode_uint(data)
@@ -55,7 +55,7 @@ class TestDecodeUint(unittest.TestCase):
         self.assertEqual(result, 0)
 
 
-class TestDecodeVariableLength(unittest.TestCase):
+class TestDecodeVariableLength(PyMySQLReplicationTestCase):
     def test_single_byte(self):
         data = bytearray([0x05])
         length, pos = decode_variable_length(data)
@@ -75,7 +75,7 @@ class TestDecodeVariableLength(unittest.TestCase):
         self.assertEqual(pos, 5)
 
 
-class TestParseUint16(unittest.TestCase):
+class TestParseUint16(PyMySQLReplicationTestCase):
     def test_valid_input(self):
         data = bytearray([0x01, 0x00])
         result = parse_uint16(data)
@@ -87,7 +87,7 @@ class TestParseUint16(unittest.TestCase):
         self.assertEqual(result, 255)
 
 
-class TestLengthEncodedInt(unittest.TestCase):
+class TestLengthEncodedInt(PyMySQLReplicationTestCase):
     def test_single_byte(self):
         data = bytearray([0x05])
         result, _, _ = length_encoded_int(data)
@@ -104,7 +104,7 @@ class TestLengthEncodedInt(unittest.TestCase):
         self.assertEqual(result, 0x030201)
 
 
-class TestDecodeTime(unittest.TestCase):
+class TestDecodeTime(PyMySQLReplicationTestCase):
     def test_midnight(self):
         data = bytearray([0x00] * 8)
         result = decode_time(data)
@@ -116,7 +116,7 @@ class TestDecodeTime(unittest.TestCase):
         self.assertEqual(result, datetime.time(17, 35, 0))
 
 
-class TestDecodeDatetime(unittest.TestCase):
+class TestDecodeDatetime(PyMySQLReplicationTestCase):
     def test_zero_datetime(self):
         data = bytearray([0x00] * 8)
         result = decode_datetime(data)
@@ -129,7 +129,3 @@ class TestDecodeDatetime(unittest.TestCase):
         )
         result = decode_datetime(data)
         self.assertEqual(result, expected_datetime)
-
-
-if __name__ == "__main__":
-    unittest.main()
