@@ -1486,7 +1486,7 @@ class TestGtidEvent(base.PyMySQLReplicationTestCase):
         self.stream = BinLogStreamReader(
             self.database,
             server_id=1024,
-            only_events=[GtidEvent, FORMAT_DESCRIPTION_EVENT],
+            only_events=[GtidEvent, FormatDescriptionEvent],
         )
         if not self.isMySQL57AndMore():
             self.skipTest("Mysql version is under 5.7")
