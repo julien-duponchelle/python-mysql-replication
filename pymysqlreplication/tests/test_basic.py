@@ -299,8 +299,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         event._dump()
         output = mock_stdout.getvalue()
         self.assertIn("Values:", output)
-        self.assertIn("* id : 1", output)
-        self.assertIn("* data : Hello World", output)
+        self.assertIn("* UNKNOWN_COL0 : 1", output)
+        self.assertIn("* UNKNOWN_COL1 : Hello World", output)
 
     def test_update_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
