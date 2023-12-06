@@ -264,7 +264,8 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[0]["values"]["data"], "Hello World")
             self.assertEqual(event.columns[1].name, "data")
 
-    def test_delete_row_event(self):
+    @patch("sys.stdout", new_callable=io.StringIO)
+    def test_delete_row_event(self, mock_stdout):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
         self.execute(query)
         query = "INSERT INTO test (data) VALUES('Hello World')"
@@ -293,6 +294,13 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
         if event.table_map[event.table_id].column_name_flag:
             self.assertEqual(event.rows[0]["values"]["id"], 1)
             self.assertEqual(event.rows[0]["values"]["data"], "Hello World")
+
+        # Test _dump method
+        event._dump()
+        output = mock_stdout.getvalue()
+        self.assertIn("Values:", output)
+        self.assertIn("* id : 1", output)
+        self.assertIn("* data : Hello World", output)
 
     def test_update_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
