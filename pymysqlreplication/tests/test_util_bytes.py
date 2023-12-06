@@ -66,6 +66,38 @@ class TestDecodeUint(unittest.TestCase):
         self.assertEqual(result, 0)
 
 
+class TestDecodeVariableLength(unittest.TestCase):
+    def test_single_byte(self):
+        # Test with a single byte where the high bit is not set (indicating the end)
+        data = bytearray([0x05])  # 5 with the high bit not set
+        length, pos = decode_variable_length(data)
+        self.assertEqual(length, 5)
+        self.assertEqual(pos, 1)
+
+    def test_multiple_bytes(self):
+        # Test with multiple bytes
+        # 0x81 -> 1 with the high bit set, indicating more bytes
+        # 0x01 -> 1 with the high bit not set, indicating the end
+        # Combined value is 1 + (1 << 7) = 129
+        data = bytearray([0x81, 0x01])
+        length, pos = decode_variable_length(data)
+        self.assertEqual(length, 129)
+        self.assertEqual(pos, 2)
+
+    def test_max_length(self):
+        # Test with the maximum length (5 bytes)
+        # This will test the boundary condition of the loop in the function
+        data = bytearray(
+            [0x80, 0x80, 0x80, 0x80, 0x01]
+        )  # Each 0x80 has the high bit set, 0x01 does not
+        # The value is 1 << (7 * 4) = 2**28
+        length, pos = decode_variable_length(data)
+        self.assertEqual(length, 2**28)
+        self.assertEqual(pos, 5)
+
+    # You can add more test cases to cover different scenarios and edge cases.
+
+
 class TestParseUint16(unittest.TestCase):
     def test_valid_input(self):
         data = bytearray([0x01, 0x00])  # Represents the unsigned integer 1
