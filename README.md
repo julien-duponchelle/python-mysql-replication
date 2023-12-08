@@ -103,11 +103,15 @@ MySQL server settings
 In your MySQL server configuration file you need to enable replication:
 
     [mysqld]
-    server-id		 = 1
-    log_bin			 = /var/log/mysql/mysql-bin.log
-    expire_logs_days = 10
-    max_binlog_size  = 100M
-    binlog-format    = row #Very important if you want to receive write, update and delete row events
+    server-id		           = 1
+    log_bin			           = /var/log/mysql/mysql-bin.log
+    binlog_expire_logs_seconds = 864000
+    max_binlog_size            = 100M
+    binlog-format              = ROW #Very important if you want to receive write, update and delete row events
+    binlog_row_metadata        = FULL
+    binlog_row_metadata        = FULL
+
+reference: https://dev.mysql.com/doc/refman/8.0/en/replication-options-binary-log.html
 
 Examples
 =========
