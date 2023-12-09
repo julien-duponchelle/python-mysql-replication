@@ -241,3 +241,7 @@
 1.0.4 04/12/2023
 * Fix an issue in parsing default column charset (#582)
 * fake rotate event check (#579)
+
+1.0.5 09/12/2023
+* Fix missing dependency on packaging (#590)
+* implement partial format description event fields (#585)
