@@ -633,7 +633,7 @@ class WriteRowsEvent(RowsEvent):
                     row["none_sources"][key] if key in row["none_sources"] else ""
                 )
                 if none_source:
-                    print(f"* {key} : row['values'][key] ({none_source})")
+                    print(f"* {key} : {row['values'][key]} ({none_source})")
                 else:
                     print(f"* {key} : {row['values'][key]}")
 
