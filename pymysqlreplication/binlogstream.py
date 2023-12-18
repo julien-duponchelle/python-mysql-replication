@@ -53,6 +53,7 @@ MYSQL_EXPECTED_ERROR_CODES = [2013, 2006]
 
 PYMYSQL_VERSION_LT_06 = Version(pymysql.__version__) < Version("0.6")
 
+
 class ReportSlave(object):
     """Represent the values that you may report when connecting as a slave
     to a master. SHOW SLAVE HOSTS related"""
