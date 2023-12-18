@@ -51,6 +51,7 @@ except ImportError:
 # 2006 MySQL server has gone away
 MYSQL_EXPECTED_ERROR_CODES = [2013, 2006]
 
+PYMYSQL_VERSION_LT_06 = Version(pymysql.__version__) < Version("0.6")
 
 class ReportSlave(object):
     """Represent the values that you may report when connecting as a slave
@@ -330,7 +331,7 @@ class BinLogStreamReader(object):
 
         packet = self.report_slave.encoded(self.__server_id)
 
-        if Version(pymysql.__version__) < Version("0.6"):
+        if PYMYSQL_VERSION_LT_06:
             self._stream_connection.wfile.write(packet)
             self._stream_connection.wfile.flush()
             self._stream_connection.read_packet()
@@ -502,7 +503,7 @@ class BinLogStreamReader(object):
                 # encoded_data
                 prelude += gtid_set.encoded()
 
-        if Version(pymysql.__version__) < Version("0.6"):
+        if PYMYSQL_VERSION_LT_06:
             self._stream_connection.wfile.write(prelude)
             self._stream_connection.wfile.flush()
         else:
@@ -588,7 +589,7 @@ class BinLogStreamReader(object):
                 self.__connect_to_ctl()
 
             try:
-                if Version(pymysql.__version__) < Version("0.6"):
+                if PYMYSQL_VERSION_LT_06:
                     pkt = self._stream_connection.read_packet()
                 else:
                     pkt = self._stream_connection._read_packet()
