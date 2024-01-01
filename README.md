@@ -31,13 +31,11 @@ Installation
 pip install mysql-replication
 ```
 
-Mailing List
-==============
+Getting support
+===============
 
 You can get support and discuss about new features on:
-https://groups.google.com/d/forum/python-mysql-replication
-
-
+https://github.com/julien-duponchelle/python-mysql-replication/discussions
 
 Project status
 ================
@@ -293,7 +291,7 @@ https://python-mysql-replication.readthedocs.org/en/latest/developement.html
 
 Changelog
 ==========
-https://github.com/noplay/python-mysql-replication/blob/main/CHANGELOG
+https://github.com/julien-duponchelle/python-mysql-replication/blob/main/CHANGELOG
 
 Similar projects
 ==================
