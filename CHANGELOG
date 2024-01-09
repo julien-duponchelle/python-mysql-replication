@@ -245,3 +245,7 @@
 1.0.5 09/12/2023
 * Fix missing dependency on packaging (#590)
 * implement partial format description event fields (#585)
+
+1.0.6 09/01/2024
+* Optimizing version check to happen once per run (#597)
+* bug-fix-nonesources f string (#596)
