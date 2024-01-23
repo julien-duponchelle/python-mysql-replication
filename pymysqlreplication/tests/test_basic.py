@@ -1567,6 +1567,36 @@ class TestRowsQueryLogEvents(base.PyMySQLReplicationTestCase):
         event = self.stream.fetchone()
         self.assertIsInstance(event, RowsQueryLogEvent)
 
+    def test_long_query(self):
+        """
+        Address issue #601
+        Do not use the first byte of the body to determine the length of the query.
+        1 byte can not represent the length of a query that is longer than 255 bytes.
+        """
+
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            only_events=[RowsQueryLogEvent],
+        )
+
+        self.execute(
+            "CREATE TABLE IF NOT EXISTS test (id INT AUTO_INCREMENT PRIMARY KEY, long_text VARCHAR(256))"
+        )
+        long_query = (
+            "INSERT INTO test (long_text) VALUES ('"
+            "What is the longest word in english?"
+            "Pneumonoultramicroscopicsilicovolcanoconiosis is the longest word in the English language."
+            "This text has 256 characters and hence its length can not be represented in a single byte."
+            "')"
+        )
+        self.execute(long_query)
+        self.execute("COMMIT")
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, RowsQueryLogEvent)
+        self.assertEqual(event.query, long_query)
+
 
 class TestLatin1(base.PyMySQLReplicationTestCase):
     def setUp(self):
