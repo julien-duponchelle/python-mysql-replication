@@ -872,7 +872,6 @@ class RowsQueryLogEvent(BinLogEvent):
     More details are available in the MySQL Knowledge Base:
     https://dev.mysql.com/doc/dev/mysql-server/latest/classRows__query__log__event.html
 
-    :ivar query_length: uint - Length of the SQL statement
     :ivar query: str - The executed SQL statement
     """
 
