@@ -173,3 +173,6 @@
 0.30 28/04/2022
 * Fix decoding large json arrays
 * Handle null json
+
+0.30.1 05/02/2024
+* improve performance Version Check
