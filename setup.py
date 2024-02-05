@@ -6,6 +6,7 @@ try:
 except ImportError:
     from distutils.core import setup, Command
 
+from pathlib import Path
 import sys
 
 tests_require = []
@@ -35,11 +36,13 @@ class TestCommand(Command):
 
 
 version = "0.30.1"
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
 
 setup(
     name="mysql-replication",
     version=version,
-    url="https://github.com/noplay/python-mysql-replication",
+    url="https://github.com/julien-duponchelle/python-mysql-replication",
     author="Julien Duponchelle",
     author_email="julien@duponchelle.info",
     description=("Pure Python Implementation of MySQL replication protocol "
