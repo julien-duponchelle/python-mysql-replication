@@ -599,7 +599,8 @@ class BinLogStreamReader(object):
                 if code in MYSQL_EXPECTED_ERROR_CODES:
                     self._stream_connection.close()
                     self.__connected_stream = False
-                    logging.WARN(
+                    logging.log(
+                        logging.WARN,
                         """
                           A pymysql.OperationalError error occurred, Re-request the connection.
                         """
