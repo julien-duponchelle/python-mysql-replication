@@ -603,7 +603,7 @@ class BinLogStreamReader(object):
                         logging.WARN,
                         """
                           A pymysql.OperationalError error occurred, Re-request the connection.
-                        """
+                        """,
                     )
                     continue
                 raise
