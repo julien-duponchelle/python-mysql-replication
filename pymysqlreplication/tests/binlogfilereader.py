@@ -1,4 +1,5 @@
 """Read binlog files"""
+
 import struct
 
 from pymysqlreplication import constants

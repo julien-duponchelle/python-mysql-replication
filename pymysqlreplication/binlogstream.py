@@ -688,9 +688,9 @@ class BinLogStreamReader(object):
                 binlog_event.event_type == TABLE_MAP_EVENT
                 and binlog_event.event is not None
             ):
-                self.table_map[
-                    binlog_event.event.table_id
-                ] = binlog_event.event.get_table()
+                self.table_map[binlog_event.event.table_id] = (
+                    binlog_event.event.get_table()
+                )
 
             # event is none if we have filter it on packet level
             # we filter also not allowed events
