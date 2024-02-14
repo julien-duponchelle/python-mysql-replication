@@ -1,5 +1,6 @@
 """Test abnormal conditions, such as caused by a MySQL crash
 """
+
 import os.path
 
 from pymysqlreplication.tests import base
