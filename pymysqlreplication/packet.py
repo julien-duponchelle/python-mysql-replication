@@ -1,6 +1,7 @@
 from pymysqlreplication import constants, event, row_event
 from pymysqlreplication.json_binary import parse_json, JsonDiff, JsonDiffOperation
 from pymysqlreplication.util.bytes import *
+from pymysqlreplication.constants import BINLOG
 
 # Constants from PyMYSQL source code
 NULL_COLUMN = 251
@@ -384,3 +385,6 @@ class BinLogPacketWrapper(object):
 
     def bytes_to_read(self):
         return len(self.packet._data) - self.packet._position
+
+    def read_available(self):
+        return self.packet.read(self.bytes_to_read() - BINLOG.BINLOG_CHECKSUM_LEN)

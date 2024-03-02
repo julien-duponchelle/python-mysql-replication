@@ -872,7 +872,6 @@ class RowsQueryLogEvent(BinLogEvent):
     More details are available in the MySQL Knowledge Base:
     https://dev.mysql.com/doc/dev/mysql-server/latest/classRows__query__log__event.html
 
-    :ivar query_length: uint - Length of the SQL statement
     :ivar query: str - The executed SQL statement
     """
 
@@ -880,12 +879,11 @@ class RowsQueryLogEvent(BinLogEvent):
         super(RowsQueryLogEvent, self).__init__(
             from_packet, event_size, table_map, ctl_connection, **kwargs
         )
-        self.query_length = self.packet.read_uint8()
-        self.query = self.packet.read(self.query_length).decode("utf-8")
+        self.packet.advance(1)
+        self.query = self.packet.read_available().decode("utf-8")
 
     def dump(self):
         print(f"=== {self.__class__.__name__} ===")
-        print(f"Query length: {self.query_length}")
         print(f"Query: {self.query}")
 
 
