@@ -249,3 +249,7 @@
 1.0.6 09/01/2024
 * Optimizing version check to happen once per run (#597)
 * bug-fix-nonesources f string (#596)
+
+1.0.7 07/03/2024
+* Fix parsing of query field of RowsQueryEvent(#602)
+* fix log statement for BinLogStreamReader.fetchone(#608)
