@@ -253,3 +253,6 @@
 1.0.7 07/03/2024
 * Fix parsing of query field of RowsQueryEvent(#602)
 * fix log statement for BinLogStreamReader.fetchone(#608)
+
+1.0.8 31/03/2024
+* Fix parsing replications events (#614)
