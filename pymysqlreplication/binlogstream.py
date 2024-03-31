@@ -360,7 +360,7 @@ class BinLogStreamReader(object):
         if self.slave_uuid:
             cur = self._stream_connection.cursor()
             cur.execute(
-                f"SET @slave_uuid = {self.slave_uuid}, @replica_uuid = {self.slave_uuid}"
+                f"SET @slave_uuid = '{self.slave_uuid}', @replica_uuid = '{self.slave_uuid}'"
             )
             cur.close()
 
