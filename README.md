@@ -95,6 +95,7 @@ Projects using this library
 * clickhouse-mysql-data-reader: https://github.com/Altinity/clickhouse-mysql-data-reader
 * py-mysql-elasticsearch-sync: https://github.com/jaehyeonpy/py-mysql-elasticsearch-sync
 * synch: Sync data from other DB to ClickHouse (https://github.com/long2ice/synch)
+* sb-osc: Online schema change tool created by Sendbird (https://github.com/sendbird/sb-osc)
 
 MySQL server settings
 =========================
