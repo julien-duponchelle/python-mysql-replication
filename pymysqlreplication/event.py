@@ -459,7 +459,7 @@ class HeartbeatLogEvent(BinLogEvent):
 
     def _dump(self):
         super()._dump()
-        print(f"Current binlog: {self.indent}")
+        print(f"Current binlog: {self.ident}")
 
 
 class QueryEvent(BinLogEvent):
