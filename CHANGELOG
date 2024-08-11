@@ -256,3 +256,7 @@
 
 1.0.8 31/03/2024
 * Fix parsing replications events (#614)
+
+1.0.9 11/08/2024
+* Fix typo in ident variable name (#619)
+* Remove black and use only ruff as linter

@@ -3,5 +3,4 @@
 set -e
 set -x
 
-ruff pymysqlreplication
-black pymysqlreplication --check
+ruff check pymysqlreplication

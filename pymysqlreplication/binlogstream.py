@@ -767,7 +767,7 @@ class BinLogStreamReader(object):
                 parameter = parameter.replace("_BinLogStreamReader__", "")
             if parameter in ignored or not value:
                 continue
-            if type(value) == frozenset:
+            if value is frozenset:
                 string_list = [
                     str(item).split()[-1][:-2].split(".")[2] for item in value
                 ]
