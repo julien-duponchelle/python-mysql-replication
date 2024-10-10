@@ -554,7 +554,8 @@ class BinLogStreamReader(object):
                 # invalidates all our cached table id to schema mappings. This means we have to load them all
                 # again for each logfile which is potentially wasted effort but we can't really do much better
                 # without being broken in restart case
-                self.table_map = {}
+                if binlog_event.timestamp != 0:
+                    self.table_map = {}
             elif binlog_event.log_pos:
                 self.log_pos = binlog_event.log_pos
 
