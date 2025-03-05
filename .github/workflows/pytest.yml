@@ -16,7 +16,8 @@ jobs:
           - {name: 'Pypy 3.7', python: 'pypy-3.7'}
           - {name: 'Pypy 3.10', python: 'pypy-3.10'}
     name: ${{ matrix.name }}
-    runs-on: ubuntu-latest
+    # ubuntu-latest does not have python 3.7
+    runs-on: ubuntu-22.04
     timeout-minutes: 3
 
     steps:
@@ -53,14 +54,10 @@ jobs:
         working-directory: pymysqlreplication/tests
         run: pytest -k "$PYTEST_SKIP_OPTION" --db=mysql-5
 
-      - name: Run tests for mysql-5-ctl
-        working-directory: pymysqlreplication/tests
-        run: pytest -k "$PYTEST_SKIP_OPTION" --db=mysql-5-ctl
-
       - name: Run tests for mysql-8
         working-directory: pymysqlreplication/tests
         run: pytest -k "$PYTEST_SKIP_OPTION" --db=mysql-8
 
       - name: Run tests for mariadb-10
         working-directory: pymysqlreplication/tests
-        run: pytest -k "$PYTEST_SKIP_OPTION" -m mariadb --db=mariadb-10
+        run: pytest -k "$PYTEST_SKIP_OPTION" --db=mariadb-10

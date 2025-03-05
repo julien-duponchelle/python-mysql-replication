@@ -3,8 +3,8 @@ Please specify the versions you are using. Exact version numbers are preferred.
 - Pymyrepl (e.g., 1.0.2):
 - OS (e.g., Ubuntu 18.04):
 - Database and version (Remove unnecessary options):
-  - MySQL: 
-  - MariaDB: 
+  - MySQL:
+  - MariaDB:
   - Percona:
 
 ### System Variables
