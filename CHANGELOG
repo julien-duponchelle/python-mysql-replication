@@ -263,3 +263,4 @@
 
 NEXT
 * Support for Python 3.9 to 3.13
+* Improve testing with better MariaDB coverage

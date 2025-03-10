@@ -351,6 +351,7 @@ Other contributors:
 - Axel Viala: Removal of Python 2.7 (https://github.com/darnuria)
 - Etern: Add XAPrepareEvent, parse last_committed & sequence_number of GtidEvent (https://github.com/etern)
 - Jason Fulghum: typo in ident variable name (https://github.com/fulghum)
+- Adam Mizerski: Improve MariaDB coverage (https://github.com/etam)
 
 Thanks to GetResponse for their support
 
