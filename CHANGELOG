@@ -260,3 +260,6 @@
 1.0.9 11/08/2024
 * Fix typo in ident variable name (#619)
 * Remove black and use only ruff as linter
+
+NEXT
+* Support for Python 3.9 to 3.13
