@@ -1,43 +1,43 @@
-import struct
 import logging
-from packaging.version import Version
+import struct
 
 import pymysql
+from packaging.version import Version
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE
 from pymysql.cursors import DictCursor
 
-from .constants.BINLOG import TABLE_MAP_EVENT, ROTATE_EVENT, FORMAT_DESCRIPTION_EVENT
+from .constants.BINLOG import FORMAT_DESCRIPTION_EVENT, ROTATE_EVENT, TABLE_MAP_EVENT
 from .event import (
-    QueryEvent,
-    RotateEvent,
-    FormatDescriptionEvent,
-    XidEvent,
-    GtidEvent,
-    StopEvent,
-    XAPrepareEvent,
     BeginLoadQueryEvent,
     ExecuteLoadQueryEvent,
+    FormatDescriptionEvent,
+    GtidEvent,
     HeartbeatLogEvent,
-    NotImplementedEvent,
-    MariadbGtidEvent,
     MariadbAnnotateRowsEvent,
-    RandEvent,
-    MariadbStartEncryptionEvent,
-    RowsQueryLogEvent,
-    MariadbGtidListEvent,
     MariadbBinLogCheckPointEvent,
-    UserVarEvent,
+    MariadbGtidEvent,
+    MariadbGtidListEvent,
+    MariadbStartEncryptionEvent,
+    NotImplementedEvent,
     PreviousGtidsEvent,
+    QueryEvent,
+    RandEvent,
+    RotateEvent,
+    RowsQueryLogEvent,
+    StopEvent,
+    UserVarEvent,
+    XAPrepareEvent,
+    XidEvent,
 )
 from .exceptions import BinLogNotEnabled
 from .gtid import GtidSet
 from .packet import BinLogPacketWrapper
 from .row_event import (
+    DeleteRowsEvent,
+    PartialUpdateRowsEvent,
+    TableMapEvent,
     UpdateRowsEvent,
     WriteRowsEvent,
-    DeleteRowsEvent,
-    TableMapEvent,
-    PartialUpdateRowsEvent,
 )
 
 try:
@@ -185,6 +185,7 @@ class BinLogStreamReader(object):
         slave_heartbeat=None,
         is_mariadb=False,
         annotate_rows_event=False,
+        force_encoding=None,
         ignore_decode_errors=False,
         verify_checksum=False,
         enable_logging=True,
@@ -225,6 +226,8 @@ class BinLogStreamReader(object):
                     to point to Mariadb specific GTID.
             annotate_rows_event: Parameter value to enable annotate rows event in mariadb,
                     used with 'is_mariadb'
+            force_encoding: Force the encoding to decode a string this for MySQL 5.XXX This is the charset
+                to use example latin-1
             ignore_decode_errors: If true, any decode errors encountered
                                   when reading column data will be ignored.
             verify_checksum: If true, verify events read from the binary log by examining checksums.
@@ -252,6 +255,7 @@ class BinLogStreamReader(object):
             only_events, ignored_events, filter_non_implemented_events
         )
         self.__ignore_decode_errors = ignore_decode_errors
+        self.__force_encoding = force_encoding
         self.__verify_checksum = verify_checksum
         self.__optional_meta_data = False
 
@@ -628,6 +632,7 @@ class BinLogStreamReader(object):
                 self.__ignored_schemas,
                 self.__freeze_schema,
                 self.__ignore_decode_errors,
+                self.__force_encoding,
                 self.__verify_checksum,
                 self.__optional_meta_data,
             )

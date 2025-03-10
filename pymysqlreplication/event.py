@@ -1,15 +1,15 @@
 import binascii
-import struct
 import datetime
 import decimal
-import zlib
+import json
 import logging
+import struct
+import zlib
+from typing import Optional, Union
 
 from pymysqlreplication.constants.STATUS_VAR_KEY import *
 from pymysqlreplication.exceptions import StatusVariableMismatch
 from pymysqlreplication.util.bytes import parse_decimal_from_bytes
-from typing import Union, Optional
-import json
 
 
 class BinLogEvent(object):
@@ -26,6 +26,7 @@ class BinLogEvent(object):
         ignored_schemas=None,
         freeze_schema=False,
         ignore_decode_errors=False,
+        force_encoding=None,
         verify_checksum=False,
         optional_meta_data=False,
     ):
@@ -37,6 +38,7 @@ class BinLogEvent(object):
         self._ctl_connection = ctl_connection
         self.mysql_version = mysql_version
         self._ignore_decode_errors = ignore_decode_errors
+        self._force_encoding = force_encoding
         self._verify_checksum = verify_checksum
         self._is_event_valid = None
         # The event have been fully processed, if processed is false
