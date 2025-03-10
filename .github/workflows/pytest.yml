@@ -11,8 +11,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {name: 'CPython 3.7', python: '3.7'}
-          - {name: 'CPython 3.11', python: '3.11'}
+          - {name: 'CPython 3.9', python: '3.9'}
+          - {name: 'CPython 3.13', python: '3.13'}
           - {name: 'Pypy 3.7', python: 'pypy-3.7'}
           - {name: 'Pypy 3.10', python: 'pypy-3.10'}
     name: ${{ matrix.name }}
