@@ -6,10 +6,12 @@ import json
 class BinLogEventTestCase(PyMySQLReplicationTestCase):
     def setUp(self):
         super(BinLogEventTestCase, self).setUp()
-        self.execute("SET SESSION binlog_rows_query_log_events=1")
+        if not self.isMariaDB():
+            self.execute("SET SESSION binlog_rows_query_log_events=1")
 
     def tearDown(self):
-        self.execute("SET SESSION binlog_rows_query_log_events=0")
+        if not self.isMariaDB():
+            self.execute("SET SESSION binlog_rows_query_log_events=0")
         super(BinLogEventTestCase, self).tearDown()
 
     target_fields = ["timestamp", "log_pos", "event_size", "read_bytes"]

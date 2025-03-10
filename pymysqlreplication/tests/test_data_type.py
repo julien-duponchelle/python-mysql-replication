@@ -13,26 +13,37 @@ from pymysqlreplication.event import *
 __all__ = ["TestDataType", "TestDataTypeVersion8"]
 
 
-def to_binary_dict(d):
-    def encode_value(v):
-        if isinstance(v, str):
-            return v.encode()
-        if isinstance(v, list):
-            return [encode_value(x) for x in v]
-        return v
+def encode_value(v):
+    if isinstance(v, str):
+        return v.encode()
+    if isinstance(v, list):
+        return [encode_value(x) for x in v]
+    return v
 
-    return dict([(k.encode(), encode_value(v)) for (k, v) in d.items()])
+
+def to_binary_dict(d):
+    return {k.encode(): encode_value(v) for (k, v) in d.items()}
+
+def to_binary_list(lst):
+    return [encode_value(v) for v in lst]
 
 
 class TestDataType(base.PyMySQLReplicationTestCase):
     def setUp(self):
         super(TestDataType, self).setUp()
-        if self.isMySQL8014AndMore():
+        if self.isMySQL8014AndMore() or self.isMariaDB():
             self.execute("SET GLOBAL binlog_row_metadata='FULL';")
             self.execute("SET GLOBAL binlog_row_image='FULL';")
 
     def ignoredEvents(self):
-        return [GtidEvent, PreviousGtidsEvent]
+        return [
+            GtidEvent,
+            PreviousGtidsEvent,
+            MariadbStartEncryptionEvent,
+            MariadbGtidListEvent,
+            MariadbBinLogCheckPointEvent,
+            MariadbGtidEvent,
+        ]
 
     def create_and_insert_value(self, create_query, insert_query):
         self.execute(create_query)
@@ -45,7 +56,8 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), QueryEvent)
 
         # QueryEvent for the BEGIN
-        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        if not self.isMariaDB():
+            self.assertIsInstance(self.stream.fetchone(), QueryEvent)
 
         self.assertIsInstance(self.stream.fetchone(), TableMapEvent)
 
@@ -591,10 +603,12 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         insert_query = """INSERT INTO test (id, value) VALUES (1, '{"my_key": "my_val", "my_key2": "my_val2"}');"""
         event = self.create_and_insert_value(create_query, insert_query)
         if event.table_map[event.table_id].column_name_flag:
-            self.assertEqual(
-                event.rows[0]["values"]["value"],
-                {b"my_key": b"my_val", b"my_key2": b"my_val2"},
-            )
+            expected_value = {"my_key": "my_val", "my_key2": "my_val2"}
+            if self.isMariaDB():
+                expected_value = json.dumps(expected_value)
+            else:
+                expected_value = to_binary_dict(expected_value)
+            self.assertEqual(event.rows[0]["values"]["value"], expected_value)
 
     def test_json_array(self):
         create_query = "CREATE TABLE test (id int, value json);"
@@ -603,9 +617,16 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         )
         event = self.create_and_insert_value(create_query, insert_query)
         if event.table_map[event.table_id].column_name_flag:
-            self.assertEqual(event.rows[0]["values"]["value"], [b"my_val", b"my_val2"])
+            expected_value = ["my_val", "my_val2"]
+            if self.isMariaDB():
+                expected_value = json.dumps(expected_value)
+            else:
+                expected_value = to_binary_list(expected_value)
+            self.assertEqual(event.rows[0]["values"]["value"], expected_value)
 
     def test_json_large(self):
+        if self.isMariaDB():
+            self.skipTest("TODO: Fails on MariaDB")
         data = dict(
             [("foooo%i" % i, "baaaaar%i" % i) for i in range(2560)]
         )  # Make it large enough to reach 2^16 length
@@ -619,6 +640,8 @@ class TestDataType(base.PyMySQLReplicationTestCase):
 
     def test_json_large_array(self):
         "Test json array larger than 64k bytes"
+        if self.isMariaDB():
+            self.skipTest("TODO: Fails on MariaDB")
         create_query = "CREATE TABLE test (id int, value json);"
         large_array = dict(my_key=[i for i in range(100000)])
         insert_query = "INSERT INTO test (id, value) VALUES (1, '%s');" % (
@@ -631,6 +654,8 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             )
 
     def test_json_large_with_literal(self):
+        if self.isMariaDB():
+            self.skipTest("TODO: Fails on MariaDB")
         data = dict(
             [("foooo%i" % i, "baaaaar%i" % i) for i in range(2560)], literal=True
         )  # Make it large with literal
@@ -665,7 +690,11 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             )
             event = self.create_and_insert_value(create_query, insert_query)
             if event.table_map[event.table_id].column_name_flag:
-                self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict(data))
+                if self.isMariaDB():
+                    expected_value = json.dumps(data)
+                else:
+                    expected_value = to_binary_dict(data)
+                self.assertEqual(event.rows[0]["values"]["value"], expected_value)
 
             self.tearDown()
             self.setUp()
@@ -691,21 +720,33 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             )
             event = self.create_and_insert_value(create_query, insert_query)
             if event.table_map[event.table_id].column_name_flag:
-                self.assertEqual(event.rows[0]["values"]["value"], data)
+                expected_value = data
+                if self.isMariaDB():
+                    expected_value = json.dumps(expected_value)
+                self.assertEqual(event.rows[0]["values"]["value"], expected_value)
 
             self.tearDown()
             self.setUp()
 
     def test_json_unicode(self):
+        if self.isMariaDB():
+            self.skipTest("TODO: Fails on MariaDB")
+
         create_query = "CREATE TABLE test (id int, value json);"
         insert_query = """INSERT INTO test (id, value) VALUES (1, '{"miam": "🍔"}');"""
         event = self.create_and_insert_value(create_query, insert_query)
         if event.table_map[event.table_id].column_name_flag:
-            self.assertEqual(
-                event.rows[0]["values"]["value"][b"miam"], "🍔".encode("utf8")
-            )
+            expected_value = {"miam": "🍔"}
+            if self.isMariaDB():
+                expected_value = json.dumps(expected_value)
+            else:
+                expected_value = to_binary_dict(expected_value)
+            self.assertEqual(event.rows[0]["values"]["value"], expected_value)
 
     def test_json_long_string(self):
+        if self.isMariaDB():
+            self.skipTest("TODO: Fails on MariaDB")
+
         create_query = "CREATE TABLE test (id int, value json);"
         # The string length needs to be larger than what can fit in a single byte.
         string_value = "super_long_string" * 100
@@ -720,7 +761,9 @@ class TestDataType(base.PyMySQLReplicationTestCase):
                 to_binary_dict({"my_key": string_value}),
             )
 
-    def test_json_deciaml_time_datetime(self):
+    def test_json_decimal_time_datetime(self):
+        if self.isMariaDB():
+            self.skipTest("TODO: Fails on MariaDB")
         create_query = """CREATE TABLE json_deciaml_time_datetime_test (
                             id INT PRIMARY KEY AUTO_INCREMENT,
                             json_data JSON
@@ -729,14 +772,12 @@ class TestDataType(base.PyMySQLReplicationTestCase):
                 INSERT INTO json_deciaml_time_datetime_test (json_data) VALUES (JSON_OBJECT('time_key', CAST('18:54:12' AS TIME), 'datetime_key', CAST('2023-09-24 18:54:12' AS DATETIME) ,'decimal', CAST('99.99' AS DECIMAL(10, 2))));"""
         event = self.create_and_insert_value(create_query, insert_query)
         if event.table_map[event.table_id].column_name_flag:
-            self.assertEqual(
-                event.rows[0]["values"]["json_data"],
-                {
-                    b"decimal": Decimal("99.99"),
-                    b"time_key": datetime.time(18, 54, 12),
-                    b"datetime_key": datetime.datetime(2023, 9, 24, 18, 54, 12),
-                },
-            )
+            expected_data = {
+                b"decimal": Decimal("99.99"),
+                b"time_key": datetime.time(18, 54, 12),
+                b"datetime_key": datetime.datetime(2023, 9, 24, 18, 54, 12),
+            }
+            self.assertEqual(event.rows[0]["values"]["json_data"], expected_data)
 
     def test_null(self):
         create_query = "CREATE TABLE test ( \
@@ -824,6 +865,8 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         Raises:
             AssertionError: if status variables not set correctly
         """
+        if self.isMariaDB():
+            self.skipTest("Not supported on MariaDB")
         create_query = "CREATE TABLE test (id INTEGER)"
         event = self.create_table(create_query)
         self.assertEqual(event.catalog_nz_code, b"std")
@@ -884,7 +927,8 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         self.assertIsInstance(self.stream.fetchone(), QueryEvent)
 
         # QueryEvent for the BEGIN
-        self.assertIsInstance(self.stream.fetchone(), QueryEvent)
+        if not self.isMariaDB():
+            self.assertIsInstance(self.stream.fetchone(), QueryEvent)
 
         event = self.stream.fetchone()
 

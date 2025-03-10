@@ -3,7 +3,7 @@ from pymysqlreplication.tests.base import PyMySQLReplicationTestCase
 
 """
 These tests aim to cover some potential input scenarios, including valid inputs, edge cases, and error handling.
-This approach ensures that every line of the corresponding function is executed under test conditions, 
+This approach ensures that every line of the corresponding function is executed under test conditions,
 thereby improving the coverage.
 """
 

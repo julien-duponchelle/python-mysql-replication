@@ -1,5 +1,5 @@
 name: Python Coverage
-on: 
+on:
   push:
   pull_request:
   workflow_dispatch:
@@ -7,7 +7,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 3
-    
+
     steps:
       - name: Check out code
         uses: actions/checkout@v4

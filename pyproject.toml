@@ -1,5 +1,5 @@
-[tool.ruff]
-lint.ignore = [
+[tool.ruff.lint]
+ignore = [
     "F403", # from module import *' used, It should be removed afterwad
     "F405", # same to F403
 ]

@@ -5,17 +5,9 @@
     "passwd": "",
     "port": 3306,
     "use_unicode": true,
-    "charset": "utf8",
-    "db": "pymysqlreplication_test"
-  },
-  "mysql-5-ctl": {
-    "host": "localhost",
-    "user": "root",
-    "passwd": "",
-    "port": 3307,
-    "use_unicode": true,
-    "charset": "utf8",
-    "db": "pymysqlreplication_test"
+    "db": "pymysqlreplication_test",
+    "host_env_override": "MYSQL_5_7",
+    "port_env_override": "MYSQL_5_7_PORT"
   },
   "mariadb-10": {
     "host": "localhost",
@@ -23,8 +15,9 @@
     "passwd": "",
     "port": 3308,
     "use_unicode": true,
-    "charset": "utf8",
-    "db": "pymysqlreplication_test"
+    "db": "pymysqlreplication_test",
+    "host_env_override": "MARIADB_10_6",
+    "port_env_override": "MARIADB_10_6_PORT"
   },
   "mysql-8": {
     "host": "localhost",
@@ -32,7 +25,8 @@
     "passwd": "",
     "port": 3309,
     "use_unicode": true,
-    "charset": "utf8",
-    "db": "pymysqlreplication_test"
+    "db": "pymysqlreplication_test",
+    "host_env_override": "MYSQL_8_0",
+    "port_env_override": "MYSQL_8_0_PORT"
   }
 }
