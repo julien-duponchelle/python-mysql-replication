@@ -14,7 +14,6 @@ from pymysqlreplication.packet import BinLogPacketWrapper
 from pymysql.protocol import MysqlPacket
 from unittest.mock import patch
 
-
 __all__ = [
     "TestBasicBinLogStreamReader",
     "TestMultipleRowBinLogStreamReader",
