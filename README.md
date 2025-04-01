@@ -53,17 +53,30 @@ https://python-mysql-replication.readthedocs.org/en/latest/limitations.html
 
 # Featured
 
-- [Data Pipelines Pocket Reference](https://www.oreilly.com/library/view/data-pipelines-pocket/9781492087823/) (by James Densmore, O'Reilly): Introduced and exemplified in Chapter 4: Data Ingestion: Extracting Data.
+## AWS blog
+
 - [Streaming Changes in a Database with Amazon Kinesis](https://aws.amazon.com/blogs/database/streaming-changes-in-a-database-with-amazon-kinesis/) (by Emmanuel Espina, Amazon Web Services)
 - [Near Zero Downtime Migration from MySQL to DynamoDB](https://aws.amazon.com/ko/blogs/big-data/near-zero-downtime-migration-from-mysql-to-dynamodb/) (by YongSeong Lee, Amazon Web Services)
-- [Enable change data capture on Amazon RDS for MySQL applications that are using XA transactions](https://aws.amazon.com/ko/blogs/database/enable-change-data-capture-on-amazon-rds-for-mysql-applications-that-are-using-xa-transactions/) (by Baruch Assif, Amazon Web Services)
+- [Enable change data capture on Amazon RDS for MySQL applications that are using XA transactions](https://aws.amazon.com/ko/blogs/database/)
+
+## Books
+
+- [Data Pipelines Pocket Reference](https://www.oreilly.com/library/view/data-pipelines-pocket/9781492087823/) (by James Densmore, O'Reilly): Introduced and exemplified in Chapter 4: Data Ingestion: Extracting Data.
+enable-change-data-capture-on-amazon-rds-for-mysql-applications-that-are-using-xa-transactions/) (by Baruch Assif, Amazon Web Services)
+
+## Blogs
+
 - [Reading MySQL Binlog with Python](https://medium.com/@mahadir.ahmad/reading-mysql-binlog-with-python-c85a8ece3b28)
 - [Using python-mysql-replication with Dolt](https://www.dolthub.com/blog/2024-08-08-python-mysql-replication-works-with-dolt/)
+- [Yelp Data Pipeline](https://engineeringblog.yelp.com/2016/11/open-sourcing-yelps-data-pipeline.html)
+- [Data Pipeline — Replicate data from MySQL to Snowflake with AWS Kinesis, Binlog Streamer Python Library & Snowpipe](https://shreyasms.medium.com/data-pipeline-replicate-data-from-mysql-to-snowflake-with-aws-kinesis-binlog-streamer-python-f4f77d852e45)
+- [MySQL CDC to Snowflake in Python](https://bytewax.io/blog/bytewax-snowflake-in-python)
+- [Change Data Capture (CDC): MySQL to BigQuery using Binary Logs Replication](https://abdulquadri-oshoare.medium.com/mysql-to-bigquery-via-change-data-capture-cdc-using-binary-logs-replication-5cea24a124e4)
+- [DIY — CDC Pipeline from MySQL to Snowflake](https://community.snowflake.com/s/article/DIY-CDC-Pipeline-from-MySQL-to-Snowflake)
 
 # Projects using this library
 
 - pg_chameleon: Migration and replica from MySQL to PostgreSQL https://github.com/the4thdoctor/pg_chameleon
-- Yelp Data Pipeline: https://engineeringblog.yelp.com/2016/11/open-sourcing-yelps-data-pipeline.html
 - Singer.io Tap for MySQL (https://github.com/singer-io/tap-mysql)
 - MySQL River Plugin for ElasticSearch: https://github.com/scharron/elasticsearch-river-mysql
 - Ditto: MySQL to MemSQL replicator https://github.com/memsql/ditto
@@ -86,6 +99,7 @@ https://python-mysql-replication.readthedocs.org/en/latest/limitations.html
 - py-mysql-elasticsearch-sync: https://github.com/jaehyeonpy/py-mysql-elasticsearch-sync
 - synch: Sync data from other DB to ClickHouse (https://github.com/long2ice/synch)
 - sb-osc: Online schema change tool created by Sendbird (https://github.com/sendbird/sb-osc)
+- Bytewax Dataflow for MySQL <> Snowflake Database Replication: (https://github.com/bytewax/mysql-cdc-snowflake)
 
 # MySQL server settings
 
