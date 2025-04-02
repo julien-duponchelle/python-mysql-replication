@@ -1,18 +1,15 @@
-import struct
-import decimal
 import datetime
-
-from pymysql.charset import charset_by_name
+import decimal
+import struct
 from enum import Enum
 
-from .event import BinLogEvent
-from .constants import FIELD_TYPE
-from .constants import BINLOG
-from .constants import CHARSET
-from .constants import NONE_SOURCE
-from .column import Column
-from .table import Table
+from pymysql.charset import charset_by_name
+
 from .bitmap import BitCount, BitGet
+from .column import Column
+from .constants import BINLOG, CHARSET, FIELD_TYPE, NONE_SOURCE
+from .event import BinLogEvent
+from .table import Table
 
 
 class RowsEvent(BinLogEvent):
@@ -332,7 +329,10 @@ class RowsEvent(BinLogEvent):
         else:
             # MYSQL 5.xx Version  Goes Here
             # We don't know encoding type So apply Default Utf-8
-            string = string.decode(errors=decode_errors)
+            if self._force_encoding:
+                string = string.decode(encoding=self._force_encoding, errors=decode_errors)
+            else:
+                string = string.decode(errors=decode_errors)
         return string
 
     def __read_bit(self, column):
