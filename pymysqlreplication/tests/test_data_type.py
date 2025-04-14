@@ -628,12 +628,10 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         if self.isMariaDB():
             self.skipTest("TODO: Fails on MariaDB")
         data = dict(
-            [("foooo%i" % i, "baaaaar%i" % i) for i in range(2560)]
+            [(f"foooo{i}", f"baaaaar{i}") for i in range(2560)]
         )  # Make it large enough to reach 2^16 length
         create_query = "CREATE TABLE test (id int, value json);"
-        insert_query = (
-            """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
-        )
+        insert_query = f"INSERT INTO test (id, value) VALUES (1, '{json.dumps(data)}');"
         event = self.create_and_insert_value(create_query, insert_query)
         if event.table_map[event.table_id].column_name_flag:
             self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict(data))
@@ -644,8 +642,8 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             self.skipTest("TODO: Fails on MariaDB")
         create_query = "CREATE TABLE test (id int, value json);"
         large_array = dict(my_key=[i for i in range(100000)])
-        insert_query = "INSERT INTO test (id, value) VALUES (1, '%s');" % (
-            json.dumps(large_array),
+        insert_query = (
+            f"INSERT INTO test (id, value) VALUES (1, '{json.dumps(large_array)}');"
         )
         event = self.create_and_insert_value(create_query, insert_query)
         if event.table_map[event.table_id].column_name_flag:
@@ -657,12 +655,10 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         if self.isMariaDB():
             self.skipTest("TODO: Fails on MariaDB")
         data = dict(
-            [("foooo%i" % i, "baaaaar%i" % i) for i in range(2560)], literal=True
+            [(f"foooo{i}", f"baaaaar{i}") for i in range(2560)], literal=True
         )  # Make it large with literal
         create_query = "CREATE TABLE test (id int, value json);"
-        insert_query = (
-            """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
-        )
+        insert_query = f"INSERT INTO test (id, value) VALUES (1, '{json.dumps(data)}');"
         event = self.create_and_insert_value(create_query, insert_query)
         if event.table_map[event.table_id].column_name_flag:
             self.assertEqual(event.rows[0]["values"]["value"], to_binary_dict(data))
@@ -686,7 +682,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
             data = {"foo": t}
             create_query = "CREATE TABLE test (id int, value json);"
             insert_query = (
-                """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
+                f"INSERT INTO test (id, value) VALUES (1, '{json.dumps(data)}');"
             )
             event = self.create_and_insert_value(create_query, insert_query)
             if event.table_map[event.table_id].column_name_flag:
@@ -716,7 +712,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         for data in types:
             create_query = "CREATE TABLE test (id int, value json);"
             insert_query = (
-                """INSERT INTO test (id, value) VALUES (1, '%s');""" % json.dumps(data)
+                f"INSERT INTO test (id, value) VALUES (1, '{json.dumps(data)}');"
             )
             event = self.create_and_insert_value(create_query, insert_query)
             if event.table_map[event.table_id].column_name_flag:
@@ -750,10 +746,7 @@ class TestDataType(base.PyMySQLReplicationTestCase):
         create_query = "CREATE TABLE test (id int, value json);"
         # The string length needs to be larger than what can fit in a single byte.
         string_value = "super_long_string" * 100
-        insert_query = (
-            'INSERT INTO test (id, value) VALUES (1, \'{"my_key": "%s"}\');'
-            % (string_value,)
-        )
+        insert_query = f'INSERT INTO test (id, value) VALUES (1, \'{{"my_key": "{string_value}"}}\')'
         event = self.create_and_insert_value(create_query, insert_query)
         if event.table_map[event.table_id].column_name_flag:
             self.assertEqual(
