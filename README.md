@@ -100,6 +100,7 @@ enable-change-data-capture-on-amazon-rds-for-mysql-applications-that-are-using-x
 - synch: Sync data from other DB to ClickHouse (https://github.com/long2ice/synch)
 - sb-osc: Online schema change tool created by Sendbird (https://github.com/sendbird/sb-osc)
 - Bytewax Dataflow for MySQL <> Snowflake Database Replication: (https://github.com/bytewax/mysql-cdc-snowflake)
+- Localstack (https://www.localstack.cloud/)
 
 # MySQL server settings
 
