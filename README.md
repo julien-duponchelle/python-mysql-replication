@@ -101,6 +101,7 @@ enable-change-data-capture-on-amazon-rds-for-mysql-applications-that-are-using-x
 - sb-osc: Online schema change tool created by Sendbird (https://github.com/sendbird/sb-osc)
 - Bytewax Dataflow for MySQL <> Snowflake Database Replication: (https://github.com/bytewax/mysql-cdc-snowflake)
 - Localstack (https://www.localstack.cloud/)
+- PGSync: PostgreSQL/MySQL/MariaDB to Elasticsearch/OpenSearch sync (https://github.com/toluaina/pgsync)
 
 # MySQL server settings
 
