@@ -102,6 +102,8 @@ enable-change-data-capture-on-amazon-rds-for-mysql-applications-that-are-using-x
 - Bytewax Dataflow for MySQL <> Snowflake Database Replication: (https://github.com/bytewax/mysql-cdc-snowflake)
 - Localstack (https://www.localstack.cloud/)
 - PGSync: PostgreSQL/MySQL/MariaDB to Elasticsearch/OpenSearch sync (https://github.com/toluaina/pgsync)
+- django-mysql-replication: MySQL DB change events for Django (https://github.com/waqqas/django-mysql-replication)
+
 
 # MySQL server settings
 
