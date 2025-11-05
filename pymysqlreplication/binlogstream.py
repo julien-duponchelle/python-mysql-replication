@@ -188,6 +188,7 @@ class BinLogStreamReader(object):
         ignore_decode_errors=False,
         verify_checksum=False,
         enable_logging=True,
+        use_column_name_cache=False,
     ):
         """
         Attributes:
@@ -230,6 +231,8 @@ class BinLogStreamReader(object):
             verify_checksum: If true, verify events read from the binary log by examining checksums.
             enable_logging: When set to True, logs various details helpful for debugging and monitoring
                             When set to False, logging is disabled to enhance performance.
+            use_column_name_cache: If true, enables caching of column names from INFORMATION_SCHEMA
+                            for MySQL 5.7 compatibility when binlog metadata is missing. Default is False.
         """
 
         self.__connection_settings = connection_settings
@@ -254,6 +257,8 @@ class BinLogStreamReader(object):
         self.__ignore_decode_errors = ignore_decode_errors
         self.__verify_checksum = verify_checksum
         self.__optional_meta_data = False
+        self.__enable_logging = enable_logging
+        self.__use_column_name_cache = use_column_name_cache
 
         # We can't filter on packet level TABLE_MAP and rotate event because
         # we need them for handling other operations
@@ -630,6 +635,8 @@ class BinLogStreamReader(object):
                 self.__ignore_decode_errors,
                 self.__verify_checksum,
                 self.__optional_meta_data,
+                self.__enable_logging,
+                self.__use_column_name_cache,
             )
 
             if binlog_event.event_type == ROTATE_EVENT:
