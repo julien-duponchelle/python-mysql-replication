@@ -74,6 +74,7 @@ class BinLogPacketWrapper(object):
         ignore_decode_errors,
         verify_checksum,
         optional_meta_data,
+        enable_logging,
         use_column_name_cache,
     ):
         # -1 because we ignore the ok byte
@@ -83,6 +84,8 @@ class BinLogPacketWrapper(object):
 
         self.packet = from_packet
         self.charset = ctl_connection.charset
+        self.enable_logging = enable_logging
+        self.use_column_name_cache = use_column_name_cache
 
         # OK value
         # timestamp
@@ -128,6 +131,7 @@ class BinLogPacketWrapper(object):
             ignore_decode_errors=ignore_decode_errors,
             verify_checksum=verify_checksum,
             optional_meta_data=optional_meta_data,
+            enable_logging=enable_logging,
             use_column_name_cache=use_column_name_cache,
         )
         if not self.event._processed:

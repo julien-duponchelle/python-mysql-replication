@@ -1,6 +1,7 @@
 import struct
 import decimal
 import datetime
+import logging
 
 from pymysql.charset import charset_by_name
 from enum import Enum
@@ -750,6 +751,7 @@ class TableMapEvent(BinLogEvent):
         self.__ignored_schemas = kwargs["ignored_schemas"]
         self.__freeze_schema = kwargs["freeze_schema"]
         self.__optional_meta_data = kwargs["optional_meta_data"]
+        self.__enable_logging = kwargs.get("enable_logging", False)
         self.__use_column_name_cache = kwargs.get("use_column_name_cache", False)
         # Post-Header
         self.table_id = self._read_table_id()
@@ -950,14 +952,13 @@ class TableMapEvent(BinLogEvent):
             # Cache result
             _COLUMN_NAME_CACHE[cache_key] = column_names
 
-            if column_names:
-                import logging
+            if self.__enable_logging and column_names:
                 logging.info(f"Cached column names for {cache_key}: {len(column_names)} columns")
 
             return column_names
         except Exception as e:
-            import logging
-            logging.warning(f"Failed to fetch column names for {cache_key}: {e}")
+            if self.__enable_logging:
+                logging.warning(f"Failed to fetch column names for {cache_key}: {e}")
             # Cache empty result to avoid retry spam
             _COLUMN_NAME_CACHE[cache_key] = []
             return []
