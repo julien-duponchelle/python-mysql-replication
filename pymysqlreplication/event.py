@@ -28,6 +28,8 @@ class BinLogEvent(object):
         ignore_decode_errors=False,
         verify_checksum=False,
         optional_meta_data=False,
+        enable_logging=False,
+        use_column_name_cache=False,
     ):
         self.packet = from_packet
         self.table_map = table_map
