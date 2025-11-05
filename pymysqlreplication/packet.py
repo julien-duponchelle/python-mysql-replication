@@ -75,7 +75,7 @@ class BinLogPacketWrapper(object):
         verify_checksum,
         optional_meta_data,
         enable_logging,
-        use_column_name_cache,
+        use_column_name_cache=False,
     ):
         # -1 because we ignore the ok byte
         self.read_bytes = 0
