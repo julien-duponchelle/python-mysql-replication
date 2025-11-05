@@ -1,7 +1,7 @@
 from pymysqlreplication import constants, event, row_event
-from pymysqlreplication.json_binary import parse_json, JsonDiff, JsonDiffOperation
-from pymysqlreplication.util.bytes import *
 from pymysqlreplication.constants import BINLOG
+from pymysqlreplication.json_binary import JsonDiff, JsonDiffOperation, parse_json
+from pymysqlreplication.util.bytes import *
 
 # Constants from PyMYSQL source code
 NULL_COLUMN = 251
@@ -72,6 +72,7 @@ class BinLogPacketWrapper(object):
         ignored_schemas,
         freeze_schema,
         ignore_decode_errors,
+        force_encoding,
         verify_checksum,
         optional_meta_data,
     ):
@@ -125,6 +126,7 @@ class BinLogPacketWrapper(object):
             ignored_schemas=ignored_schemas,
             freeze_schema=freeze_schema,
             ignore_decode_errors=ignore_decode_errors,
+            force_encoding=force_encoding,
             verify_checksum=verify_checksum,
             optional_meta_data=optional_meta_data,
         )

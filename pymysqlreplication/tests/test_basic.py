@@ -1,19 +1,19 @@
 import io
 import time
 import unittest
-
-from pymysqlreplication.json_binary import JsonDiff, JsonDiffOperation
-from pymysqlreplication.tests import base
-from pymysqlreplication import BinLogStreamReader
-from pymysqlreplication.gtid import GtidSet, Gtid
-from pymysqlreplication.event import *
-from pymysqlreplication.constants.BINLOG import *
-from pymysqlreplication.constants.NONE_SOURCE import *
-from pymysqlreplication.row_event import *
-from pymysqlreplication.packet import BinLogPacketWrapper
-from pymysql.protocol import MysqlPacket
 from unittest.mock import patch
 
+from pymysql.protocol import MysqlPacket
+
+from pymysqlreplication import BinLogStreamReader
+from pymysqlreplication.constants.BINLOG import *
+from pymysqlreplication.constants.NONE_SOURCE import *
+from pymysqlreplication.event import *
+from pymysqlreplication.gtid import Gtid, GtidSet
+from pymysqlreplication.json_binary import JsonDiff, JsonDiffOperation
+from pymysqlreplication.packet import BinLogPacketWrapper
+from pymysqlreplication.row_event import *
+from pymysqlreplication.tests import base
 
 __all__ = [
     "TestBasicBinLogStreamReader",
