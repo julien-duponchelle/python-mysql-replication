@@ -1,6 +1,7 @@
 import struct
 import decimal
 import datetime
+import logging
 
 from pymysql.charset import charset_by_name
 from enum import Enum
@@ -14,6 +15,10 @@ from .column import Column
 from .table import Table
 from .bitmap import BitCount, BitGet
 
+
+
+# MySQL 5.7 compatibility: Cache for INFORMATION_SCHEMA column names
+_COLUMN_NAME_CACHE = {}
 
 class RowsEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
@@ -746,6 +751,8 @@ class TableMapEvent(BinLogEvent):
         self.__ignored_schemas = kwargs["ignored_schemas"]
         self.__freeze_schema = kwargs["freeze_schema"]
         self.__optional_meta_data = kwargs["optional_meta_data"]
+        self.__enable_logging = kwargs.get("enable_logging", False)
+        self.__use_column_name_cache = kwargs.get("use_column_name_cache", False)
         # Post-Header
         self.table_id = self._read_table_id()
 
@@ -909,12 +916,70 @@ class TableMapEvent(BinLogEvent):
 
         return optional_metadata
 
+
+    def _fetch_column_names_from_schema(self):
+        """
+        Fetch column names from INFORMATION_SCHEMA for MySQL 5.7 compatibility.
+
+        Only executes if use_column_name_cache=True is enabled.
+        Uses module-level cache to avoid repeated queries.
+
+        Returns:
+            list: Column names in ORDINAL_POSITION order, or empty list
+        """
+        # Only fetch if explicitly enabled (opt-in feature)
+        if not self.__use_column_name_cache:
+            return []
+
+        cache_key = f"{self.schema}.{self.table}"
+
+        # Check cache first
+        if cache_key in _COLUMN_NAME_CACHE:
+            return _COLUMN_NAME_CACHE[cache_key]
+
+        try:
+            query = """
+                SELECT COLUMN_NAME
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
+                ORDER BY ORDINAL_POSITION
+            """
+            cursor = self._ctl_connection.cursor()
+            cursor.execute(query, (self.schema, self.table))
+            rows = cursor.fetchall()
+            # Handle both tuple and dict cursor results
+            if rows and isinstance(rows[0], dict):
+                column_names = [row['COLUMN_NAME'] for row in rows]
+            else:
+                column_names = [row[0] for row in rows]
+            cursor.close()
+
+            # Cache result
+            _COLUMN_NAME_CACHE[cache_key] = column_names
+
+            if self.__enable_logging and column_names:
+                logging.info(f"Cached column names for {cache_key}: {len(column_names)} columns")
+
+            return column_names
+        except Exception as e:
+            if self.__enable_logging:
+                logging.warning(f"Failed to fetch column names for {cache_key}: {type(e).__name__}: {e}")
+            # Cache empty result to avoid retry spam
+            _COLUMN_NAME_CACHE[cache_key] = []
+            return []
+
     def _sync_column_info(self):
         if not self.__optional_meta_data:
-            # If optional_meta_data is False Do not sync Event Time Column Schemas
+            column_names = self._fetch_column_names_from_schema()
+            if column_names and len(column_names) == self.column_count:
+                for column_idx in range(self.column_count):
+                    self.columns[column_idx].name = column_names[column_idx]
             return
         if len(self.optional_metadata.column_name_list) == 0:
-            # May Be Now BINLOG_ROW_METADATA = FULL But Before Action BINLOG_ROW_METADATA Mode = MINIMAL
+            column_names = self._fetch_column_names_from_schema()
+            if column_names and len(column_names) == self.column_count:
+                for column_idx in range(self.column_count):
+                    self.columns[column_idx].name = column_names[column_idx]
             return
         charset_pos = 0
         enum_or_set_pos = 0
