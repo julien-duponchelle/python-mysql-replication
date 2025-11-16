@@ -1,11 +1,12 @@
-import pymysql
 import copy
-from pymysqlreplication import BinLogStreamReader
-import os
 import json
+import os
+import unittest
+
+import pymysql
 import pytest
 
-import unittest
+from pymysqlreplication import BinLogStreamReader
 
 
 def get_databases():
@@ -88,6 +89,12 @@ class PyMySQLReplicationTestCase(base):
             return False
         version = float(self.getMySQLVersion().rsplit(".", 1)[0])
         return version == 5.7
+
+    def isMySQL57AndMore(self):
+        if self.isMariaDB():
+            return False
+        version = float(self.getMySQLVersion().rsplit(".", 1)[0])
+        return version >= 5.7
 
     def isMySQL80AndMore(self):
         if self.isMariaDB():

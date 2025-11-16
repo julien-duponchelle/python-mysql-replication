@@ -26,6 +26,7 @@ Contents
 
     installation
     limitations
+    mysql57_support
     binlogstream
     events
     examples
