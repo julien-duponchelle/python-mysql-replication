@@ -270,3 +270,6 @@
 
 * MySQL 5.7 column name support (#634)
 
+1.0.12 16/11/2025
+
+* Wheel publishing
