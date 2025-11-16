@@ -1,19 +1,19 @@
 import io
 import time
 import unittest
-
-from pymysqlreplication.json_binary import JsonDiff, JsonDiffOperation
-from pymysqlreplication.tests import base
-from pymysqlreplication import BinLogStreamReader
-from pymysqlreplication.gtid import GtidSet, Gtid
-from pymysqlreplication.event import *
-from pymysqlreplication.constants.BINLOG import *
-from pymysqlreplication.constants.NONE_SOURCE import *
-from pymysqlreplication.row_event import *
-from pymysqlreplication.packet import BinLogPacketWrapper
-from pymysql.protocol import MysqlPacket
 from unittest.mock import patch
 
+from pymysql.protocol import MysqlPacket
+
+from pymysqlreplication import BinLogStreamReader
+from pymysqlreplication.constants.BINLOG import *
+from pymysqlreplication.constants.NONE_SOURCE import *
+from pymysqlreplication.event import *
+from pymysqlreplication.gtid import Gtid, GtidSet
+from pymysqlreplication.json_binary import JsonDiff, JsonDiffOperation
+from pymysqlreplication.packet import BinLogPacketWrapper
+from pymysqlreplication.row_event import *
+from pymysqlreplication.tests import base
 
 __all__ = [
     "TestBasicBinLogStreamReader",
@@ -270,6 +270,87 @@ class TestBasicBinLogStreamReader(base.PyMySQLReplicationTestCase):
             self.assertEqual(event.rows[0]["values"]["id"], 1)
             self.assertEqual(event.rows[0]["values"]["data"], "Hello World")
             self.assertEqual(event.columns[1].name, "data")
+
+    def test_fetch_column_names_from_schema(self):
+        # This test is for scenarios where column names are NOT in the binlog
+        # (MySQL 5.7 or older, or MySQL 8.0+ with binlog_row_metadata=MINIMAL)
+
+        # Check if binlog_row_metadata exists (MySQL 8.0+)
+        try:
+            cursor = self.execute("SHOW GLOBAL VARIABLES LIKE 'binlog_row_metadata'")
+            result = cursor.fetchone()
+            if result:
+                global_binlog_row_metadata = result[1]
+                if global_binlog_row_metadata == 'FULL':
+                    self.skipTest("binlog_row_metadata is FULL globally, use_column_name_cache is not needed")
+            # If result is None, binlog_row_metadata doesn't exist (MySQL 5.7 or older), so proceed
+        except pymysql.err.OperationalError as e:
+            if e.args[0] == 1193:  # ER_UNKNOWN_SYSTEM_VARIABLE
+                # Variable doesn't exist, likely MySQL 5.7 or older, so proceed
+                pass
+            else:
+                raise
+
+        query = "CREATE TABLE test_column_cache (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
+        self.execute(query)
+        self.execute("INSERT INTO test_column_cache (data) VALUES('Hello')")
+        self.execute("COMMIT")
+
+        # Test with use_column_name_cache = True
+        self.stream.close()
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1024,
+            use_column_name_cache=True,
+            only_events=[WriteRowsEvent],
+        )
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, WriteRowsEvent)
+        self.assertEqual(event.table, "test_column_cache")
+        self.assertIn("id", event.rows[0]["values"])
+        self.assertIn("data", event.rows[0]["values"])
+        self.assertEqual(event.rows[0]["values"]["id"], 1)
+        self.assertEqual(event.rows[0]["values"]["data"], "Hello")
+
+        # Test with use_column_name_cache = False
+        self.stream.close()
+
+        # Clear cache before next run
+        from pymysqlreplication import row_event
+        row_event._COLUMN_NAME_CACHE.clear()
+
+        self.stream = BinLogStreamReader(
+            self.database,
+            server_id=1025, # different server_id to avoid caching issues
+            use_column_name_cache=False,
+            only_events=[WriteRowsEvent],
+        )
+
+        # Reset and replay events
+        self.resetBinLog()
+        self.execute("INSERT INTO test_column_cache (data) VALUES('World')")
+        self.execute("COMMIT")
+
+        # Skip RotateEvent and FormatDescriptionEvent
+        self.stream.fetchone()
+        self.stream.fetchone()
+        # Skip QueryEvent for BEGIN
+        if not self.isMariaDB():
+            self.stream.fetchone()
+        # Skip TableMapEvent
+        self.stream.fetchone()
+
+        event = self.stream.fetchone()
+        self.assertIsInstance(event, WriteRowsEvent)
+        self.assertEqual(event.table, "test_column_cache")
+        # With cache disabled, we should not have column names
+        self.assertNotIn("id", event.rows[0]["values"])
+        self.assertNotIn("data", event.rows[0]["values"])
+
+        # cleanup
+        row_event._COLUMN_NAME_CACHE.clear()
+
 
     def test_delete_row_event(self):
         query = "CREATE TABLE test (id INT NOT NULL AUTO_INCREMENT, data VARCHAR (50) NOT NULL, PRIMARY KEY (id))"
