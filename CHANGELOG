@@ -262,4 +262,11 @@
 * Remove black and use only ruff as linter
 
 1.0.10 16/11/2025
-* Fix MySQL 5.7 column name support (#625)
+
+* Support for Python 3.9 to 3.13
+* Improve testing with better MariaDB coverage
+
+1.0.11 16/11/2025
+
+* MySQL 5.7 column name support (#634)
+
