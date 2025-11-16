@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 try:
-    from setuptools import setup, Command
+    from setuptools import Command, setup
 except ImportError:
-    from distutils.core import setup, Command
+    from distutils.core import Command, setup
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 
 class TestCommand(Command):
@@ -22,13 +22,14 @@ class TestCommand(Command):
         """
         Finds all the tests modules in tests/, and runs them.
         """
-        from pymysqlreplication import tests
         import unittest
+
+        from pymysqlreplication import tests
 
         unittest.main(tests, argv=sys.argv[:1])
 
 
-version = "1.0.9"
+version = "1.0.10"
 
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
