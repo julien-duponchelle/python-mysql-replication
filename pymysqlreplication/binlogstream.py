@@ -2,6 +2,8 @@ import struct
 import logging
 from packaging.version import Version
 
+logger = logging.getLogger(__name__)
+
 import pymysql
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE
 from pymysql.cursors import DictCursor
@@ -564,17 +566,15 @@ class BinLogStreamReader(object):
         cur.execute("SHOW VARIABLES LIKE 'BINLOG_ROW_METADATA';")
         value = cur.fetchone()
         if value is None:  # BinLog Variable Not exist It means Not Supported Version
-            logging.log(
-                logging.WARN,
+            logger.warning(
                 """
                     Before using MARIADB 10.5.0 and MYSQL 8.0.14 versions,
-                    use python-mysql-replication version Before 1.0 version """,
+                    use python-mysql-replication version Before 1.0 version """
             )
         else:
             value = value.get("Value", "")
             if value.upper() != "FULL":
-                logging.log(
-                    logging.WARN,
+                logger.warning(
                     """
                        Setting The Variable Value BINLOG_ROW_METADATA = FULL, BINLOG_ROW_IMAGE = FULL.
                        By Applying this, provide properly mapped column information on UPDATE,DELETE,INSERT.
@@ -604,8 +604,7 @@ class BinLogStreamReader(object):
                 if code in MYSQL_EXPECTED_ERROR_CODES:
                     self._stream_connection.close()
                     self.__connected_stream = False
-                    logging.log(
-                        logging.WARN,
+                    logger.warning(
                         """
                           A pymysql.OperationalError error occurred, Re-request the connection.
                         """,
@@ -782,7 +781,7 @@ class BinLogStreamReader(object):
                 comment = f"{parameter}: [{items}]"
             else:
                 comment = f"{parameter}: {value}"
-            logging.info(comment)
+            logger.info(comment)
 
     def __iter__(self):
         return iter(self.fetchone, None)
