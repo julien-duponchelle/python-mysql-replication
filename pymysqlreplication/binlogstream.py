@@ -1,8 +1,7 @@
 import struct
-import logging
 from packaging.version import Version
 
-logger = logging.getLogger(__name__)
+from .logger import logger
 
 import pymysql
 from pymysql.constants.COMMAND import COM_BINLOG_DUMP, COM_REGISTER_SLAVE

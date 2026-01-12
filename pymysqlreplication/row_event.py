@@ -1,12 +1,12 @@
 import struct
 import decimal
 import datetime
-import logging
 
 from pymysql.charset import charset_by_name
 from enum import Enum
 
 from .event import BinLogEvent
+from .logger import logger
 from .constants import FIELD_TYPE
 from .constants import BINLOG
 from .constants import CHARSET
@@ -958,12 +958,12 @@ class TableMapEvent(BinLogEvent):
             _COLUMN_NAME_CACHE[cache_key] = column_names
 
             if self.__enable_logging and column_names:
-                logging.info(f"Cached column names for {cache_key}: {len(column_names)} columns")
+                logger.info(f"Cached column names for {cache_key}: {len(column_names)} columns")
 
             return column_names
         except Exception as e:
             if self.__enable_logging:
-                logging.warning(f"Failed to fetch column names for {cache_key}: {type(e).__name__}: {e}")
+                logger.warning(f"Failed to fetch column names for {cache_key}: {type(e).__name__}: {e}")
             # Cache empty result to avoid retry spam
             _COLUMN_NAME_CACHE[cache_key] = []
             return []
