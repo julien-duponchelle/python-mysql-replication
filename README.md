@@ -371,6 +371,7 @@ Other contributors:
 - Etern: Add XAPrepareEvent, parse last_committed & sequence_number of GtidEvent (https://github.com/etern)
 - Jason Fulghum: typo in ident variable name (https://github.com/fulghum)
 - Adam Mizerski: Improve MariaDB coverage (https://github.com/etam)
+- Jeong, YunWon: Replace all loggers with a project logger (https://github.com/youknowone)
 
 Thanks to GetResponse for their support
 
