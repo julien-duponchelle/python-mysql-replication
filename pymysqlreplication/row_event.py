@@ -20,6 +20,66 @@ from .bitmap import BitCount, BitGet
 # MySQL 5.7 compatibility: Cache for INFORMATION_SCHEMA column names
 _COLUMN_NAME_CACHE = {}
 
+
+def fetch_column_names(ctl_connection, schema, table, use_column_name_cache=False, enable_logging=False):
+    """
+    Fetch column names from INFORMATION_SCHEMA.
+
+    Centralized function used by both TableMapEvent and RowsEvent.
+    Only caches successful non-empty results. Never caches failures.
+
+    Args:
+        ctl_connection: MySQL control connection
+        schema: Database schema name
+        table: Table name
+        use_column_name_cache: Must be True to enable (opt-in feature for MySQL 5.7)
+        enable_logging: Whether to log info/warnings
+
+    Returns:
+        list: Column names in ORDINAL_POSITION order, or empty list if disabled/failure
+    """
+    if not use_column_name_cache:
+        return []
+
+    cache_key = f"{schema}.{table}"
+
+    # Check cache first - only use if non-empty
+    cached = _COLUMN_NAME_CACHE.get(cache_key)
+    if cached:
+        return cached
+
+    # Fetch from INFORMATION_SCHEMA
+    try:
+        query = """
+            SELECT COLUMN_NAME
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
+            ORDER BY ORDINAL_POSITION
+        """
+        cursor = ctl_connection.cursor()
+        cursor.execute(query, (schema, table))
+        rows = cursor.fetchall()
+        # Handle both tuple and dict cursor results
+        if rows and isinstance(rows[0], dict):
+            column_names = [row['COLUMN_NAME'] for row in rows]
+        else:
+            column_names = [row[0] for row in rows]
+        cursor.close()
+
+        # Only cache successful non-empty results
+        if column_names:
+            _COLUMN_NAME_CACHE[cache_key] = column_names
+            if enable_logging:
+                logger.info(f"Cached column names for {cache_key}: {len(column_names)} columns")
+
+        return column_names
+    except Exception as e:
+        if enable_logging:
+            logger.warning(f"Failed to fetch column names for {cache_key}: {type(e).__name__}: {e}")
+        # Don't cache failure - allow retry on next event
+        return []
+
+
 class RowsEvent(BinLogEvent):
     def __init__(self, from_packet, event_size, table_map, ctl_connection, **kwargs):
         super().__init__(from_packet, event_size, table_map, ctl_connection, **kwargs)
@@ -28,6 +88,8 @@ class RowsEvent(BinLogEvent):
         self.__ignored_tables = kwargs["ignored_tables"]
         self.__only_schemas = kwargs["only_schemas"]
         self.__ignored_schemas = kwargs["ignored_schemas"]
+        self.__use_column_name_cache = kwargs.get("use_column_name_cache", False)
+        self.__enable_logging = kwargs.get("enable_logging", False)
         self.__none_sources = {}
 
         # Header
@@ -144,12 +206,22 @@ class RowsEvent(BinLogEvent):
                 partial_bitmap_index += 1
 
             if not name:
-                # If you are using mysql 5.7 or mysql 8, but binlog_row_metadata = "MINIMAL",
-                # we do not know the column information.
-                # If you know column information,
-                # mysql 5.7 version Users Use Under 1.0 version
-                # mysql 8.0 version Users Set binlog_row_metadata = "FULL"
-                name = "UNKNOWN_COL" + str(i)
+                # Column name missing - try to fetch from INFORMATION_SCHEMA
+                column_names = fetch_column_names(
+                    self._ctl_connection,
+                    self.schema,
+                    self.table,
+                    use_column_name_cache=self.__use_column_name_cache,
+                    enable_logging=self.__enable_logging
+                )
+                if column_names and i < len(column_names):
+                    # Update table_map with fetched column names
+                    for idx, col_name in enumerate(column_names):
+                        if idx < len(self.table_map[self.table_id].columns):
+                            self.table_map[self.table_id].columns[idx].name = col_name
+                    name = column_names[i]
+                if not name:
+                    name = "UNKNOWN_COL" + str(i)
             values[name] = self.__read_values_name(
                 column,
                 null_bitmap,
@@ -917,66 +989,27 @@ class TableMapEvent(BinLogEvent):
         return optional_metadata
 
 
-    def _fetch_column_names_from_schema(self):
-        """
-        Fetch column names from INFORMATION_SCHEMA for MySQL 5.7 compatibility.
-
-        Only executes if use_column_name_cache=True is enabled.
-        Uses module-level cache to avoid repeated queries.
-
-        Returns:
-            list: Column names in ORDINAL_POSITION order, or empty list
-        """
-        # Only fetch if explicitly enabled (opt-in feature)
-        if not self.__use_column_name_cache:
-            return []
-
-        cache_key = f"{self.schema}.{self.table}"
-
-        # Check cache first
-        if cache_key in _COLUMN_NAME_CACHE:
-            return _COLUMN_NAME_CACHE[cache_key]
-
-        try:
-            query = """
-                SELECT COLUMN_NAME
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
-                ORDER BY ORDINAL_POSITION
-            """
-            cursor = self._ctl_connection.cursor()
-            cursor.execute(query, (self.schema, self.table))
-            rows = cursor.fetchall()
-            # Handle both tuple and dict cursor results
-            if rows and isinstance(rows[0], dict):
-                column_names = [row['COLUMN_NAME'] for row in rows]
-            else:
-                column_names = [row[0] for row in rows]
-            cursor.close()
-
-            # Cache result
-            _COLUMN_NAME_CACHE[cache_key] = column_names
-
-            if self.__enable_logging and column_names:
-                logger.info(f"Cached column names for {cache_key}: {len(column_names)} columns")
-
-            return column_names
-        except Exception as e:
-            if self.__enable_logging:
-                logger.warning(f"Failed to fetch column names for {cache_key}: {type(e).__name__}: {e}")
-            # Cache empty result to avoid retry spam
-            _COLUMN_NAME_CACHE[cache_key] = []
-            return []
-
     def _sync_column_info(self):
         if not self.__optional_meta_data:
-            column_names = self._fetch_column_names_from_schema()
+            column_names = fetch_column_names(
+                self._ctl_connection,
+                self.schema,
+                self.table,
+                use_column_name_cache=self.__use_column_name_cache,
+                enable_logging=self.__enable_logging
+            )
             if column_names and len(column_names) == self.column_count:
                 for column_idx in range(self.column_count):
                     self.columns[column_idx].name = column_names[column_idx]
             return
         if len(self.optional_metadata.column_name_list) == 0:
-            column_names = self._fetch_column_names_from_schema()
+            column_names = fetch_column_names(
+                self._ctl_connection,
+                self.schema,
+                self.table,
+                use_column_name_cache=self.__use_column_name_cache,
+                enable_logging=self.__enable_logging
+            )
             if column_names and len(column_names) == self.column_count:
                 for column_idx in range(self.column_count):
                     self.columns[column_idx].name = column_names[column_idx]
