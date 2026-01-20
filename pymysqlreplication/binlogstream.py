@@ -366,7 +366,8 @@ class BinLogStreamReader(object):
         if self.slave_uuid:
             cur = self._stream_connection.cursor()
             cur.execute(
-                f"SET @slave_uuid = '{self.slave_uuid}', @replica_uuid = '{self.slave_uuid}'"
+                "SET @slave_uuid = %s, @replica_uuid = %s",
+                (self.slave_uuid, self.slave_uuid),
             )
             cur.close()
 
@@ -382,7 +383,7 @@ class BinLogStreamReader(object):
             # master_heartbeat_period is nanoseconds
             heartbeat = int(heartbeat * 1000000000)
             cur = self._stream_connection.cursor()
-            cur.execute("SET @master_heartbeat_period= %d" % heartbeat)
+            cur.execute("SET @master_heartbeat_period = %s", (heartbeat,))
             cur.close()
 
         # When replicating from Mariadb 10.6.12 using binlog coordinates, a slave capability < 4 triggers a bug in
@@ -522,7 +523,7 @@ class BinLogStreamReader(object):
         # https://mariadb.com/kb/en/5-slave-registration/
         cur = self._stream_connection.cursor()
         if self.auto_position is not None:
-            cur.execute(f'SET @slave_connect_state="{self.auto_position}"')
+            cur.execute("SET @slave_connect_state = %s", (self.auto_position,))
         cur.execute("SET @slave_gtid_strict_mode=1")
         cur.execute("SET @slave_gtid_ignore_duplicates=0")
         cur.close()
