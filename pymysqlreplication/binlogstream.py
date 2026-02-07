@@ -766,7 +766,7 @@ class BinLogStreamReader(object):
         return "mysql"
 
     def __log_valid_parameters(self):
-        ignored = ["allowed_events", "table_map"]
+        ignored = ["allowed_events", "table_map", "connection_settings"]
         for parameter, value in self.__dict__.items():
             if parameter.startswith("_BinLogStreamReader__"):
                 parameter = parameter.replace("_BinLogStreamReader__", "")

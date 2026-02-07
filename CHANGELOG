@@ -1,3 +1,7 @@
+1.0.15 07/02/2026
+
+* Security fix: Sensitive connection settings are no longer logged when logging is enabled.
+
 1.0.14 19/01/2026
 
 * Fix column name cache bug for MySQL 5.7 compatibility
