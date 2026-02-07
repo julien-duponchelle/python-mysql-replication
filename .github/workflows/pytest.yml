@@ -13,6 +13,7 @@ jobs:
         include:
           - {name: 'CPython 3.9', python: '3.9'}
           - {name: 'CPython 3.13', python: '3.13'}
+          - {name: 'CPython 3.14', python: '3.14'}
           - {name: 'Pypy 3.7', python: 'pypy-3.7'}
           - {name: 'Pypy 3.10', python: 'pypy-3.10'}
     name: ${{ matrix.name }}
