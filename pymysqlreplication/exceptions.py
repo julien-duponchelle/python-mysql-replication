@@ -8,6 +8,11 @@ class BinLogNotEnabled(Exception):
         Exception.__init__(self, "MySQL binary logging is not enabled.")
 
 
+class MalformedBinLogEvent(Exception):
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
 class StatusVariableMismatch(Exception):
     def __init__(self):
         Exception.__init__(

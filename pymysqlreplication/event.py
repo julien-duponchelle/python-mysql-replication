@@ -5,7 +5,7 @@ import decimal
 import zlib
 
 from pymysqlreplication.constants.STATUS_VAR_KEY import *
-from pymysqlreplication.exceptions import StatusVariableMismatch
+from pymysqlreplication.exceptions import MalformedBinLogEvent, StatusVariableMismatch
 from pymysqlreplication.util.bytes import parse_decimal_from_bytes
 from pymysqlreplication.logger import logger
 from typing import Union, Optional
@@ -27,15 +27,18 @@ class BinLogEvent(object):
         freeze_schema=False,
         ignore_decode_errors=False,
         verify_checksum=False,
+        use_checksum=False,
         optional_meta_data=False,
         enable_logging=False,
         use_column_name_cache=False,
+        post_header_lengths=None,
     ):
         self.packet = from_packet
         self.table_map = table_map
         self.event_type = self.packet.event_type
         self.timestamp = self.packet.timestamp
         self.event_size = event_size
+        self._post_header_lengths = post_header_lengths
         self._ctl_connection = ctl_connection
         self.mysql_version = mysql_version
         self._ignore_decode_errors = ignore_decode_errors
@@ -47,6 +50,38 @@ class BinLogEvent(object):
         self.complete = True
         self._verify_event()
         self.dbms = self._ctl_connection._get_dbms()
+
+    def _declared_post_header_len(self, default):
+        if not self._post_header_lengths:
+            return default
+
+        index = self.event_type - 1
+        if index < 0 or index >= len(self._post_header_lengths):
+            return default
+
+        return self._post_header_lengths[index]
+
+    def _advance_to_payload(self, known_post_header_len):
+        declared_post_header_len = self._declared_post_header_len(known_post_header_len)
+
+        if declared_post_header_len < known_post_header_len:
+            raise MalformedBinLogEvent(
+                "Event type %s declares post-header length %s, shorter than "
+                "the supported minimum %s"
+                % (self.event_type, declared_post_header_len, known_post_header_len)
+            )
+
+        extra_len = declared_post_header_len - known_post_header_len
+        if self.packet.read_bytes + extra_len > self.event_size:
+            raise MalformedBinLogEvent(
+                "Event type %s declares post-header length %s beyond event size %s"
+                % (self.event_type, declared_post_header_len, self.event_size)
+            )
+
+        if extra_len:
+            self.packet.advance(extra_len)
+
+        return declared_post_header_len
 
     def _read_table_id(self):
         # Table ID is 6 byte
@@ -389,15 +424,37 @@ class FormatDescriptionEvent(BinLogEvent):
         self.mysql_version = tuple(map(int, numbers.split(".")))
         self.created = struct.unpack("<I", self.packet.read(4))[0]
         self.common_header_len = struct.unpack("<B", self.packet.read(1))[0]
-        offset = (
-            4 + 2 + 50 + 1
-        )  # created + binlog_version + mysql_version_str + common_header_len
-        checksum_algorithm = 1
-        checksum = 4
-        n = event_size - offset - self.common_header_len - checksum_algorithm - checksum
-        self.post_header_len = struct.unpack(f"<{n}B", self.packet.read(n))
-        self.server_version_split = struct.unpack("<3B", self.packet.read(3))
-        self.number_of_event_types = struct.unpack("<B", self.packet.read(1))[0]
+
+        fixed_part_len = 2 + 50 + 4 + 1
+        if event_size < fixed_part_len:
+            raise MalformedBinLogEvent(
+                "FormatDescriptionEvent size %s is shorter than fixed part %s"
+                % (event_size, fixed_part_len)
+            )
+
+        remaining_len = event_size - fixed_part_len
+        checksum_aware = self.mysql_version >= (5, 6) or self.mysql_version[0] >= 10
+        checksum_algorithm_len = 1 if checksum_aware else 0
+        checksum_len = 0 if kwargs.get("use_checksum") else 4 if checksum_aware else 0
+        post_header_len = remaining_len - checksum_algorithm_len - checksum_len
+
+        if post_header_len < 0:
+            raise MalformedBinLogEvent(
+                "FormatDescriptionEvent size %s is too short for checksum metadata"
+                % event_size
+            )
+
+        self.post_header_len = struct.unpack(
+            f"<{post_header_len}B", self.packet.read(post_header_len)
+        )
+        self.checksum_algorithm = (
+            self.packet.read_uint8() if checksum_algorithm_len else None
+        )
+        if checksum_len:
+            self.packet.advance(checksum_len)
+
+        self.server_version_split = self.mysql_version[:3]
+        self.number_of_event_types = len(self.post_header_len)
 
     def _dump(self):
         print(f"Binlog version: {self.binlog_version}")
@@ -488,6 +545,7 @@ class QueryEvent(BinLogEvent):
         self.schema_length = struct.unpack("!B", self.packet.read(1))[0]
         self.error_code = self.packet.read_uint16()
         self.status_vars_length = self.packet.read_uint16()
+        post_header_len = self._advance_to_payload(13)
 
         # Payload
         status_vars_end_pos = self.packet.read_bytes + self.status_vars_length
@@ -499,9 +557,19 @@ class QueryEvent(BinLogEvent):
 
         self.schema = self.packet.read(self.schema_length)
         self.packet.advance(1)
-        query = self.packet.read(
-            event_size - 13 - self.status_vars_length - self.schema_length - 1
+        query_len = (
+            event_size
+            - post_header_len
+            - self.status_vars_length
+            - self.schema_length
+            - 1
         )
+        if query_len < 0:
+            raise MalformedBinLogEvent(
+                "QueryEvent payload length is negative after applying post-header "
+                "length %s" % post_header_len
+            )
+        query = self.packet.read(query_len)
         self.query = query.decode("utf-8", errors="backslashreplace")
         # string[EOF]    query
 

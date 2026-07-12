@@ -53,6 +53,7 @@ except ImportError:
 MYSQL_EXPECTED_ERROR_CODES = [2013, 2006]
 
 PYMYSQL_VERSION_LT_06 = Version(pymysql.__version__) < Version("0.6")
+MYSQL_ER_PARSE_ERROR = 1064
 
 
 class ReportSlave(object):
@@ -263,12 +264,13 @@ class BinLogStreamReader(object):
 
         # We can't filter on packet level TABLE_MAP and rotate event because
         # we need them for handling other operations
-        self.__allowed_events_in_packet = frozenset([TableMapEvent, RotateEvent]).union(
-            self.__allowed_events
-        )
+        self.__allowed_events_in_packet = frozenset(
+            [FormatDescriptionEvent, TableMapEvent, RotateEvent]
+        ).union(self.__allowed_events)
 
         self.__server_id = server_id
         self.__use_checksum = False
+        self.__post_header_lengths = None
 
         # Store table meta information
         self.table_map = {}
@@ -331,6 +333,15 @@ class BinLogStreamReader(object):
         if value == "NONE":
             return False
         return True
+
+    def __show_binary_log_status(self, cur):
+        try:
+            cur.execute("SHOW BINARY LOG STATUS")
+        except pymysql.err.ProgrammingError as exc:
+            if not exc.args or exc.args[0] != MYSQL_ER_PARSE_ERROR:
+                raise
+            cur.execute("SHOW MASTER STATUS")
+        return cur.fetchone()
 
     def _register_slave(self):
         if not self.report_slave:
@@ -404,12 +415,13 @@ class BinLogStreamReader(object):
                 # valid, if not, get the current position from master
                 if self.log_file is None or self.log_pos is None:
                     cur = self._stream_connection.cursor()
-                    cur.execute("SHOW MASTER STATUS")
-                    master_status = cur.fetchone()
-                    if master_status is None:
-                        raise BinLogNotEnabled()
-                    self.log_file, self.log_pos = master_status[:2]
-                    cur.close()
+                    try:
+                        master_status = self.__show_binary_log_status(cur)
+                        if master_status is None:
+                            raise BinLogNotEnabled()
+                        self.log_file, self.log_pos = master_status[:2]
+                    finally:
+                        cur.close()
 
                 prelude = struct.pack("<i", len(self.log_file) + 11) + bytes(
                     bytearray([COM_BINLOG_DUMP])
@@ -636,6 +648,7 @@ class BinLogStreamReader(object):
                 self.__optional_meta_data,
                 self.__enable_logging,
                 self.__use_column_name_cache,
+                self.__post_header_lengths,
             )
 
             if binlog_event.event_type == ROTATE_EVENT:
@@ -659,6 +672,13 @@ class BinLogStreamReader(object):
             if self.end_log_pos and self.log_pos >= self.end_log_pos:
                 # We're currently at, or past, the specified end log position.
                 self.is_past_end_log_pos = True
+
+            if (
+                binlog_event.event_type == FORMAT_DESCRIPTION_EVENT
+                and binlog_event.event is not None
+            ):
+                self.mysql_version = binlog_event.event.mysql_version
+                self.__post_header_lengths = binlog_event.event.post_header_len
 
             # This check must not occur before clearing the ``table_map`` as a
             # result of a RotateEvent.
@@ -704,9 +724,6 @@ class BinLogStreamReader(object):
                 binlog_event.event.__class__ not in self.__allowed_events
             ):
                 continue
-
-            if binlog_event.event_type == FORMAT_DESCRIPTION_EVENT:
-                self.mysql_version = binlog_event.event.mysql_version
 
             return binlog_event.event
 

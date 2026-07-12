@@ -130,6 +130,7 @@ class RowsEvent(BinLogEvent):
             self.flags, self.extra_data_length = struct.unpack(
                 "<HH", self.packet.read(4)
             )
+            self._advance_to_payload(10)
             if self.extra_data_length > 2:
                 self.extra_data_type = struct.unpack("<B", self.packet.read(1))[0]
                 # ndb information
@@ -155,6 +156,7 @@ class RowsEvent(BinLogEvent):
                     self.extra_data = self.packet.read(self.extra_data_length - 3)
         else:
             self.flags = struct.unpack("<H", self.packet.read(2))[0]
+            self._advance_to_payload(8)
 
         # Body
         self.number_of_columns = self.packet.read_length_coded_binary()
@@ -833,6 +835,7 @@ class TableMapEvent(BinLogEvent):
             return
 
         self.flags = struct.unpack("<H", self.packet.read(2))[0]
+        self._advance_to_payload(8)
 
         # Payload
         self.schema_length = struct.unpack("!B", self.packet.read(1))[0]

@@ -76,6 +76,7 @@ class BinLogPacketWrapper(object):
         optional_meta_data,
         enable_logging,
         use_column_name_cache=False,
+        post_header_lengths=None,
     ):
         # -1 because we ignore the ok byte
         self.read_bytes = 0
@@ -133,6 +134,8 @@ class BinLogPacketWrapper(object):
             optional_meta_data=optional_meta_data,
             enable_logging=enable_logging,
             use_column_name_cache=use_column_name_cache,
+            use_checksum=use_checksum,
+            post_header_lengths=post_header_lengths,
         )
         if not self.event._processed:
             self.event = None

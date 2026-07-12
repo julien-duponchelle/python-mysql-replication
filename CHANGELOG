@@ -1,3 +1,9 @@
+1.0.16 12/07/2026
+
+* Parse FormatDescriptionEvent post-header lengths and use them to align event payloads.
+* Add malformed binlog event validation for invalid post-header lengths.
+* Support MySQL 8.4 binary log coordinate discovery with SHOW BINARY LOG STATUS.
+
 1.0.15 07/02/2026
 
 * Security fix: Sensitive connection settings are no longer logged when logging is enabled.
