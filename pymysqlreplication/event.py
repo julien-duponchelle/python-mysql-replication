@@ -662,6 +662,18 @@ class QueryEvent(BinLogEvent):
             self.hrnow = self.packet.read_uint24()
         elif key == Q_XID:
             self.xid = self.packet.read_uint64()
+        elif key == Q_GTID_FLAGS3:
+            self.gtid_flags_extra = self.packet.read_uint8()
+            # FL_COMMIT_ALTER_E1 (0x4) or FL_ROLLBACK_ALTER_E1 (0x8)
+            if self.gtid_flags_extra & (0x4 | 0x8):
+                self.sa_seq_no = self.packet.read_uint64()
+        elif key == Q_CHARACTER_SET_COLLATIONS:
+            # one byte count followed by count * (charset id, collation id) uint16 pairs
+            count = self.packet.read_uint8()
+            self.character_set_collations = [
+                (self.packet.read_uint16(), self.packet.read_uint16())
+                for _ in range(count)
+            ]
         else:
             raise StatusVariableMismatch
 
