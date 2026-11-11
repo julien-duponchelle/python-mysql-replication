@@ -109,6 +109,39 @@ class BinLogProtocolEventTestCase(unittest.TestCase):
         self.assertEqual(event.schema, b"d1")
         self.assertEqual(event.query, "CREATE TABLE t1 (id INT)")
 
+    def test_query_event_parses_mariadb_11_7_status_vars(self):
+        post_header_lengths = [0] * 41
+        post_header_lengths[constants.QUERY_EVENT - 1] = 13
+        status_vars = (
+            # Q_CHARACTER_SET_COLLATIONS: count, then (charset, collation) pairs
+            b"\x83"
+            + b"\x01"
+            + struct.pack("<HH", 45, 46)
+            # Q_GTID_FLAGS3 with a commit alter flag, followed by sa_seq_no
+            + b"\x82\x04"
+            + struct.pack("<Q", 7)
+        )
+        body = (
+            struct.pack("<IIBHH", 10, 0, 2, 0, len(status_vars))
+            + status_vars
+            + b"d1"
+            + b"\0"
+            + b"CREATE TABLE t1 (id INT)"
+        )
+
+        event = _wrapper(
+            constants.QUERY_EVENT,
+            body,
+            QueryEvent,
+            post_header_lengths=tuple(post_header_lengths),
+        ).event
+
+        self.assertEqual(event.character_set_collations, [(45, 46)])
+        self.assertEqual(event.gtid_flags_extra, 4)
+        self.assertEqual(event.sa_seq_no, 7)
+        self.assertEqual(event.schema, b"d1")
+        self.assertEqual(event.query, "CREATE TABLE t1 (id INT)")
+
     def test_query_event_rejects_short_declared_post_header(self):
         post_header_lengths = [0] * 41
         post_header_lengths[constants.QUERY_EVENT - 1] = 12
