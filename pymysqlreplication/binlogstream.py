@@ -31,7 +31,7 @@ from .event import (
     PreviousGtidsEvent,
 )
 from .exceptions import BinLogNotEnabled
-from .gtid import GtidSet
+from .gtid import Gtid, GtidSet
 from .packet import BinLogPacketWrapper
 from .row_event import (
     UpdateRowsEvent,
@@ -267,6 +267,12 @@ class BinLogStreamReader(object):
         self.__allowed_events_in_packet = frozenset(
             [FormatDescriptionEvent, TableMapEvent, RotateEvent]
         ).union(self.__allowed_events)
+        if auto_position and not is_mariadb:
+            # GTID bookkeeping (see _track_executed_gtid) needs these events
+            # even when the caller filtered them out.
+            self.__allowed_events_in_packet = self.__allowed_events_in_packet.union(
+                [GtidEvent, XidEvent, QueryEvent]
+            )
 
         self.__server_id = server_id
         self.__use_checksum = False
@@ -278,6 +284,10 @@ class BinLogStreamReader(object):
         self.end_log_pos = end_log_pos
         self.log_file = log_file
         self.auto_position = auto_position
+        # GTIDs of committed transactions already read (MySQL auto_position
+        # only). Used to resume from the right place after a reconnect.
+        self._executed_gtids = None
+        self._pending_gtid = None
         self.skip_to_timestamp = skip_to_timestamp
         self.is_mariadb = is_mariadb
         self.__annotate_rows_event = annotate_rows_event
@@ -595,6 +605,34 @@ class BinLogStreamReader(object):
             else:
                 self.__optional_meta_data = True
 
+    def _track_executed_gtid(self, event):
+        """Remember the GTID of each transaction once it is committed.
+
+        A GtidEvent opens a transaction; it only counts as executed when its
+        XidEvent (or a non-BEGIN QueryEvent such as DDL or COMMIT) is seen, so a
+        connection lost in the middle of a transaction replays that transaction.
+        """
+        if not self.auto_position or self.is_mariadb or event is None:
+            return
+        if isinstance(event, GtidEvent):
+            self._pending_gtid = event.gtid
+        elif self._pending_gtid is not None and (
+            isinstance(event, XidEvent)
+            or (isinstance(event, QueryEvent) and event.query != "BEGIN")
+        ):
+            if self._executed_gtids is None:
+                self._executed_gtids = GtidSet(self.auto_position)
+            self._executed_gtids.merge_gtid(Gtid(self._pending_gtid))
+            self._pending_gtid = None
+
+    def _refresh_auto_position(self):
+        """Before reconnecting, resume after the last committed transaction
+        instead of the GTID set given at start (which would resend events
+        already delivered)."""
+        self._pending_gtid = None
+        if self._executed_gtids is not None:
+            self.auto_position = ",".join(str(g) for g in self._executed_gtids.gtids)
+
     def fetchone(self):
         while True:
             if self.end_log_pos and self.is_past_end_log_pos:
@@ -616,6 +654,7 @@ class BinLogStreamReader(object):
                 if code in MYSQL_EXPECTED_ERROR_CODES:
                     self._stream_connection.close()
                     self.__connected_stream = False
+                    self._refresh_auto_position()
                     logger.warning(
                         """
                           A pymysql.OperationalError error occurred, Re-request the connection.
@@ -650,6 +689,8 @@ class BinLogStreamReader(object):
                 self.__use_column_name_cache,
                 self.__post_header_lengths,
             )
+
+            self._track_executed_gtid(binlog_event.event)
 
             if binlog_event.event_type == ROTATE_EVENT:
                 self.log_pos = binlog_event.event.position
