@@ -1,3 +1,4 @@
+import re
 import struct
 from packaging.version import Version
 
@@ -271,7 +272,7 @@ class BinLogStreamReader(object):
             # GTID bookkeeping (see _track_executed_gtid) needs these events
             # even when the caller filtered them out.
             self.__allowed_events_in_packet = self.__allowed_events_in_packet.union(
-                [GtidEvent, XidEvent, QueryEvent]
+                [GtidEvent, XidEvent, QueryEvent, XAPrepareEvent]
             )
 
         self.__server_id = server_id
@@ -288,6 +289,7 @@ class BinLogStreamReader(object):
         # only). Used to resume from the right place after a reconnect.
         self._executed_gtids = None
         self._pending_gtid = None
+        self._pending_in_txn = False
         self.skip_to_timestamp = skip_to_timestamp
         self.is_mariadb = is_mariadb
         self.__annotate_rows_event = annotate_rows_event
@@ -605,31 +607,63 @@ class BinLogStreamReader(object):
             else:
                 self.__optional_meta_data = True
 
-    def _track_executed_gtid(self, event):
-        """Remember the GTID of each transaction once it is committed.
+    _TXN_OPEN_RE = re.compile(
+        r"^(BEGIN|START\s+TRANSACTION|XA\s+(START|BEGIN))\b", re.IGNORECASE
+    )
+    _TXN_END_RE = re.compile(r"^(XA\s+)?(COMMIT|ROLLBACK)\b", re.IGNORECASE)
+    _SAVEPOINT_RE = re.compile(r"\bTO\s+(SAVEPOINT\s+)?\w", re.IGNORECASE)
+    _LEADING_COMMENT_RE = re.compile(r"^(\s*/\*.*?\*/)+\s*", re.DOTALL)
 
-        A GtidEvent opens a transaction; it only counts as executed when its
-        XidEvent (or a non-BEGIN QueryEvent such as DDL or COMMIT) is seen, so a
-        connection lost in the middle of a transaction replays that transaction.
+    def _track_executed_gtid(self, event):
+        """Remember the GTID of each transaction once it is complete.
+
+        A GtidEvent opens a group. The group counts as executed only at its
+        real boundary: an XidEvent, an XAPrepareEvent, a COMMIT/ROLLBACK
+        (or XA COMMIT/XA ROLLBACK) query, or, for a group that never opened
+        a transaction (DDL, single statement), its only QueryEvent. Statements
+        inside BEGIN / XA START do not end the group. A connection lost in the
+        middle of a group replays that group.
         """
         if not self.auto_position or self.is_mariadb or event is None:
             return
         if isinstance(event, GtidEvent):
             self._pending_gtid = event.gtid
-        elif self._pending_gtid is not None and (
-            isinstance(event, XidEvent)
-            or (isinstance(event, QueryEvent) and event.query != "BEGIN")
-        ):
+            self._pending_in_txn = False
+            return
+        if self._pending_gtid is None:
+            return
+        if isinstance(event, (XidEvent, XAPrepareEvent)):
+            done = True
+        elif isinstance(event, QueryEvent):
+            query = event.query
+            if isinstance(query, bytes):
+                query = query.decode("utf-8", "replace")
+            query = self._LEADING_COMMENT_RE.sub("", query or "").strip()
+            if self._TXN_OPEN_RE.match(query):
+                self._pending_in_txn = True
+                done = False
+            elif self._TXN_END_RE.match(query) and not self._SAVEPOINT_RE.search(
+                query
+            ):
+                done = True
+            else:
+                # XA END, statements inside a transaction: not a boundary.
+                done = not self._pending_in_txn
+        else:
+            done = False
+        if done:
             if self._executed_gtids is None:
                 self._executed_gtids = GtidSet(self.auto_position)
             self._executed_gtids.merge_gtid(Gtid(self._pending_gtid))
             self._pending_gtid = None
+            self._pending_in_txn = False
 
     def _refresh_auto_position(self):
         """Before reconnecting, resume after the last committed transaction
         instead of the GTID set given at start (which would resend events
         already delivered)."""
         self._pending_gtid = None
+        self._pending_in_txn = False
         if self._executed_gtids is not None:
             self.auto_position = ",".join(str(g) for g in self._executed_gtids.gtids)
 
